@@ -1,15 +1,21 @@
 """SSH tunnel management for reverse connections."""
 
+import json
 import socket
 import threading
 import logging
 import time
+from datetime import datetime
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING
 
 import paramiko
 
 from shared.protocol import ClientInfo, Request, Response, encode_message, decode_message
+from client.capabilities import detect_capabilities, get_ssh_key_fingerprint
+
+if TYPE_CHECKING:
+    from client.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -19,17 +25,15 @@ class ReverseTunnel:
 
     def __init__(
         self,
-        server_host: str,
-        server_port: int,
-        server_user: str,
-        key_file: str,
+        config: "Config",
         client_id: str,
         request_handler: Callable[[Request], Response],
     ):
-        self.server_host = server_host
-        self.server_port = server_port
-        self.server_user = server_user
-        self.key_file = Path(key_file)
+        self.config = config
+        self.server_host = config.server_host
+        self.server_port = config.server_port
+        self.server_user = config.server_user
+        self.key_file = Path(config.key_file)
         self.client_id = client_id
         self.request_handler = request_handler
 
@@ -148,12 +152,46 @@ class ReverseTunnel:
             chan.close()
 
     def _register(self):
-        """Register this client with the server."""
-        client_info = ClientInfo.create_local(self.client_id, self.tunnel_port)
+        """Register this client with the server, including full identity."""
+        # Get SSH key fingerprint
+        try:
+            fingerprint = get_ssh_key_fingerprint(self.key_file)
+        except Exception as e:
+            logger.warning(f"Could not get key fingerprint: {e}")
+            fingerprint = ""
+
+        # Detect system capabilities
+        capabilities = detect_capabilities()
+
+        # Build identity payload
+        now = datetime.utcnow().isoformat() + "Z"
+        identity = {
+            "uuid": self.config.uuid or "",
+            "display_name": self.config.display_name or socket.gethostname(),
+            "purpose": self.config.purpose or "",
+            "tags": self.config.tags or [],
+            "capabilities": capabilities,
+            "public_key_fingerprint": fingerprint,
+            "first_seen": now,  # Server will use stored value if exists
+            "created_by": "auto",
+        }
+
+        # Build client info
+        client_info = ClientInfo.create_local(
+            self.client_id,
+            self.tunnel_port,
+            identity_uuid=self.config.uuid
+        )
+
+        # Build full registration payload
+        registration = {
+            "identity": identity,
+            "client_info": client_info.to_dict()
+        }
 
         # Send registration via SSH exec channel
         stdin, stdout, stderr = self.ssh_client.exec_command(
-            f"register {client_info.to_dict()}"
+            f"register {json.dumps(registration)}"
         )
         result = stdout.read().decode().strip()
         logger.info(f"Registration result: {result}")

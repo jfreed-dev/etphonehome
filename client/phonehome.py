@@ -10,6 +10,7 @@ import logging
 import signal
 import sys
 import time
+import uuid as uuid_mod
 from pathlib import Path
 
 from client.config import Config, ensure_config_dir, generate_client_id, DEFAULT_KEY_FILE
@@ -70,6 +71,24 @@ def main():
         help="Initialize config directory with defaults"
     )
     parser.add_argument(
+        "--name",
+        help="Display name for this client"
+    )
+    parser.add_argument(
+        "--purpose",
+        help="Purpose/role of this client (e.g., 'Development', 'Production')"
+    )
+    parser.add_argument(
+        "--tags",
+        nargs="+",
+        help="Tags for this client"
+    )
+    parser.add_argument(
+        "--show-uuid",
+        action="store_true",
+        help="Show client UUID and exit"
+    )
+    parser.add_argument(
         "-v", "--verbose",
         action="store_true",
         help="Enable verbose logging"
@@ -95,14 +114,60 @@ def main():
         config_dir = ensure_config_dir()
         config = Config()
         config.client_id = generate_client_id()
+        config.uuid = str(uuid_mod.uuid4())
+
+        # Required: display_name
+        if args.name:
+            config.display_name = args.name
+        else:
+            while not config.display_name:
+                config.display_name = input("Display name (e.g., 'My Laptop'): ").strip()
+                if not config.display_name:
+                    print("Display name is required.")
+
+        # Required: purpose
+        if args.purpose:
+            config.purpose = args.purpose
+        else:
+            while not config.purpose:
+                config.purpose = input("Purpose (e.g., 'Development', 'CI Runner', 'Production'): ").strip()
+                if not config.purpose:
+                    print("Purpose is required.")
+
+        # Optional: tags
+        if args.tags:
+            config.tags = args.tags
+        else:
+            tags_input = input("Tags (comma-separated, optional): ").strip()
+            config.tags = [t.strip() for t in tags_input.split(",") if t.strip()]
+
         config.save()
-        print(f"Initialized config directory: {config_dir}")
+        print(f"\nInitialized config directory: {config_dir}")
         print(f"Config file: {config_dir / 'config.yaml'}")
+        print(f"\nClient identity:")
+        print(f"  UUID: {config.uuid}")
+        print(f"  Name: {config.display_name}")
+        print(f"  Purpose: {config.purpose}")
+        if config.tags:
+            print(f"  Tags: {', '.join(config.tags)}")
         print(f"\nNext steps:")
         print(f"1. Edit the config file with your server details")
         print(f"2. Run: phonehome --generate-key")
         print(f"3. Add the public key to your server")
         print(f"4. Run: phonehome")
+        return 0
+
+    # Handle --show-uuid
+    if args.show_uuid:
+        config = Config.load(args.config)
+        if config.uuid:
+            print(f"UUID: {config.uuid}")
+            print(f"Name: {config.display_name or '(not set)'}")
+            print(f"Purpose: {config.purpose or '(not set)'}")
+            if config.tags:
+                print(f"Tags: {', '.join(config.tags)}")
+        else:
+            print("No UUID assigned. Run 'phonehome --init' first.")
         return 0
 
     # Load configuration
@@ -119,6 +184,12 @@ def main():
         config.key_file = str(args.key)
     if args.client_id:
         config.client_id = args.client_id
+    if args.name:
+        config.display_name = args.name
+    if args.purpose:
+        config.purpose = args.purpose
+    if args.tags:
+        config.tags = args.tags
     if args.verbose:
         config.log_level = "DEBUG"
 
@@ -141,12 +212,15 @@ def main():
         allowed_paths=config.allowed_paths if config.allowed_paths else None
     )
 
+    # Ensure UUID exists for identity tracking
+    if not config.uuid:
+        config.uuid = str(uuid_mod.uuid4())
+        config.save()
+        logger.info(f"Generated new UUID: {config.uuid}")
+
     # Create tunnel
     tunnel = ReverseTunnel(
-        server_host=config.server_host,
-        server_port=config.server_port,
-        server_user=config.server_user,
-        key_file=config.key_file,
+        config=config,
         client_id=config.client_id,
         request_handler=agent.handle_request,
     )
