@@ -121,6 +121,36 @@ After running `--init` and `--generate-key`:
 2. Edit `~/.etphonehome/config.yaml` with server details (optional if using CLI flags)
 3. Connect: `phonehome` or `./run.sh`
 
+### Running as a Service (Linux)
+
+Install the client as a systemd service for automatic startup and reconnection:
+
+```bash
+# User service (no root required)
+./scripts/install-service.sh --user
+systemctl --user start phonehome
+systemctl --user enable phonehome
+
+# Enable start on boot (before login)
+loginctl enable-linger $USER
+```
+
+Service commands:
+
+```bash
+systemctl --user status phonehome    # Check status
+systemctl --user restart phonehome   # Restart
+journalctl --user -u phonehome -f    # View logs
+```
+
+For system-wide installation (requires root):
+
+```bash
+sudo ./scripts/install-service.sh --system
+sudo systemctl enable phonehome@username
+sudo systemctl start phonehome@username
+```
+
 ## MCP Tools
 
 Once connected, Claude CLI can use these tools:
