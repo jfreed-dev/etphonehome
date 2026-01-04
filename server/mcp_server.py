@@ -39,16 +39,40 @@ _connections: dict[str, ClientConnection] = {}
 async def get_connection(client_id: str = None) -> ClientConnection:
     """Get a connection to a client."""
     if client_id is None:
+        # Try active registry first
         client = await registry.get_active_client()
-        if not client:
-            raise RuntimeError("No active client. Use list_clients and select_client first.")
-        client_id = client.info.client_id
-        port = client.info.tunnel_port
+        if client:
+            client_id = client.info.client_id
+            port = client.info.tunnel_port
+        else:
+            # Fall back to stored clients - find one with a valid tunnel
+            stored_clients = store.list_all()
+            for sc in stored_clients:
+                if sc.last_client_info and sc.last_client_info.get("tunnel_port"):
+                    port = sc.last_client_info["tunnel_port"]
+                    client_id = sc.last_client_info.get("client_id", sc.identity.uuid)
+                    break
+            else:
+                raise RuntimeError("No active client. Use list_clients and select_client first.")
     else:
+        # Try active registry first
         client = await registry.get_client(client_id)
-        if not client:
-            raise RuntimeError(f"Client not found: {client_id}")
-        port = client.info.tunnel_port
+        if client:
+            port = client.info.tunnel_port
+        else:
+            # Look up in store by client_id or UUID
+            stored = store.get_by_uuid(client_id)
+            if not stored:
+                # Try to find by client_id in last_client_info
+                for sc in store.list_all():
+                    if sc.last_client_info and sc.last_client_info.get("client_id") == client_id:
+                        stored = sc
+                        break
+            if not stored or not stored.last_client_info:
+                raise RuntimeError(f"Client not found: {client_id}")
+            port = stored.last_client_info.get("tunnel_port")
+            if not port:
+                raise RuntimeError(f"No tunnel port for client: {client_id}")
 
     if client_id not in _connections:
         _connections[client_id] = ClientConnection("127.0.0.1", port)
