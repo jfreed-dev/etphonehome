@@ -26,6 +26,7 @@ fi
 echo "✓ Virtual environment: $VENV_DIR"
 
 # Activate and install dependencies
+# shellcheck source=/dev/null
 source "$VENV_DIR/bin/activate"
 pip install -q --upgrade pip
 
