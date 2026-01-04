@@ -135,6 +135,9 @@ Once connected, Claude CLI can use these tools:
 | `list_files` | List directory contents |
 | `upload_file` | Send file from server to client |
 | `download_file` | Fetch file from client to server |
+| `find_client` | Search clients by name, purpose, tags, or capabilities |
+| `describe_client` | Get detailed information about a specific client |
+| `update_client` | Update client metadata (display_name, purpose, tags) |
 
 ## Configuration
 
