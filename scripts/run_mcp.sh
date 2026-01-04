@@ -7,7 +7,7 @@ REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(dirname "$REAL_SCRIPT")"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-cd "$PROJECT_DIR"
+cd "$PROJECT_DIR" || exit 1
 
 # Use virtual environment if it exists, otherwise use system Python
 if [ -f "$PROJECT_DIR/venv/bin/python" ]; then
