@@ -8,8 +8,8 @@
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Client (tunnel, agent, config, CLI) | ✓ Complete | ~723 lines across 4 modules |
-| Server (MCP tools, client registry) | ✓ Complete | ~593 lines across 3 modules |
+| Client (tunnel, agent, config, CLI, updater, capabilities) | ✓ Complete | ~1000 lines across 6 modules |
+| Server (MCP tools, client registry, store) | ✓ Complete | ~1270 lines across 4 modules |
 | Protocol (JSON-RPC, length-prefixed) | ✓ Complete | 132 lines in shared/protocol.py |
 | Build system (PyInstaller + portable) | ✓ Complete | Linux + Windows |
 | CI/CD (GitHub Actions) | ✓ Complete | Auto-releases on version tags |
