@@ -199,6 +199,7 @@ jobs:
     needs: [lint, test, lint-powershell, security]
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-22.04
@@ -211,6 +212,7 @@ jobs:
             arch: aarch64
             script: build/portable/package_linux.sh
             artifact: phonehome-linux-aarch64.tar.gz
+            use_qemu: true
           - os: windows-2022
             name: windows-amd64
             script: build/portable/package_windows.ps1
@@ -220,11 +222,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build portable package (Linux)
-        if: runner.os == 'Linux'
+      - name: Set up QEMU (ARM64)
+        if: matrix.use_qemu
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build portable package (Linux native)
+        if: runner.os == 'Linux' && !matrix.use_qemu
         run: |
           chmod +x ${{ matrix.script }}
           ${{ matrix.script }} ${{ matrix.arch }}
+
+      - name: Build portable package (Linux ARM64 via QEMU)
+        if: runner.os == 'Linux' && matrix.use_qemu
+        run: |
+          chmod +x ${{ matrix.script }}
+          # Run build in ARM64 container with QEMU emulation
+          docker run --rm --platform linux/arm64 \
+            -v "$PWD:/work" -w /work \
+            arm64v8/python:3.12-slim \
+            bash -c "apt-get update && apt-get install -y curl && bash ${{ matrix.script }} ${{ matrix.arch }}"
 
       - name: Build portable package (Windows)
         if: runner.os == 'Windows'
