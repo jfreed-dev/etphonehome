@@ -48,9 +48,9 @@ rm "$PYTHON_ARCHIVE"
 # Install dependencies
 echo "Installing dependencies..."
 ./python/bin/pip3 install --target=packages --no-cache-dir \
-    paramiko>=3.0.0 \
-    pyyaml>=6.0 \
-    cryptography>=41.0.0
+    "paramiko>=3.0.0" \
+    "pyyaml>=6.0" \
+    "cryptography>=41.0.0"
 
 # Copy application code
 echo "Copying application code..."
@@ -68,7 +68,9 @@ touch app/shared/__init__.py
 echo "Copying scripts..."
 cp "$SCRIPT_DIR/run.sh" ./
 cp "$SCRIPT_DIR/setup.sh" ./
-chmod +x run.sh setup.sh
+cp "$SCRIPT_DIR/install.sh" ./
+cp "$SCRIPT_DIR/uninstall.sh" ./
+chmod +x run.sh setup.sh install.sh uninstall.sh
 
 # Create version file
 echo "$PYTHON_VERSION" > python_version.txt
@@ -90,5 +92,8 @@ echo
 echo "To deploy:"
 echo "  tar xzf $ARCHIVE_NAME"
 echo "  cd phonehome"
+echo "  ./install.sh              # Install to ~/.local/bin (recommended)"
+echo
+echo "Or run directly without installing:"
 echo "  ./setup.sh"
 echo "  ./run.sh -s your-server.com"
