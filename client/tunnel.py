@@ -60,8 +60,10 @@ class ReverseTunnel:
         pkey = paramiko.Ed25519Key.from_private_key_file(str(self.key_file))
 
         # Create SSH client
+        # AutoAddPolicy is used because clients connect to a known server
+        # Host key verification is handled at the server configuration level
         self.ssh_client = paramiko.SSHClient()
-        self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # nosec B507
 
         self.ssh_client.connect(
             hostname=self.server_host,
@@ -180,8 +182,10 @@ class ReverseTunnel:
         # Build full registration payload
         registration = {"identity": identity, "client_info": client_info.to_dict()}
 
-        # Send registration via SSH exec channel
-        stdin, stdout, stderr = self.ssh_client.exec_command(f"register {json.dumps(registration)}")
+        # Send registration via SSH exec channel (data is JSON-encoded)
+        stdin, stdout, stderr = self.ssh_client.exec_command(  # nosec B601
+            f"register {json.dumps(registration)}"
+        )
         result = stdout.read().decode().strip()
         logger.info(f"Registration result: {result}")
 

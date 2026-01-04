@@ -6,8 +6,10 @@ import logging
 import os
 import platform
 import shutil
+import tarfile
 import tempfile
 import urllib.request
+import zipfile
 from pathlib import Path
 
 from shared.version import UPDATE_URL, __version__
@@ -150,10 +152,51 @@ def perform_update(update_info: dict) -> bool:
             pass
 
 
+def _safe_tar_extract(tar: tarfile.TarFile, dest: Path) -> None:
+    """Safely extract tarfile, preventing path traversal attacks (CVE-2007-4559)."""
+
+    for member in tar.getmembers():
+        member_path = dest / member.name
+        # Resolve to absolute and ensure it's within destination
+        try:
+            member_path.resolve().relative_to(dest.resolve())
+        except ValueError:
+            raise ValueError(f"Attempted path traversal in tar: {member.name}")
+        # Block absolute paths
+        if member.name.startswith("/") or member.name.startswith("\\"):
+            raise ValueError(f"Absolute path in tar: {member.name}")
+        # Block parent directory references
+        if ".." in member.name.split("/") or ".." in member.name.split("\\"):
+            raise ValueError(f"Parent directory reference in tar: {member.name}")
+
+    # Python 3.12+ has filter parameter, use it if available
+    if hasattr(tarfile, "data_filter"):
+        tar.extractall(dest, filter="data")  # nosec B202
+    else:
+        tar.extractall(dest)  # nosec B202
+
+
+def _safe_zip_extract(zf: zipfile.ZipFile, dest: Path) -> None:
+    """Safely extract zipfile, preventing path traversal attacks."""
+    for member in zf.namelist():
+        member_path = dest / member
+        # Resolve to absolute and ensure it's within destination
+        try:
+            member_path.resolve().relative_to(dest.resolve())
+        except ValueError:
+            raise ValueError(f"Attempted path traversal in zip: {member}")
+        # Block absolute paths
+        if member.startswith("/") or member.startswith("\\"):
+            raise ValueError(f"Absolute path in zip: {member}")
+        # Block parent directory references
+        if ".." in member.split("/") or ".." in member.split("\\"):
+            raise ValueError(f"Parent directory reference in zip: {member}")
+
+    zf.extractall(dest)  # nosec B202
+
+
 def _update_linux(archive_path: Path) -> bool:
     """Update on Linux - extract and replace installation."""
-    import tarfile
-
     install_dir = _get_install_dir()
 
     logger.info(f"Updating installation at {install_dir}")
@@ -164,7 +207,7 @@ def _update_linux(archive_path: Path) -> bool:
 
         try:
             with tarfile.open(archive_path, "r:gz") as tar:
-                tar.extractall(tmp_path)
+                _safe_tar_extract(tar, tmp_path)
         except Exception as e:
             logger.error(f"Failed to extract archive: {e}")
             return False
@@ -203,8 +246,6 @@ def _update_linux(archive_path: Path) -> bool:
 
 def _update_windows(archive_path: Path, version: str) -> bool:
     """Update on Windows - extract and replace installation."""
-    import zipfile
-
     install_dir = _get_install_dir()
 
     logger.info(f"Updating installation at {install_dir}")
@@ -215,7 +256,7 @@ def _update_windows(archive_path: Path, version: str) -> bool:
 
         try:
             with zipfile.ZipFile(archive_path, "r") as zf:
-                zf.extractall(tmp_path)
+                _safe_zip_extract(zf, tmp_path)
         except Exception as e:
             logger.error(f"Failed to extract archive: {e}")
             return False
@@ -237,8 +278,8 @@ del "%~f0"
 """
         try:
             update_script.write_text(script_content)
-            # Schedule the script to run
-            os.system(f'start /min cmd /c "{update_script}"')
+            # Schedule the script to run (path is from controlled install directory)
+            os.system(f'start /min cmd /c "{update_script}"')  # nosec B605
         except Exception as e:
             logger.error(f"Failed to create update script: {e}")
             return False

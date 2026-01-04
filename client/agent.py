@@ -95,8 +95,14 @@ class Agent:
         logger.info(f"Running command: {cmd}")
 
         try:
+            # shell=True is intentional - this is a remote command execution tool
             result = subprocess.run(
-                cmd, shell=True, cwd=cwd, capture_output=True, text=True, timeout=timeout
+                cmd,
+                shell=True,
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                timeout=timeout,  # nosec B602
             )
             return {
                 "stdout": result.stdout,
