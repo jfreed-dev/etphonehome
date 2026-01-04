@@ -1,14 +1,12 @@
 """Registry for tracking connected clients."""
 
 import asyncio
-import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, Optional
 
-from shared.protocol import ClientInfo, ClientIdentity
-from server.client_store import ClientStore, StoredClient
+from server.client_store import ClientStore
+from shared.protocol import ClientIdentity, ClientInfo
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +14,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RegisteredClient:
     """A currently connected client."""
+
     identity: ClientIdentity
     info: ClientInfo
     last_seen: datetime = field(default_factory=datetime.utcnow)
@@ -46,10 +45,10 @@ class ClientRegistry:
 
     def __init__(self, store: ClientStore = None):
         self.store = store or ClientStore()
-        self._active_clients: Dict[str, RegisteredClient] = {}  # Keyed by UUID
-        self._uuid_to_client_id: Dict[str, str] = {}  # UUID -> client_id mapping
-        self._client_id_to_uuid: Dict[str, str] = {}  # client_id -> UUID mapping
-        self._active_client_uuid: Optional[str] = None
+        self._active_clients: dict[str, RegisteredClient] = {}  # Keyed by UUID
+        self._uuid_to_client_id: dict[str, str] = {}  # UUID -> client_id mapping
+        self._client_id_to_uuid: dict[str, str] = {}  # client_id -> UUID mapping
+        self._active_client_uuid: str | None = None
         self._lock = asyncio.Lock()
 
     async def register(self, registration: dict) -> None:
@@ -92,9 +91,7 @@ class ClientRegistry:
 
             # Track as active connection
             self._active_clients[uuid] = RegisteredClient(
-                identity=identity,
-                info=client_info,
-                last_seen=datetime.utcnow()
+                identity=identity, info=client_info, last_seen=datetime.utcnow()
             )
 
             # Update mappings
@@ -119,6 +116,7 @@ class ClientRegistry:
         """
         # Create a minimal identity
         import uuid as uuid_mod
+
         generated_uuid = str(uuid_mod.uuid4())
 
         registration = {
@@ -132,7 +130,7 @@ class ClientRegistry:
                 "first_seen": datetime.utcnow().isoformat() + "Z",
                 "created_by": "legacy",
             },
-            "client_info": info.to_dict()
+            "client_info": info.to_dict(),
         }
         await self.register(registration)
 
@@ -157,7 +155,9 @@ class ClientRegistry:
                     if self._active_clients:
                         self._active_client_uuid = next(iter(self._active_clients.keys()))
                         new_active = self._active_clients[self._active_client_uuid]
-                        logger.info(f"Auto-selected new active client: {new_active.identity.display_name}")
+                        logger.info(
+                            f"Auto-selected new active client: {new_active.identity.display_name}"
+                        )
 
     async def unregister_by_client_id(self, client_id: str) -> None:
         """Remove a client by client_id."""
@@ -224,7 +224,7 @@ class ClientRegistry:
 
             return result
 
-    async def get_active_client(self) -> Optional[RegisteredClient]:
+    async def get_active_client(self) -> RegisteredClient | None:
         """Get the currently selected client."""
         async with self._lock:
             if self._active_client_uuid and self._active_client_uuid in self._active_clients:
@@ -256,7 +256,7 @@ class ClientRegistry:
 
             return False
 
-    async def get_client(self, identifier: str) -> Optional[RegisteredClient]:
+    async def get_client(self, identifier: str) -> RegisteredClient | None:
         """Get a specific client by UUID or client_id."""
         async with self._lock:
             # Try as UUID
@@ -276,7 +276,7 @@ class ClientRegistry:
         purpose: str = None,
         tags: list[str] = None,
         capabilities: list[str] = None,
-        online_only: bool = False
+        online_only: bool = False,
     ) -> list[dict]:
         """
         Search for clients matching criteria.
@@ -316,7 +316,9 @@ class ClientRegistry:
                 # Apply additional filters
                 if tags and not all(t in stored.identity.tags for t in tags):
                     continue
-                if capabilities and not all(c in stored.identity.capabilities for c in capabilities):
+                if capabilities and not all(
+                    c in stored.identity.capabilities for c in capabilities
+                ):
                     continue
 
                 client_data = {
@@ -338,7 +340,7 @@ class ClientRegistry:
 
             return results
 
-    async def describe_client(self, identifier: str) -> Optional[dict]:
+    async def describe_client(self, identifier: str) -> dict | None:
         """Get detailed information about a specific client."""
         async with self._lock:
             # Find UUID
@@ -389,12 +391,8 @@ class ClientRegistry:
             return result
 
     async def update_client(
-        self,
-        uuid: str,
-        display_name: str = None,
-        purpose: str = None,
-        tags: list[str] = None
-    ) -> Optional[dict]:
+        self, uuid: str, display_name: str = None, purpose: str = None, tags: list[str] = None
+    ) -> dict | None:
         """Update client metadata."""
         async with self._lock:
             updated = self.store.update_identity(uuid, display_name, purpose, tags)
@@ -413,12 +411,12 @@ class ClientRegistry:
             }
 
     @property
-    def active_client_uuid(self) -> Optional[str]:
+    def active_client_uuid(self) -> str | None:
         """Get the UUID of the currently selected client."""
         return self._active_client_uuid
 
     @property
-    def active_client_id(self) -> Optional[str]:
+    def active_client_id(self) -> str | None:
         """Get the client_id of the currently selected client (for backwards compat)."""
         if self._active_client_uuid:
             return self._uuid_to_client_id.get(self._active_client_uuid)

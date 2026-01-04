@@ -1,9 +1,8 @@
 """Configuration management for the phone home client."""
 
-import os
-from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Optional
+from pathlib import Path
+
 import yaml
 
 DEFAULT_CONFIG_DIR = Path.home() / ".etphonehome"
@@ -14,6 +13,7 @@ DEFAULT_KEY_FILE = DEFAULT_CONFIG_DIR / "id_ed25519"
 @dataclass
 class Config:
     """Client configuration."""
+
     # Server connection
     server_host: str = "localhost"
     server_port: int = 443
@@ -21,13 +21,13 @@ class Config:
     key_file: str = str(DEFAULT_KEY_FILE)
 
     # Client identity (persistent across reconnects)
-    uuid: Optional[str] = None              # Stable UUID (generated once)
-    display_name: Optional[str] = None      # Human-friendly name
-    purpose: str = ""                       # "Development", "CI Runner", etc.
+    uuid: str | None = None  # Stable UUID (generated once)
+    display_name: str | None = None  # Human-friendly name
+    purpose: str = ""  # "Development", "CI Runner", etc.
     tags: list[str] = field(default_factory=list)  # User-defined tags
 
     # Legacy/runtime identification
-    client_id: Optional[str] = None
+    client_id: str | None = None
     agent_port: int = 0  # 0 = auto-assign
 
     # Connection settings
@@ -37,7 +37,7 @@ class Config:
     log_level: str = "INFO"
 
     @classmethod
-    def load(cls, path: Optional[Path] = None) -> "Config":
+    def load(cls, path: Path | None = None) -> "Config":
         """Load configuration from file."""
         path = path or DEFAULT_CONFIG_FILE
 
@@ -68,7 +68,7 @@ class Config:
             log_level=data.get("log_level", "INFO"),
         )
 
-    def save(self, path: Optional[Path] = None) -> None:
+    def save(self, path: Path | None = None) -> None:
         """Save configuration to file."""
         path = path or DEFAULT_CONFIG_FILE
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -106,8 +106,9 @@ def ensure_config_dir() -> Path:
 
 def generate_client_id() -> str:
     """Generate a unique client ID."""
-    import uuid
     import socket
+    import uuid
+
     hostname = socket.gethostname()
     short_uuid = uuid.uuid4().hex[:8]
     return f"{hostname}-{short_uuid}"

@@ -44,7 +44,8 @@ echo
 echo -e "${YELLOW}[3/3] Running shellcheck...${NC}"
 SHELL_SCRIPTS=$(find build/portable build/pyinstaller scripts -name "*.sh" 2>/dev/null || true)
 if [ -n "$SHELL_SCRIPTS" ]; then
-    if echo "$SHELL_SCRIPTS" | xargs shellcheck; then
+    # Exclude SC1091: Can't follow non-constant source (virtualenv activate scripts)
+    if echo "$SHELL_SCRIPTS" | xargs shellcheck --exclude=SC1091; then
         echo -e "${GREEN}  shellcheck: PASSED${NC}"
     else
         echo -e "${RED}  shellcheck: FAILED${NC}"

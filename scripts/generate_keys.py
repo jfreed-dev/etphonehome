@@ -8,25 +8,20 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from client.tunnel import generate_ssh_keypair
 from client.config import DEFAULT_KEY_FILE, ensure_config_dir
+from client.tunnel import generate_ssh_keypair
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate SSH keypair for ET Phone Home"
-    )
+    parser = argparse.ArgumentParser(description="Generate SSH keypair for ET Phone Home")
     parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         type=Path,
         default=DEFAULT_KEY_FILE,
-        help=f"Output path for private key (default: {DEFAULT_KEY_FILE})"
+        help=f"Output path for private key (default: {DEFAULT_KEY_FILE})",
     )
-    parser.add_argument(
-        "-f", "--force",
-        action="store_true",
-        help="Overwrite existing key"
-    )
+    parser.add_argument("-f", "--force", action="store_true", help="Overwrite existing key")
 
     args = parser.parse_args()
 
@@ -39,7 +34,7 @@ def main():
     generate_ssh_keypair(args.output)
 
     pub_path = args.output.with_suffix(".pub")
-    print(f"Generated SSH keypair:")
+    print("Generated SSH keypair:")
     print(f"  Private key: {args.output}")
     print(f"  Public key:  {pub_path}")
     print()
