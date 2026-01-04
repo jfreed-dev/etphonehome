@@ -133,6 +133,57 @@ ssh root@YOUR_SERVER_IP 'systemctl restart etphonehome-ssh'
 ssh root@YOUR_SERVER_IP 'journalctl -u etphonehome-ssh -f'
 ```
 
+## MCP Server Configuration
+
+The MCP server runs on the VPS and is invoked via SSH by Claude CLI.
+
+### Claude CLI Configuration
+
+Add to your Claude Code settings (`~/.claude/settings.json` or project `.claude/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "etphonehome": {
+      "command": "ssh",
+      "args": [
+        "-i", "/path/to/.project_settings/ssh-keys/hostinger_mcpsrv",
+        "-o", "StrictHostKeyChecking=no",
+        "root@YOUR_SERVER_IP",
+        "/opt/etphonehome/run_mcp.sh"
+      ]
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_clients` | List all connected clients with status and metadata |
+| `select_client` | Select a client for subsequent commands |
+| `find_client` | Search clients by name, purpose, tags, or capabilities |
+| `describe_client` | Get detailed info about a specific client |
+| `update_client` | Update client metadata (display_name, purpose, tags) |
+| `run_command` | Execute shell command on active client |
+| `read_file` | Read file from active client |
+| `write_file` | Write file to active client |
+| `list_files` | List directory contents on active client |
+| `upload_file` | Upload file from server to client |
+| `download_file` | Download file from client to server |
+
+### Client Identity System
+
+Clients now have persistent identities stored in `/home/etphonehome/.etphonehome-server/clients.json`:
+
+- **UUID**: Stable identifier across reconnects
+- **Display Name**: Human-friendly name
+- **Purpose**: Role classification (Development, Production, etc.)
+- **Tags**: User-defined labels
+- **Capabilities**: Auto-detected (docker, python version, GPU, etc.)
+- **SSH Key Fingerprint**: Security verification
+
 ## Documentation Links
 
 - Hostinger API Docs: https://developers.hostinger.com/
