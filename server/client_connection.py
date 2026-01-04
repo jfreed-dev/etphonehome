@@ -2,10 +2,8 @@
 
 import asyncio
 import logging
-import socket
-from typing import Any, Optional
 
-from shared.protocol import Request, Response, encode_message, decode_message
+from shared.protocol import Request, Response, encode_message
 
 logger = logging.getLogger(__name__)
 
@@ -17,16 +15,15 @@ class ClientConnection:
         self.host = host
         self.port = port
         self.timeout = timeout
-        self._reader: Optional[asyncio.StreamReader] = None
-        self._writer: Optional[asyncio.StreamWriter] = None
+        self._reader: asyncio.StreamReader | None = None
+        self._writer: asyncio.StreamWriter | None = None
         self._lock = asyncio.Lock()
         self._request_id = 0
 
     async def connect(self) -> None:
         """Establish connection to the client's tunnel."""
         self._reader, self._writer = await asyncio.wait_for(
-            asyncio.open_connection(self.host, self.port),
-            timeout=self.timeout
+            asyncio.open_connection(self.host, self.port), timeout=self.timeout
         )
         logger.debug(f"Connected to client tunnel at {self.host}:{self.port}")
 
@@ -48,11 +45,7 @@ class ClientConnection:
                 await self.connect()
 
             self._request_id += 1
-            request = Request(
-                method=method,
-                params=params or {},
-                id=str(self._request_id)
-            )
+            request = Request(method=method, params=params or {}, id=str(self._request_id))
 
             try:
                 # Send request
@@ -61,10 +54,7 @@ class ClientConnection:
                 await self._writer.drain()
 
                 # Read response
-                response_data = await asyncio.wait_for(
-                    self._read_response(),
-                    timeout=self.timeout
-                )
+                response_data = await asyncio.wait_for(self._read_response(), timeout=self.timeout)
                 return Response.from_json(response_data)
 
             except Exception as e:
@@ -97,21 +87,16 @@ class ClientConnection:
 
     async def read_file(self, path: str, encoding: str = "utf-8") -> dict:
         """Read a file from the client."""
-        response = await self.send_request("read_file", {
-            "path": path,
-            "encoding": encoding
-        })
+        response = await self.send_request("read_file", {"path": path, "encoding": encoding})
         if response.error:
             raise RuntimeError(f"Read failed: {response.error['message']}")
         return response.result
 
     async def write_file(self, path: str, content: str, binary: bool = False) -> dict:
         """Write a file to the client."""
-        response = await self.send_request("write_file", {
-            "path": path,
-            "content": content,
-            "binary": binary
-        })
+        response = await self.send_request(
+            "write_file", {"path": path, "content": content, "binary": binary}
+        )
         if response.error:
             raise RuntimeError(f"Write failed: {response.error['message']}")
         return response.result

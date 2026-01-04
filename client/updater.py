@@ -6,13 +6,11 @@ import logging
 import os
 import platform
 import shutil
-import sys
 import tempfile
 import urllib.request
 from pathlib import Path
-from typing import Optional
 
-from shared.version import __version__, UPDATE_URL
+from shared.version import UPDATE_URL, __version__
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +43,7 @@ def get_platform_key() -> str:
 
 def _compare_versions(v1: str, v2: str) -> int:
     """Compare version strings. Returns >0 if v1 > v2, <0 if v1 < v2, 0 if equal."""
+
     def parse(v):
         # Handle versions like "0.1.0" or "0.1.0-beta"
         base = v.split("-")[0]
@@ -58,7 +57,7 @@ def _compare_versions(v1: str, v2: str) -> int:
     return 0
 
 
-def check_for_update(url: str = UPDATE_URL) -> Optional[dict]:
+def check_for_update(url: str = UPDATE_URL) -> dict | None:
     """Check if a newer version is available.
 
     Returns update info dict if update available, None otherwise.

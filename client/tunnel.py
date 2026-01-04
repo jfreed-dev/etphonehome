@@ -1,18 +1,18 @@
 """SSH tunnel management for reverse connections."""
 
 import json
+import logging
 import socket
 import threading
-import logging
-import time
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import paramiko
 
-from shared.protocol import ClientInfo, Request, Response, encode_message, decode_message
 from client.capabilities import detect_capabilities, get_ssh_key_fingerprint
+from shared.protocol import ClientInfo, Request, Response, decode_message, encode_message
 
 if TYPE_CHECKING:
     from client.config import Config
@@ -37,12 +37,12 @@ class ReverseTunnel:
         self.client_id = client_id
         self.request_handler = request_handler
 
-        self.ssh_client: Optional[paramiko.SSHClient] = None
-        self.transport: Optional[paramiko.Transport] = None
+        self.ssh_client: paramiko.SSHClient | None = None
+        self.transport: paramiko.Transport | None = None
         self.tunnel_port: int = 0
         self.running = False
-        self._agent_thread: Optional[threading.Thread] = None
-        self._agent_socket: Optional[socket.socket] = None
+        self._agent_thread: threading.Thread | None = None
+        self._agent_socket: socket.socket | None = None
 
     def connect(self) -> int:
         """
@@ -112,11 +112,7 @@ class ReverseTunnel:
                     continue
 
                 logger.debug("Accepted tunnel connection")
-                thread = threading.Thread(
-                    target=self._handle_channel,
-                    args=(chan,),
-                    daemon=True
-                )
+                thread = threading.Thread(target=self._handle_channel, args=(chan,), daemon=True)
                 thread.start()
             except Exception as e:
                 if self.running:
@@ -178,21 +174,14 @@ class ReverseTunnel:
 
         # Build client info
         client_info = ClientInfo.create_local(
-            self.client_id,
-            self.tunnel_port,
-            identity_uuid=self.config.uuid
+            self.client_id, self.tunnel_port, identity_uuid=self.config.uuid
         )
 
         # Build full registration payload
-        registration = {
-            "identity": identity,
-            "client_info": client_info.to_dict()
-        }
+        registration = {"identity": identity, "client_info": client_info.to_dict()}
 
         # Send registration via SSH exec channel
-        stdin, stdout, stderr = self.ssh_client.exec_command(
-            f"register {json.dumps(registration)}"
-        )
+        stdin, stdout, stderr = self.ssh_client.exec_command(f"register {json.dumps(registration)}")
         result = stdout.read().decode().strip()
         logger.info(f"Registration result: {result}")
 
@@ -250,7 +239,7 @@ def generate_ssh_keypair(key_path: Path) -> Path:
     private_bytes = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.OpenSSH,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
     key_path.write_bytes(private_bytes)
     key_path.chmod(0o600)
@@ -258,8 +247,7 @@ def generate_ssh_keypair(key_path: Path) -> Path:
     # Save public key
     public_key = private_key.public_key()
     public_bytes = public_key.public_bytes(
-        encoding=serialization.Encoding.OpenSSH,
-        format=serialization.PublicFormat.OpenSSH
+        encoding=serialization.Encoding.OpenSSH, format=serialization.PublicFormat.OpenSSH
     )
     pub_path = key_path.with_suffix(".pub")
     pub_path.write_bytes(public_bytes + b"\n")

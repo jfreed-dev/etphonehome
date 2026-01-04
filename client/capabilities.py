@@ -1,6 +1,5 @@
 """Auto-detect system capabilities for client identity."""
 
-import os
 import shutil
 import sys
 from pathlib import Path
@@ -108,8 +107,8 @@ def get_ssh_key_fingerprint(key_path: Path) -> str:
     Returns:
         SHA256 fingerprint string like "SHA256:abc123..."
     """
-    import hashlib
     import base64
+    import hashlib
 
     pub_path = key_path.with_suffix(".pub")
     if not pub_path.exists():
