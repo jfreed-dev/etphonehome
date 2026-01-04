@@ -14,12 +14,23 @@ DEFAULT_KEY_FILE = DEFAULT_CONFIG_DIR / "id_ed25519"
 @dataclass
 class Config:
     """Client configuration."""
+    # Server connection
     server_host: str = "localhost"
     server_port: int = 443
     server_user: str = "etphonehome"
     key_file: str = str(DEFAULT_KEY_FILE)
+
+    # Client identity (persistent across reconnects)
+    uuid: Optional[str] = None              # Stable UUID (generated once)
+    display_name: Optional[str] = None      # Human-friendly name
+    purpose: str = ""                       # "Development", "CI Runner", etc.
+    tags: list[str] = field(default_factory=list)  # User-defined tags
+
+    # Legacy/runtime identification
     client_id: Optional[str] = None
     agent_port: int = 0  # 0 = auto-assign
+
+    # Connection settings
     reconnect_delay: int = 5
     max_reconnect_delay: int = 300
     allowed_paths: list[str] = field(default_factory=list)
@@ -37,12 +48,20 @@ class Config:
             data = yaml.safe_load(f) or {}
 
         return cls(
-            server_host=data.get("server_host", cls.server_host),
-            server_port=data.get("server_port", cls.server_port),
-            server_user=data.get("server_user", cls.server_user),
+            # Server connection
+            server_host=data.get("server_host", "localhost"),
+            server_port=data.get("server_port", 443),
+            server_user=data.get("server_user", "etphonehome"),
             key_file=data.get("key_file", str(DEFAULT_KEY_FILE)),
+            # Client identity
+            uuid=data.get("uuid"),
+            display_name=data.get("display_name"),
+            purpose=data.get("purpose", ""),
+            tags=data.get("tags", []),
+            # Legacy/runtime
             client_id=data.get("client_id"),
             agent_port=data.get("agent_port", 0),
+            # Connection settings
             reconnect_delay=data.get("reconnect_delay", 5),
             max_reconnect_delay=data.get("max_reconnect_delay", 300),
             allowed_paths=data.get("allowed_paths", []),
@@ -55,12 +74,20 @@ class Config:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         data = {
+            # Server connection
             "server_host": self.server_host,
             "server_port": self.server_port,
             "server_user": self.server_user,
             "key_file": self.key_file,
+            # Client identity
+            "uuid": self.uuid,
+            "display_name": self.display_name,
+            "purpose": self.purpose,
+            "tags": self.tags,
+            # Legacy/runtime
             "client_id": self.client_id,
             "agent_port": self.agent_port,
+            # Connection settings
             "reconnect_delay": self.reconnect_delay,
             "max_reconnect_delay": self.max_reconnect_delay,
             "allowed_paths": self.allowed_paths,

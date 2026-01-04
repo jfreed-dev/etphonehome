@@ -19,6 +19,7 @@ from mcp.types import Tool, TextContent
 
 from server.client_registry import ClientRegistry
 from server.client_connection import ClientConnection
+from server.client_store import ClientStore
 
 # Configure logging to stderr (stdout is used for MCP protocol)
 logging.basicConfig(
@@ -28,8 +29,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("etphonehome")
 
-# Global registry
-registry = ClientRegistry()
+# Global store and registry
+store = ClientStore()
+registry = ClientRegistry(store)
 
 # Cache of client connections
 _connections: dict[str, ClientConnection] = {}
@@ -214,6 +216,81 @@ def create_server() -> Server:
                     "required": ["remote_path", "local_path"]
                 }
             ),
+            Tool(
+                name="find_client",
+                description="Search for clients by name, purpose, tags, or capabilities",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search term (matches display_name, purpose, hostname)"
+                        },
+                        "purpose": {
+                            "type": "string",
+                            "description": "Filter by purpose"
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Filter by tags (must have all)"
+                        },
+                        "capabilities": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Filter by capabilities (must have all)"
+                        },
+                        "online_only": {
+                            "type": "boolean",
+                            "description": "Only show currently connected clients"
+                        }
+                    }
+                }
+            ),
+            Tool(
+                name="describe_client",
+                description="Get detailed information about a specific client",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "uuid": {
+                            "type": "string",
+                            "description": "Client UUID"
+                        },
+                        "client_id": {
+                            "type": "string",
+                            "description": "Client ID (alternative to UUID)"
+                        }
+                    }
+                }
+            ),
+            Tool(
+                name="update_client",
+                description="Update client metadata (display_name, purpose, tags)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "uuid": {
+                            "type": "string",
+                            "description": "Client UUID"
+                        },
+                        "display_name": {
+                            "type": "string",
+                            "description": "New display name"
+                        },
+                        "purpose": {
+                            "type": "string",
+                            "description": "New purpose"
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "New tags (replaces existing)"
+                        }
+                    },
+                    "required": ["uuid"]
+                }
+            ),
         ]
 
     @server.call_tool()
@@ -234,9 +311,13 @@ async def _handle_tool(name: str, args: dict) -> Any:
 
     if name == "list_clients":
         clients = await registry.list_clients()
-        if not clients:
-            return {"clients": [], "message": "No clients connected"}
-        return {"clients": clients, "active_client": registry.active_client_id}
+        return {
+            "clients": clients,
+            "active_client": registry.active_client_uuid,
+            "online_count": registry.online_count,
+            "total_count": registry.total_count,
+            "message": "No clients connected" if not clients else None
+        }
 
     elif name == "select_client":
         client_id = args["client_id"]
@@ -300,6 +381,42 @@ async def _handle_tool(name: str, args: dict) -> Any:
             local_path.write_text(result["content"])
 
         return {"downloaded": str(local_path), "size": result["size"]}
+
+    elif name == "find_client":
+        results = await registry.find_clients(
+            query=args.get("query"),
+            purpose=args.get("purpose"),
+            tags=args.get("tags"),
+            capabilities=args.get("capabilities"),
+            online_only=args.get("online_only", False)
+        )
+        return {
+            "clients": results,
+            "count": len(results),
+            "message": "No matching clients found" if not results else None
+        }
+
+    elif name == "describe_client":
+        identifier = args.get("uuid") or args.get("client_id")
+        if not identifier:
+            return {"error": "Must provide either 'uuid' or 'client_id'"}
+
+        result = await registry.describe_client(identifier)
+        if not result:
+            return {"error": f"Client not found: {identifier}"}
+        return result
+
+    elif name == "update_client":
+        uuid = args["uuid"]
+        result = await registry.update_client(
+            uuid=uuid,
+            display_name=args.get("display_name"),
+            purpose=args.get("purpose"),
+            tags=args.get("tags")
+        )
+        if not result:
+            return {"error": f"Client not found: {uuid}"}
+        return {"updated": result, "message": f"Updated client: {uuid}"}
 
     else:
         raise ValueError(f"Unknown tool: {name}")

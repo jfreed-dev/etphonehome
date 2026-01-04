@@ -70,8 +70,34 @@ class Response:
 
 
 @dataclass
+class ClientIdentity:
+    """Persistent identity for a client (survives reconnects)."""
+    uuid: str                      # Stable UUID (generated once, persisted)
+    display_name: str              # Human-friendly name ("Jon's Laptop")
+    purpose: str                   # "Development", "CI Runner", "Production"
+    tags: list[str]                # ["linux", "docker", "gpu"]
+    capabilities: list[str]        # Auto-detected: ["python3.12", "docker", "nvidia-gpu"]
+    public_key_fingerprint: str    # SHA256 of SSH public key for verification
+    first_seen: str                # ISO timestamp
+    created_by: str = "auto"       # "auto" or "manual"
+    key_mismatch: bool = False     # True if key changed since registration
+    previous_fingerprint: Optional[str] = None  # Previous key if mismatched
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ClientIdentity":
+        # Handle missing optional fields for backwards compatibility
+        data.setdefault("created_by", "auto")
+        data.setdefault("key_mismatch", False)
+        data.setdefault("previous_fingerprint", None)
+        return cls(**data)
+
+
+@dataclass
 class ClientInfo:
-    """Information about a connected client."""
+    """Information about a connected client (per-connection data)."""
     client_id: str
     hostname: str
     platform: str
@@ -79,16 +105,19 @@ class ClientInfo:
     tunnel_port: int
     connected_at: str
     last_heartbeat: str
+    identity_uuid: Optional[str] = None  # Links to ClientIdentity
 
     def to_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict) -> "ClientInfo":
+        # Handle missing optional fields for backwards compatibility
+        data.setdefault("identity_uuid", None)
         return cls(**data)
 
     @classmethod
-    def create_local(cls, client_id: str, tunnel_port: int) -> "ClientInfo":
+    def create_local(cls, client_id: str, tunnel_port: int, identity_uuid: str = None) -> "ClientInfo":
         """Create ClientInfo for the local machine."""
         import getpass
         now = datetime.utcnow().isoformat() + "Z"
@@ -99,7 +128,8 @@ class ClientInfo:
             username=getpass.getuser(),
             tunnel_port=tunnel_port,
             connected_at=now,
-            last_heartbeat=now
+            last_heartbeat=now,
+            identity_uuid=identity_uuid
         )
 
 
