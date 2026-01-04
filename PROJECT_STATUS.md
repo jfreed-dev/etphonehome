@@ -14,31 +14,21 @@
 | Build system (PyInstaller + portable) | ✓ Complete | Linux + Windows |
 | CI/CD (GitHub Actions) | ✓ Complete | Auto-releases on version tags |
 | Documentation | ✓ Excellent | README.md, CLAUDE.md |
-| **Tests** | ✗ Missing | Critical gap |
+| **Tests** | ✓ Complete | 99 tests across 4 test files |
 
 ## Next Steps (Priority Order)
 
-### 1. Add Test Suite (Critical)
-- No tests exist despite `pytest` being configured in pyproject.toml
-- Create `tests/` directory
-- Required test files:
-  - `test_agent.py` - Agent request handlers
-  - `test_protocol.py` - JSON-RPC encoding/decoding
-  - `test_config.py` - YAML config management
-  - `test_client_registry.py` - Client tracking
-  - `test_integration.py` - End-to-end tunnel tests
-
-### 2. Production Deployment Artifacts
+### 1. Production Deployment Artifacts
 - Create `systemd` service file for server (`etphonehome-server.service`)
 - Add persistent logging with rotation (currently logs to stderr only)
 - Create deployment playbook (ansible/terraform/docker)
 
-### 3. Security Hardening
+### 2. Security Hardening
 - Code signing for Windows executables (avoid SmartScreen warnings)
 - Consider client certificate validation
 - Audit path validation logic in agent.py
 
-### 4. Minor Improvements
+### 3. Minor Improvements
 - Replace SSH exec-based client registration (`client/tunnel.py:156`) with dedicated handler
 - Add health check endpoint for monitoring
 - Windows Server setup documentation (currently Linux-focused)
@@ -77,7 +67,7 @@ python -m server.mcp_server
 ./build/portable/package_linux.sh
 ./build/pyinstaller/build_linux.sh
 
-# Test (once tests exist)
+# Test
 pytest
 pytest tests/test_agent.py -v
 
@@ -88,8 +78,7 @@ ruff check --fix .
 
 ## Known Gaps
 
-1. **No automated tests** - High risk for production
-2. **Registration uses SSH exec workaround** - Works but not elegant
-3. **No systemd service** - Manual server management required
-4. **No log rotation** - Logs only to stderr
-5. **No Windows Server docs** - Setup guide is Linux-focused
+1. **Registration uses SSH exec workaround** - Works but not elegant
+2. **No systemd service** - Manual server management required
+3. **No log rotation** - Logs only to stderr
+4. **No Windows Server docs** - Setup guide is Linux-focused
