@@ -90,6 +90,17 @@ Make it executable:
 chmod +x /opt/etphonehome/run_mcp.sh
 ```
 
+### Client Store Symlink (Required for Root Access)
+
+When the MCP server runs as root (via SSH), it looks for the client store in `/root/.etphonehome-server/`. However, client registrations are saved to `/home/etphonehome/.etphonehome-server/`. Create a symlink to share the store:
+
+```bash
+# On the server (as root)
+ln -sfn /home/etphonehome/.etphonehome-server /root/.etphonehome-server
+```
+
+This ensures the MCP server can see registered clients and their tunnel ports.
+
 Now Claude Code on your local machine can manage remote clients without SSHing manually.
 
 ## Available Commands
