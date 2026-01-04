@@ -85,6 +85,8 @@ Copy-Item "$ProjectDir\shared\*.py" "app\shared\" -Force
 Write-Host "Copying scripts..."
 Copy-Item "$ScriptDir\run.bat" ".\" -Force
 Copy-Item "$ScriptDir\setup.bat" ".\" -Force
+Copy-Item "$ScriptDir\install.ps1" ".\" -Force
+Copy-Item "$ScriptDir\uninstall.ps1" ".\" -Force
 
 # Create version files
 $PythonVersion | Out-File -FilePath "python_version.txt" -Encoding utf8
@@ -132,5 +134,8 @@ Write-Host ""
 Write-Host "To deploy:"
 Write-Host "  Expand-Archive $ArchiveName -DestinationPath ."
 Write-Host "  cd phonehome"
+Write-Host "  .\install.ps1              # Install to user profile (recommended)"
+Write-Host ""
+Write-Host "Or run directly without installing:"
 Write-Host "  .\setup.bat"
 Write-Host "  .\run.bat -s your-server.com"

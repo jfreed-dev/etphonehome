@@ -7,6 +7,7 @@ Creates a reverse SSH tunnel to the server, allowing remote access to this machi
 
 import argparse
 import logging
+import os
 import signal
 import sys
 import time
@@ -16,6 +17,7 @@ from pathlib import Path
 from client.config import Config, ensure_config_dir, generate_client_id, DEFAULT_KEY_FILE
 from client.agent import Agent
 from client.tunnel import ReverseTunnel, generate_ssh_keypair
+from client.updater import auto_update, get_current_version
 
 logger = logging.getLogger("phonehome")
 
@@ -199,6 +201,13 @@ def main():
         config.save()
 
     setup_logging(config.log_level)
+
+    logger.info(f"ET Phone Home v{get_current_version()}")
+
+    # Check for updates
+    if auto_update():
+        logger.info("Update installed. Restarting...")
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
     # Check for SSH key
     key_path = Path(config.key_file)
