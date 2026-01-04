@@ -1,14 +1,56 @@
 # Hostinger VPS Server Setup
 
-## Server Details
+## Deployed Server Details
 
-- **IP Address**: Stored in `.project_settings/hostinger_server_ip`
-- **SSH Access**: `ssh -i .project_settings/ssh-keys/hostinger_mcpsrv root@<IP>`
+- **VPS ID**: 1148367
+- **IP Address**: 72.60.125.7 (also in `.project_settings/hostinger_server_ip`)
+- **Firewall ID**: 169198
+- **Admin SSH (Port 22)**: `ssh -i .project_settings/ssh-keys/hostinger_mcpsrv root@72.60.125.7`
+- **Client SSH (Port 443)**: For reverse tunnel connections from phonehome clients
 - **API Key**: Stored in `.secrets/hostinger_api_key`
+
+## Server Architecture
+
+```
+                    ┌─────────────────────────────────────┐
+                    │     Hostinger VPS (72.60.125.7)     │
+                    │                                     │
+  Admin Access ─────┤►  Port 22  (sshd - root access)     │
+                    │                                     │
+  Client Tunnels ───┤►  Port 443 (sshd - etphonehome)     │
+                    │     └─ Dedicated SSH daemon         │
+                    │     └─ Accepts client keys only     │
+                    │     └─ Reverse tunnel enabled       │
+                    │                                     │
+                    └─────────────────────────────────────┘
+```
+
+## Client Connection
+
+Clients connect on port 443 (looks like HTTPS to firewalls):
+
+```yaml
+# Client config (~/.etphonehome/config.yaml)
+server_host: 72.60.125.7
+server_port: 443
+server_user: etphonehome
+key_file: ~/.etphonehome/id_ed25519
+```
+
+## Adding Client Keys
+
+To authorize a new client:
+
+```bash
+# Get the client's public key (from their ~/.etphonehome/id_ed25519.pub)
+# Add it to the server's authorized_keys:
+ssh -i .project_settings/ssh-keys/hostinger_mcpsrv root@72.60.125.7 \
+  'echo "ssh-ed25519 AAAA... client@hostname" >> /home/etphonehome/.etphonehome-server/authorized_keys'
+```
 
 ## Hostinger API Reference
 
-Base URL: `https://api.hostinger.com`
+Base URL: `https://developers.hostinger.com`
 
 ### Authentication
 
@@ -43,67 +85,52 @@ Authorization: Bearer <API_KEY>
 | POST | `/api/vps/v1/firewall/{id}/deactivate/{vmId}` | Deactivate on VPS |
 | POST | `/api/vps/v1/firewall/{id}/sync/{vmId}` | Sync rules to VPS |
 
-### SSH Key Management
+### Current Firewall Rules (ID: 169198)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/vps/v1/public-keys` | List SSH keys |
-| POST | `/api/vps/v1/public-keys` | Add SSH key |
-| DELETE | `/api/vps/v1/public-keys/{id}` | Remove SSH key |
-| POST | `/api/vps/v1/public-keys/attach/{vmId}` | Attach key to VPS |
+| Protocol | Port | Source | Description |
+|----------|------|--------|-------------|
+| TCP | 22 | any | Admin SSH access |
+| TCP | 443 | any | Client tunnel connections |
+| ICMP | any | any | Ping |
 
-### Server Configuration
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| PUT | `/api/vps/v1/virtual-machines/{id}/hostname` | Set hostname |
-| PUT | `/api/vps/v1/virtual-machines/{id}/nameservers` | Configure DNS |
-| PUT | `/api/vps/v1/virtual-machines/{id}/root-password` | Change root password |
-
-### Backups & Recovery
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/vps/v1/virtual-machines/{id}/backups` | List backups |
-| POST | `/api/vps/v1/virtual-machines/{id}/backups/{backupId}/restore` | Restore backup |
-| POST | `/api/vps/v1/virtual-machines/{id}/snapshot` | Create snapshot |
-| POST | `/api/vps/v1/virtual-machines/{id}/snapshot/restore` | Restore snapshot |
-
-## Server Deployment
-
-### Manual Docker Deployment
+### API Examples
 
 ```bash
-# SSH to server
-ssh -i .project_settings/ssh-keys/hostinger_mcpsrv root@$(cat .project_settings/hostinger_server_ip)
+# List VPS instances
+curl -s "https://developers.hostinger.com/api/vps/v1/virtual-machines" \
+  -H "Authorization: Bearer $(cat .secrets/hostinger_api_key)"
 
-# Install Docker (if needed)
-curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
-
-# Clone and deploy
-git clone https://github.com/jfreed-dev/etphonehome.git
-cd etphonehome
-docker-compose up -d --build
-
-# Configure firewall via API (preferred over ufw)
-# Use Hostinger API to manage firewall rules
-```
-
-### Required Firewall Rules
-
-For ET Phone Home server operation, open these ports via Hostinger API:
-
-- **22/tcp** - SSH (management)
-- **2222/tcp** - Client reverse tunnel connections (configurable)
-- **8080/tcp** - MCP server endpoint (if using HTTP transport)
-
-### API Example: Add Firewall Rule
-
-```bash
-curl -X POST "https://api.hostinger.com/api/vps/v1/firewall/{firewallId}/rules" \
+# Add firewall rule
+curl -s -X POST "https://developers.hostinger.com/api/vps/v1/firewall/169198/rules" \
   -H "Authorization: Bearer $(cat .secrets/hostinger_api_key)" \
   -H "Content-Type: application/json" \
-  -d '{"protocol": "tcp", "port": "2222", "source": "0.0.0.0/0", "action": "accept"}'
+  -d '{"protocol": "TCP", "port": "8080", "source": "any", "source_detail": "any", "action": "accept"}'
+
+# Restart VPS
+curl -s -X POST "https://developers.hostinger.com/api/vps/v1/virtual-machines/1148367/restart" \
+  -H "Authorization: Bearer $(cat .secrets/hostinger_api_key)"
+```
+
+## Server Services
+
+### ET Phone Home SSH Service
+
+A dedicated SSH daemon runs on port 443 for client connections:
+
+- **Service**: `etphonehome-ssh.service`
+- **Config**: `/etc/ssh/sshd_config_etphonehome`
+- **User**: `etphonehome`
+- **Authorized Keys**: `/home/etphonehome/.etphonehome-server/authorized_keys`
+
+```bash
+# Check service status
+ssh root@72.60.125.7 'systemctl status etphonehome-ssh'
+
+# Restart service
+ssh root@72.60.125.7 'systemctl restart etphonehome-ssh'
+
+# View logs
+ssh root@72.60.125.7 'journalctl -u etphonehome-ssh -f'
 ```
 
 ## Documentation Links

@@ -15,7 +15,7 @@ DEFAULT_KEY_FILE = DEFAULT_CONFIG_DIR / "id_ed25519"
 class Config:
     """Client configuration."""
     server_host: str = "localhost"
-    server_port: int = 2222
+    server_port: int = 443
     server_user: str = "etphonehome"
     key_file: str = str(DEFAULT_KEY_FILE)
     client_id: Optional[str] = None

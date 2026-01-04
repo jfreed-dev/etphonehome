@@ -22,7 +22,7 @@ This is useful for assisting machines behind firewalls, NAT, or otherwise inacce
 │  └─────────────┘    └──────┬──────┘    └─────────────────┘  │
 │                            │                                 │
 │                     ┌──────┴──────┐                         │
-│                     │  SSH Server │ :2222                   │
+│                     │  SSH Server │ :443                    │
 │                     └──────┬──────┘                         │
 └────────────────────────────┼────────────────────────────────┘
                              │ Reverse SSH Tunnels
@@ -78,12 +78,12 @@ Download from GitHub Releases and run directly:
 chmod +x phonehome-linux
 ./phonehome-linux --init
 ./phonehome-linux --generate-key
-./phonehome-linux -s your-server.example.com -p 2222
+./phonehome-linux -s your-server.example.com -p 443
 
 # Windows (PowerShell)
 .\phonehome-windows.exe --init
 .\phonehome-windows.exe --generate-key
-.\phonehome-windows.exe -s your-server.example.com -p 2222
+.\phonehome-windows.exe -s your-server.example.com -p 443
 ```
 
 #### Option B: Portable Archive
@@ -142,7 +142,7 @@ Once connected, Claude CLI can use these tools:
 
 ```yaml
 server_host: localhost
-server_port: 2222
+server_port: 443
 server_user: etphonehome
 key_file: ~/.etphonehome/id_ed25519
 client_id: myhost-abc123
@@ -166,10 +166,10 @@ Windows security tools may require additional configuration:
 |-------|----------|
 | **Antivirus blocks executable** | Add to exclusions, or use portable archive instead |
 | **SmartScreen warning** | Click "More info" → "Run anyway" |
-| **Firewall blocks connection** | Allow outbound on port 2222 (or use 443) |
+| **Firewall blocks connection** | Allow outbound on port 443 |
 | **PowerShell execution policy** | `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` |
 
-If port 2222 is blocked by corporate firewall, configure the server to listen on port 443 instead (SSH over 443 often works as it resembles HTTPS traffic).
+The default port is 443 (SSH over HTTPS port) to maximize compatibility with corporate firewalls. You can change this if needed.
 
 ## Building Releases
 
