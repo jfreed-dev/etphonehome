@@ -1,0 +1,23 @@
+[Unit]
+Description=ET Phone Home Client
+Documentation=https://github.com/jfreed-dev/etphonehome
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+Environment=HOME=/home/%i
+ExecStart=/usr/local/bin/phonehome
+Restart=always
+RestartSec=10
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/%i/.etphonehome
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

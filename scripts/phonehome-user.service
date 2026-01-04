@@ -1,0 +1,14 @@
+[Unit]
+Description=ET Phone Home Client
+Documentation=https://github.com/jfreed-dev/etphonehome
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/phonehome
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
