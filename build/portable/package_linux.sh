@@ -12,7 +12,24 @@ OUTPUT_DIR="$PROJECT_DIR/dist"
 # Python version and architecture
 PYTHON_VERSION="3.12.8"
 PYTHON_BUILD="20250106"
-ARCH="x86_64"
+
+# Accept architecture as argument or detect from system
+ARCH="${1:-$(uname -m)}"
+
+# Normalize architecture names
+case "$ARCH" in
+    x86_64|amd64)
+        ARCH="x86_64"
+        ;;
+    aarch64|arm64)
+        ARCH="aarch64"
+        ;;
+    *)
+        echo "Error: Unsupported architecture: $ARCH"
+        echo "Supported: x86_64, aarch64"
+        exit 1
+        ;;
+esac
 
 # python-build-standalone release URL
 PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/${PYTHON_BUILD}/cpython-${PYTHON_VERSION}+${PYTHON_BUILD}-${ARCH}-unknown-linux-gnu-install_only_stripped.tar.gz"
