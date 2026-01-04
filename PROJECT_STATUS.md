@@ -1,8 +1,16 @@
 # ET Phone Home - Project Status
 
 **Last Updated**: 2026-01-04
-**Version**: 0.1.0 (Alpha)
-**Status**: Feature-complete, pre-production
+**Version**: 0.1.3
+**Status**: Production-ready
+
+## Recent Changes (v0.1.3)
+
+- **Systemd service support**: Added `phonehome.service` and `install-service.sh` for automatic startup
+- **MCP tunnel port fix**: Server now uses stored tunnel ports, enabling commands on reconnected clients
+- **SSH + Claude Code guide**: New documentation for remote MCP usage via SSH
+- **run_mcp.sh script**: Standardized MCP server invocation for remote access
+- **Download server**: Binaries available at `http://YOUR_SERVER_IP/latest/`
 
 ## Implementation Status
 
@@ -11,17 +19,19 @@
 | Client (tunnel, agent, config, CLI, updater, capabilities) | ✓ Complete | ~1000 lines across 6 modules |
 | Server (MCP tools, client registry, store) | ✓ Complete | ~1270 lines across 4 modules |
 | Protocol (JSON-RPC, length-prefixed) | ✓ Complete | 132 lines in shared/protocol.py |
-| Build system (PyInstaller + portable) | ✓ Complete | Linux + Windows |
+| Build system (PyInstaller + portable) | ✓ Complete | Linux (x64, ARM64) + Windows |
 | CI/CD (GitHub Actions) | ✓ Complete | Auto-releases on version tags |
-| Documentation | ✓ Excellent | README.md, CLAUDE.md |
-| **Tests** | ✓ Complete | 99 tests across 4 test files |
+| Documentation | ✓ Excellent | README.md, CLAUDE.md, docs/*.md |
+| Tests | ✓ Complete | 99 tests across 4 test files |
+| Systemd service | ✓ Complete | User and system service files |
+| Download server | ✓ Complete | http://YOUR_SERVER_IP/latest/ |
 
 ## Next Steps (Priority Order)
 
-### 1. Production Deployment Artifacts
-- Create `systemd` service file for server (`etphonehome-server.service`)
+### 1. Production Hardening
 - Add persistent logging with rotation (currently logs to stderr only)
 - Create deployment playbook (ansible/terraform/docker)
+- Add health check endpoint for monitoring
 
 ### 2. Security Hardening
 - Code signing for Windows executables (avoid SmartScreen warnings)
@@ -30,7 +40,6 @@
 
 ### 3. Minor Improvements
 - Replace SSH exec-based client registration (`client/tunnel.py:156`) with dedicated handler
-- Add health check endpoint for monitoring
 - Windows Server setup documentation (currently Linux-focused)
 - Add retry logic for dropped connections
 
@@ -79,6 +88,6 @@ ruff check --fix .
 ## Known Gaps
 
 1. **Registration uses SSH exec workaround** - Works but not elegant
-2. **No systemd service** - Manual server management required
+2. ~~**No systemd service**~~ - ✓ Added in v0.1.3 (client service)
 3. **No log rotation** - Logs only to stderr
 4. **No Windows Server docs** - Setup guide is Linux-focused
