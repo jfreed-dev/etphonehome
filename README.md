@@ -174,6 +174,12 @@ Windows security tools may require additional configuration:
 
 The default port is 443 (SSH over HTTPS port) to maximize compatibility with corporate firewalls. You can change this if needed.
 
+## Documentation
+
+- [SSH + Claude Code Guide](docs/ssh-claude-code-guide.md) - Connect via SSH and use Claude Code to manage clients
+- [Management Guide](docs/management-guide.md) - Detailed client management workflows
+- [Server Setup (Hostinger)](docs/hostinger-server-setup.md) - VPS deployment reference
+
 ## Building Releases
 
 Build scripts are in the `build/` directory:
