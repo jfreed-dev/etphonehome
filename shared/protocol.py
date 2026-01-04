@@ -1,11 +1,11 @@
 """JSON-RPC protocol definitions for client-server communication."""
 
-from dataclasses import dataclass, field, asdict
-from typing import Any, Optional
 import json
 import platform
 import socket
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from typing import Any
 
 # Method constants
 METHOD_RUN_COMMAND = "run_command"
@@ -19,9 +19,10 @@ METHOD_REGISTER = "register"
 @dataclass
 class Request:
     """JSON-RPC request message."""
+
     method: str
     params: dict = field(default_factory=dict)
-    id: Optional[str] = None
+    id: str | None = None
 
     def to_json(self) -> str:
         return json.dumps(asdict(self))
@@ -29,19 +30,16 @@ class Request:
     @classmethod
     def from_json(cls, data: str) -> "Request":
         obj = json.loads(data)
-        return cls(
-            method=obj["method"],
-            params=obj.get("params", {}),
-            id=obj.get("id")
-        )
+        return cls(method=obj["method"], params=obj.get("params", {}), id=obj.get("id"))
 
 
 @dataclass
 class Response:
     """JSON-RPC response message."""
-    id: Optional[str] = None
+
+    id: str | None = None
     result: Any = None
-    error: Optional[dict] = None
+    error: dict | None = None
 
     def to_json(self) -> str:
         data = {"id": self.id}
@@ -54,34 +52,31 @@ class Response:
     @classmethod
     def from_json(cls, data: str) -> "Response":
         obj = json.loads(data)
-        return cls(
-            id=obj.get("id"),
-            result=obj.get("result"),
-            error=obj.get("error")
-        )
+        return cls(id=obj.get("id"), result=obj.get("result"), error=obj.get("error"))
 
     @classmethod
-    def success(cls, result: Any, id: Optional[str] = None) -> "Response":
+    def success(cls, result: Any, id: str | None = None) -> "Response":
         return cls(id=id, result=result)
 
     @classmethod
-    def error_response(cls, code: int, message: str, id: Optional[str] = None) -> "Response":
+    def error_response(cls, code: int, message: str, id: str | None = None) -> "Response":
         return cls(id=id, error={"code": code, "message": message})
 
 
 @dataclass
 class ClientIdentity:
     """Persistent identity for a client (survives reconnects)."""
-    uuid: str                      # Stable UUID (generated once, persisted)
-    display_name: str              # Human-friendly name ("Jon's Laptop")
-    purpose: str                   # "Development", "CI Runner", "Production"
-    tags: list[str]                # ["linux", "docker", "gpu"]
-    capabilities: list[str]        # Auto-detected: ["python3.12", "docker", "nvidia-gpu"]
-    public_key_fingerprint: str    # SHA256 of SSH public key for verification
-    first_seen: str                # ISO timestamp
-    created_by: str = "auto"       # "auto" or "manual"
-    key_mismatch: bool = False     # True if key changed since registration
-    previous_fingerprint: Optional[str] = None  # Previous key if mismatched
+
+    uuid: str  # Stable UUID (generated once, persisted)
+    display_name: str  # Human-friendly name ("Jon's Laptop")
+    purpose: str  # "Development", "CI Runner", "Production"
+    tags: list[str]  # ["linux", "docker", "gpu"]
+    capabilities: list[str]  # Auto-detected: ["python3.12", "docker", "nvidia-gpu"]
+    public_key_fingerprint: str  # SHA256 of SSH public key for verification
+    first_seen: str  # ISO timestamp
+    created_by: str = "auto"  # "auto" or "manual"
+    key_mismatch: bool = False  # True if key changed since registration
+    previous_fingerprint: str | None = None  # Previous key if mismatched
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -98,6 +93,7 @@ class ClientIdentity:
 @dataclass
 class ClientInfo:
     """Information about a connected client (per-connection data)."""
+
     client_id: str
     hostname: str
     platform: str
@@ -105,7 +101,7 @@ class ClientInfo:
     tunnel_port: int
     connected_at: str
     last_heartbeat: str
-    identity_uuid: Optional[str] = None  # Links to ClientIdentity
+    identity_uuid: str | None = None  # Links to ClientIdentity
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -117,9 +113,12 @@ class ClientInfo:
         return cls(**data)
 
     @classmethod
-    def create_local(cls, client_id: str, tunnel_port: int, identity_uuid: str = None) -> "ClientInfo":
+    def create_local(
+        cls, client_id: str, tunnel_port: int, identity_uuid: str = None
+    ) -> "ClientInfo":
         """Create ClientInfo for the local machine."""
         import getpass
+
         now = datetime.utcnow().isoformat() + "Z"
         return cls(
             client_id=client_id,
@@ -129,7 +128,7 @@ class ClientInfo:
             tunnel_port=tunnel_port,
             connected_at=now,
             last_heartbeat=now,
-            identity_uuid=identity_uuid
+            identity_uuid=identity_uuid,
         )
 
 
@@ -157,5 +156,5 @@ def decode_message(data: bytes) -> tuple[str, bytes]:
     length = int.from_bytes(data[:4], "big")
     if len(data) < 4 + length:
         raise ValueError("Incomplete message body")
-    msg = data[4:4+length].decode("utf-8")
-    return msg, data[4+length:]
+    msg = data[4 : 4 + length].decode("utf-8")
+    return msg, data[4 + length :]

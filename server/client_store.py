@@ -2,10 +2,9 @@
 
 import json
 import logging
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from shared.protocol import ClientIdentity
 
@@ -18,10 +17,11 @@ STORE_VERSION = 1
 @dataclass
 class StoredClient:
     """A client stored in the persistent store."""
+
     identity: ClientIdentity
-    last_seen: str                          # ISO timestamp
+    last_seen: str  # ISO timestamp
     connection_count: int = 0
-    last_client_info: Optional[dict] = None  # Most recent ClientInfo snapshot
+    last_client_info: dict | None = None  # Most recent ClientInfo snapshot
 
     def to_dict(self) -> dict:
         return {
@@ -85,10 +85,7 @@ class ClientStore:
 
         data = {
             "version": STORE_VERSION,
-            "clients": {
-                uuid: client.to_dict()
-                for uuid, client in self._clients.items()
-            }
+            "clients": {uuid: client.to_dict() for uuid, client in self._clients.items()},
         }
 
         # Write atomically
@@ -99,11 +96,11 @@ class ClientStore:
 
         logger.debug(f"Saved {len(self._clients)} clients to {self.store_path}")
 
-    def get_by_uuid(self, uuid: str) -> Optional[StoredClient]:
+    def get_by_uuid(self, uuid: str) -> StoredClient | None:
         """Get a client by UUID."""
         return self._clients.get(uuid)
 
-    def get_by_fingerprint(self, fingerprint: str) -> Optional[StoredClient]:
+    def get_by_fingerprint(self, fingerprint: str) -> StoredClient | None:
         """Get a client by SSH key fingerprint."""
         for client in self._clients.values():
             if client.identity.public_key_fingerprint == fingerprint:
@@ -148,7 +145,8 @@ class ClientStore:
         """Find clients with a specific purpose (case-insensitive partial match)."""
         purpose = purpose.lower()
         return [
-            client for client in self._clients.values()
+            client
+            for client in self._clients.values()
             if purpose in client.identity.purpose.lower()
         ]
 
@@ -175,7 +173,9 @@ class ClientStore:
 
         return results
 
-    def find_by_capabilities(self, capabilities: list[str], match_all: bool = True) -> list[StoredClient]:
+    def find_by_capabilities(
+        self, capabilities: list[str], match_all: bool = True
+    ) -> list[StoredClient]:
         """
         Find clients with specific capabilities.
 
@@ -245,12 +245,8 @@ class ClientStore:
             self._save()
 
     def update_identity(
-        self,
-        uuid: str,
-        display_name: str = None,
-        purpose: str = None,
-        tags: list[str] = None
-    ) -> Optional[StoredClient]:
+        self, uuid: str, display_name: str = None, purpose: str = None, tags: list[str] = None
+    ) -> StoredClient | None:
         """Update client metadata."""
         if uuid not in self._clients:
             return None

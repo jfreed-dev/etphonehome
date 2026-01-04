@@ -14,8 +14,8 @@ import time
 import uuid as uuid_mod
 from pathlib import Path
 
-from client.config import Config, ensure_config_dir, generate_client_id, DEFAULT_KEY_FILE
 from client.agent import Agent
+from client.config import DEFAULT_KEY_FILE, Config, ensure_config_dir, generate_client_id
 from client.tunnel import ReverseTunnel, generate_ssh_keypair
 from client.updater import auto_update, get_current_version
 
@@ -27,7 +27,7 @@ def setup_logging(level: str):
     logging.basicConfig(
         level=getattr(logging, level.upper()),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
 
@@ -35,66 +35,23 @@ def main():
     parser = argparse.ArgumentParser(
         description="ET Phone Home - Connect to remote Claude CLI instance"
     )
+    parser.add_argument("-c", "--config", type=Path, help="Path to config file")
+    parser.add_argument("-s", "--server", help="Server host (overrides config)")
+    parser.add_argument("-p", "--port", type=int, help="Server port (overrides config)")
+    parser.add_argument("-u", "--user", help="Server username (overrides config)")
+    parser.add_argument("-k", "--key", type=Path, help="SSH private key file (overrides config)")
+    parser.add_argument("-i", "--client-id", help="Client ID (overrides config)")
+    parser.add_argument("--generate-key", action="store_true", help="Generate SSH keypair and exit")
     parser.add_argument(
-        "-c", "--config",
-        type=Path,
-        help="Path to config file"
+        "--init", action="store_true", help="Initialize config directory with defaults"
     )
+    parser.add_argument("--name", help="Display name for this client")
     parser.add_argument(
-        "-s", "--server",
-        help="Server host (overrides config)"
+        "--purpose", help="Purpose/role of this client (e.g., 'Development', 'Production')"
     )
-    parser.add_argument(
-        "-p", "--port",
-        type=int,
-        help="Server port (overrides config)"
-    )
-    parser.add_argument(
-        "-u", "--user",
-        help="Server username (overrides config)"
-    )
-    parser.add_argument(
-        "-k", "--key",
-        type=Path,
-        help="SSH private key file (overrides config)"
-    )
-    parser.add_argument(
-        "-i", "--client-id",
-        help="Client ID (overrides config)"
-    )
-    parser.add_argument(
-        "--generate-key",
-        action="store_true",
-        help="Generate SSH keypair and exit"
-    )
-    parser.add_argument(
-        "--init",
-        action="store_true",
-        help="Initialize config directory with defaults"
-    )
-    parser.add_argument(
-        "--name",
-        help="Display name for this client"
-    )
-    parser.add_argument(
-        "--purpose",
-        help="Purpose/role of this client (e.g., 'Development', 'Production')"
-    )
-    parser.add_argument(
-        "--tags",
-        nargs="+",
-        help="Tags for this client"
-    )
-    parser.add_argument(
-        "--show-uuid",
-        action="store_true",
-        help="Show client UUID and exit"
-    )
-    parser.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="Enable verbose logging"
-    )
+    parser.add_argument("--tags", nargs="+", help="Tags for this client")
+    parser.add_argument("--show-uuid", action="store_true", help="Show client UUID and exit")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
 
@@ -104,10 +61,10 @@ def main():
         ensure_config_dir()
         generate_ssh_keypair(key_path)
         pub_path = key_path.with_suffix(".pub")
-        print(f"Generated SSH keypair:")
+        print("Generated SSH keypair:")
         print(f"  Private: {key_path}")
         print(f"  Public:  {pub_path}")
-        print(f"\nAdd this public key to your server's authorized_keys:")
+        print("\nAdd this public key to your server's authorized_keys:")
         print(pub_path.read_text())
         return 0
 
@@ -132,7 +89,9 @@ def main():
             config.purpose = args.purpose
         else:
             while not config.purpose:
-                config.purpose = input("Purpose (e.g., 'Development', 'CI Runner', 'Production'): ").strip()
+                config.purpose = input(
+                    "Purpose (e.g., 'Development', 'CI Runner', 'Production'): "
+                ).strip()
                 if not config.purpose:
                     print("Purpose is required.")
 
@@ -146,17 +105,17 @@ def main():
         config.save()
         print(f"\nInitialized config directory: {config_dir}")
         print(f"Config file: {config_dir / 'config.yaml'}")
-        print(f"\nClient identity:")
+        print("\nClient identity:")
         print(f"  UUID: {config.uuid}")
         print(f"  Name: {config.display_name}")
         print(f"  Purpose: {config.purpose}")
         if config.tags:
             print(f"  Tags: {', '.join(config.tags)}")
-        print(f"\nNext steps:")
-        print(f"1. Edit the config file with your server details")
-        print(f"2. Run: phonehome --generate-key")
-        print(f"3. Add the public key to your server")
-        print(f"4. Run: phonehome")
+        print("\nNext steps:")
+        print("1. Edit the config file with your server details")
+        print("2. Run: phonehome --generate-key")
+        print("3. Add the public key to your server")
+        print("4. Run: phonehome")
         return 0
 
     # Handle --show-uuid
@@ -217,9 +176,7 @@ def main():
         return 1
 
     # Create agent
-    agent = Agent(
-        allowed_paths=config.allowed_paths if config.allowed_paths else None
-    )
+    agent = Agent(allowed_paths=config.allowed_paths if config.allowed_paths else None)
 
     # Ensure UUID exists for identity tracking
     if not config.uuid:

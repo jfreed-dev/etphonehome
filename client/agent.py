@@ -1,25 +1,23 @@
 """Local agent that handles requests from the server."""
 
-import os
-import subprocess
-import stat
-from pathlib import Path
-from typing import Any
 import logging
+import stat
+import subprocess
+from pathlib import Path
 
 from shared.protocol import (
-    Request,
-    Response,
-    METHOD_RUN_COMMAND,
-    METHOD_READ_FILE,
-    METHOD_WRITE_FILE,
-    METHOD_LIST_FILES,
-    METHOD_HEARTBEAT,
-    ERR_METHOD_NOT_FOUND,
-    ERR_INVALID_PARAMS,
-    ERR_PATH_DENIED,
     ERR_COMMAND_FAILED,
     ERR_FILE_NOT_FOUND,
+    ERR_INVALID_PARAMS,
+    ERR_METHOD_NOT_FOUND,
+    ERR_PATH_DENIED,
+    METHOD_HEARTBEAT,
+    METHOD_LIST_FILES,
+    METHOD_READ_FILE,
+    METHOD_RUN_COMMAND,
+    METHOD_WRITE_FILE,
+    Request,
+    Response,
 )
 
 logger = logging.getLogger(__name__)
@@ -70,9 +68,7 @@ class Agent:
                 result = {"status": "alive"}
             else:
                 return Response.error_response(
-                    ERR_METHOD_NOT_FOUND,
-                    f"Unknown method: {request.method}",
-                    request.id
+                    ERR_METHOD_NOT_FOUND, f"Unknown method: {request.method}", request.id
                 )
             return Response.success(result, request.id)
         except PermissionError as e:
@@ -81,9 +77,7 @@ class Agent:
             return Response.error_response(ERR_FILE_NOT_FOUND, str(e), request.id)
         except KeyError as e:
             return Response.error_response(
-                ERR_INVALID_PARAMS,
-                f"Missing required parameter: {e}",
-                request.id
+                ERR_INVALID_PARAMS, f"Missing required parameter: {e}", request.id
             )
         except Exception as e:
             logger.exception("Error handling request")
@@ -102,23 +96,18 @@ class Agent:
 
         try:
             result = subprocess.run(
-                cmd,
-                shell=True,
-                cwd=cwd,
-                capture_output=True,
-                text=True,
-                timeout=timeout
+                cmd, shell=True, cwd=cwd, capture_output=True, text=True, timeout=timeout
             )
             return {
                 "stdout": result.stdout,
                 "stderr": result.stderr,
-                "returncode": result.returncode
+                "returncode": result.returncode,
             }
         except subprocess.TimeoutExpired:
             return {
                 "stdout": "",
                 "stderr": f"Command timed out after {timeout} seconds",
-                "returncode": -1
+                "returncode": -1,
             }
 
     def _read_file(self, params: dict) -> dict:
@@ -144,11 +133,12 @@ class Agent:
             # Try binary read
             content = path.read_bytes()
             import base64
+
             return {
                 "content": base64.b64encode(content).decode("ascii"),
                 "size": size,
                 "path": str(path),
-                "binary": True
+                "binary": True,
             }
 
     def _write_file(self, params: dict) -> dict:
@@ -163,6 +153,7 @@ class Agent:
 
         if binary:
             import base64
+
             data = base64.b64decode(content)
             path.write_bytes(data)
         else:
@@ -184,18 +175,18 @@ class Agent:
         for entry in path.iterdir():
             try:
                 st = entry.stat()
-                entries.append({
-                    "name": entry.name,
-                    "type": "dir" if entry.is_dir() else "file",
-                    "size": st.st_size if entry.is_file() else 0,
-                    "mode": stat.filemode(st.st_mode),
-                    "mtime": st.st_mtime
-                })
+                entries.append(
+                    {
+                        "name": entry.name,
+                        "type": "dir" if entry.is_dir() else "file",
+                        "size": st.st_size if entry.is_file() else 0,
+                        "mode": stat.filemode(st.st_mode),
+                        "mtime": st.st_mtime,
+                    }
+                )
             except PermissionError:
-                entries.append({
-                    "name": entry.name,
-                    "type": "unknown",
-                    "error": "permission denied"
-                })
+                entries.append(
+                    {"name": entry.name, "type": "unknown", "error": "permission denied"}
+                )
 
         return {"path": str(path), "entries": entries}

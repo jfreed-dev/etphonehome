@@ -8,24 +8,23 @@ Exposes tools to Claude CLI for interacting with connected remote clients.
 import asyncio
 import json
 import logging
-import os
 import sys
 from pathlib import Path
 from typing import Any
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from mcp.types import TextContent, Tool
 
-from server.client_registry import ClientRegistry
 from server.client_connection import ClientConnection
+from server.client_registry import ClientRegistry
 from server.client_store import ClientStore
 
 # Configure logging to stderr (stdout is used for MCP protocol)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    stream=sys.stderr
+    stream=sys.stderr,
 )
 logger = logging.getLogger("etphonehome")
 
@@ -68,11 +67,7 @@ def create_server() -> Server:
             Tool(
                 name="list_clients",
                 description="List all connected clients with their status and metadata",
-                inputSchema={
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
+                inputSchema={"type": "object", "properties": {}, "required": []},
             ),
             Tool(
                 name="select_client",
@@ -80,13 +75,10 @@ def create_server() -> Server:
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "client_id": {
-                            "type": "string",
-                            "description": "The client ID to select"
-                        }
+                        "client_id": {"type": "string", "description": "The client ID to select"}
                     },
-                    "required": ["client_id"]
-                }
+                    "required": ["client_id"],
+                },
             ),
             Tool(
                 name="run_command",
@@ -94,25 +86,22 @@ def create_server() -> Server:
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "cmd": {
-                            "type": "string",
-                            "description": "The command to execute"
-                        },
+                        "cmd": {"type": "string", "description": "The command to execute"},
                         "cwd": {
                             "type": "string",
-                            "description": "Working directory for the command (optional)"
+                            "description": "Working directory for the command (optional)",
                         },
                         "timeout": {
                             "type": "integer",
-                            "description": "Command timeout in seconds (default: 300)"
+                            "description": "Command timeout in seconds (default: 300)",
                         },
                         "client_id": {
                             "type": "string",
-                            "description": "Specific client ID (optional, uses active client if not specified)"
-                        }
+                            "description": "Specific client ID (optional, uses active client if not specified)",
+                        },
                     },
-                    "required": ["cmd"]
-                }
+                    "required": ["cmd"],
+                },
             ),
             Tool(
                 name="read_file",
@@ -120,17 +109,14 @@ def create_server() -> Server:
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "Absolute path to the file"
-                        },
+                        "path": {"type": "string", "description": "Absolute path to the file"},
                         "client_id": {
                             "type": "string",
-                            "description": "Specific client ID (optional)"
-                        }
+                            "description": "Specific client ID (optional)",
+                        },
                     },
-                    "required": ["path"]
-                }
+                    "required": ["path"],
+                },
             ),
             Tool(
                 name="write_file",
@@ -138,21 +124,15 @@ def create_server() -> Server:
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "Absolute path to the file"
-                        },
-                        "content": {
-                            "type": "string",
-                            "description": "Content to write"
-                        },
+                        "path": {"type": "string", "description": "Absolute path to the file"},
+                        "content": {"type": "string", "description": "Content to write"},
                         "client_id": {
                             "type": "string",
-                            "description": "Specific client ID (optional)"
-                        }
+                            "description": "Specific client ID (optional)",
+                        },
                     },
-                    "required": ["path", "content"]
-                }
+                    "required": ["path", "content"],
+                },
             ),
             Tool(
                 name="list_files",
@@ -160,17 +140,14 @@ def create_server() -> Server:
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "Absolute path to the directory"
-                        },
+                        "path": {"type": "string", "description": "Absolute path to the directory"},
                         "client_id": {
                             "type": "string",
-                            "description": "Specific client ID (optional)"
-                        }
+                            "description": "Specific client ID (optional)",
+                        },
                     },
-                    "required": ["path"]
-                }
+                    "required": ["path"],
+                },
             ),
             Tool(
                 name="upload_file",
@@ -180,19 +157,19 @@ def create_server() -> Server:
                     "properties": {
                         "local_path": {
                             "type": "string",
-                            "description": "Path to the file on the server"
+                            "description": "Path to the file on the server",
                         },
                         "remote_path": {
                             "type": "string",
-                            "description": "Destination path on the client"
+                            "description": "Destination path on the client",
                         },
                         "client_id": {
                             "type": "string",
-                            "description": "Specific client ID (optional)"
-                        }
+                            "description": "Specific client ID (optional)",
+                        },
                     },
-                    "required": ["local_path", "remote_path"]
-                }
+                    "required": ["local_path", "remote_path"],
+                },
             ),
             Tool(
                 name="download_file",
@@ -202,19 +179,19 @@ def create_server() -> Server:
                     "properties": {
                         "remote_path": {
                             "type": "string",
-                            "description": "Path to the file on the client"
+                            "description": "Path to the file on the client",
                         },
                         "local_path": {
                             "type": "string",
-                            "description": "Destination path on the server"
+                            "description": "Destination path on the server",
                         },
                         "client_id": {
                             "type": "string",
-                            "description": "Specific client ID (optional)"
-                        }
+                            "description": "Specific client ID (optional)",
+                        },
                     },
-                    "required": ["remote_path", "local_path"]
-                }
+                    "required": ["remote_path", "local_path"],
+                },
             ),
             Tool(
                 name="find_client",
@@ -224,28 +201,25 @@ def create_server() -> Server:
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Search term (matches display_name, purpose, hostname)"
+                            "description": "Search term (matches display_name, purpose, hostname)",
                         },
-                        "purpose": {
-                            "type": "string",
-                            "description": "Filter by purpose"
-                        },
+                        "purpose": {"type": "string", "description": "Filter by purpose"},
                         "tags": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "Filter by tags (must have all)"
+                            "description": "Filter by tags (must have all)",
                         },
                         "capabilities": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "Filter by capabilities (must have all)"
+                            "description": "Filter by capabilities (must have all)",
                         },
                         "online_only": {
                             "type": "boolean",
-                            "description": "Only show currently connected clients"
-                        }
-                    }
-                }
+                            "description": "Only show currently connected clients",
+                        },
+                    },
+                },
             ),
             Tool(
                 name="describe_client",
@@ -253,16 +227,13 @@ def create_server() -> Server:
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "uuid": {
-                            "type": "string",
-                            "description": "Client UUID"
-                        },
+                        "uuid": {"type": "string", "description": "Client UUID"},
                         "client_id": {
                             "type": "string",
-                            "description": "Client ID (alternative to UUID)"
-                        }
-                    }
-                }
+                            "description": "Client ID (alternative to UUID)",
+                        },
+                    },
+                },
             ),
             Tool(
                 name="update_client",
@@ -270,26 +241,17 @@ def create_server() -> Server:
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "uuid": {
-                            "type": "string",
-                            "description": "Client UUID"
-                        },
-                        "display_name": {
-                            "type": "string",
-                            "description": "New display name"
-                        },
-                        "purpose": {
-                            "type": "string",
-                            "description": "New purpose"
-                        },
+                        "uuid": {"type": "string", "description": "Client UUID"},
+                        "display_name": {"type": "string", "description": "New display name"},
+                        "purpose": {"type": "string", "description": "New purpose"},
                         "tags": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "New tags (replaces existing)"
-                        }
+                            "description": "New tags (replaces existing)",
+                        },
                     },
-                    "required": ["uuid"]
-                }
+                    "required": ["uuid"],
+                },
             ),
         ]
 
@@ -316,7 +278,7 @@ async def _handle_tool(name: str, args: dict) -> Any:
             "active_client": registry.active_client_uuid,
             "online_count": registry.online_count,
             "total_count": registry.total_count,
-            "message": "No clients connected" if not clients else None
+            "message": "No clients connected" if not clients else None,
         }
 
     elif name == "select_client":
@@ -330,9 +292,7 @@ async def _handle_tool(name: str, args: dict) -> Any:
     elif name == "run_command":
         conn = await get_connection(args.get("client_id"))
         result = await conn.run_command(
-            cmd=args["cmd"],
-            cwd=args.get("cwd"),
-            timeout=args.get("timeout")
+            cmd=args["cmd"], cwd=args.get("cwd"), timeout=args.get("timeout")
         )
         return result
 
@@ -359,6 +319,7 @@ async def _handle_tool(name: str, args: dict) -> Any:
         # Read local file
         content = local_path.read_bytes()
         import base64
+
         encoded = base64.b64encode(content).decode("ascii")
 
         # Write to remote
@@ -375,6 +336,7 @@ async def _handle_tool(name: str, args: dict) -> Any:
 
         if result.get("binary"):
             import base64
+
             content = base64.b64decode(result["content"])
             local_path.write_bytes(content)
         else:
@@ -388,12 +350,12 @@ async def _handle_tool(name: str, args: dict) -> Any:
             purpose=args.get("purpose"),
             tags=args.get("tags"),
             capabilities=args.get("capabilities"),
-            online_only=args.get("online_only", False)
+            online_only=args.get("online_only", False),
         )
         return {
             "clients": results,
             "count": len(results),
-            "message": "No matching clients found" if not results else None
+            "message": "No matching clients found" if not results else None,
         }
 
     elif name == "describe_client":
@@ -412,7 +374,7 @@ async def _handle_tool(name: str, args: dict) -> Any:
             uuid=uuid,
             display_name=args.get("display_name"),
             purpose=args.get("purpose"),
-            tags=args.get("tags")
+            tags=args.get("tags"),
         )
         if not result:
             return {"error": f"Client not found: {uuid}"}
@@ -433,6 +395,7 @@ async def register_client_handler(reader: asyncio.StreamReader, writer: asyncio.
                 info_str = text[9:]
                 info_dict = json.loads(info_str.replace("'", '"'))
                 from shared.protocol import ClientInfo
+
                 info = ClientInfo.from_dict(info_dict)
                 await registry.register(info)
                 writer.write(b"OK\n")
@@ -454,11 +417,7 @@ async def main():
 
     async with stdio_server() as (read_stream, write_stream):
         logger.info("MCP server ready")
-        await server.run(
-            read_stream,
-            write_stream,
-            server.create_initialization_options()
-        )
+        await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
 if __name__ == "__main__":
