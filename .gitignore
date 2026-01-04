@@ -30,6 +30,7 @@ ansible/credentials/
 kubeconfig
 talosconfig
 .project_settings/
+.secrets/
 
 # OS
 .DS_Store
