@@ -281,6 +281,53 @@ class ClientStore:
         logger.info(f"Updated client {uuid}")
         return updated
 
+    def accept_key(self, uuid: str) -> dict | None:
+        """
+        Accept a client's new SSH key, clearing key_mismatch flag.
+
+        Returns dict with result info, or None if client not found.
+        """
+        if uuid not in self._clients:
+            return None
+
+        client = self._clients[uuid]
+        identity = client.identity
+
+        # Check if there's actually a mismatch to clear
+        if not identity.key_mismatch:
+            return {"no_mismatch": True, "uuid": uuid}
+
+        # Create updated identity with cleared mismatch
+        updated_identity = ClientIdentity(
+            uuid=identity.uuid,
+            display_name=identity.display_name,
+            purpose=identity.purpose,
+            tags=identity.tags,
+            capabilities=identity.capabilities,
+            public_key_fingerprint=identity.public_key_fingerprint,
+            first_seen=identity.first_seen,
+            created_by=identity.created_by,
+            key_mismatch=False,
+            previous_fingerprint=None,
+        )
+
+        updated = StoredClient(
+            identity=updated_identity,
+            last_seen=client.last_seen,
+            connection_count=client.connection_count,
+            last_client_info=client.last_client_info,
+        )
+
+        self._clients[uuid] = updated
+        self._save()
+
+        logger.info(f"Accepted new key for client {uuid}")
+        return {
+            "uuid": uuid,
+            "public_key_fingerprint": updated_identity.public_key_fingerprint,
+            "key_mismatch": False,
+        }
+
     def list_all(self) -> list[StoredClient]:
         """Get all stored clients."""
         return list(self._clients.values())
