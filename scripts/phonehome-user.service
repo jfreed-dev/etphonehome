@@ -6,9 +6,11 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/phonehome
+ExecStart=%h/.local/share/phonehome/run.sh
 Restart=always
 RestartSec=10
+# Set PHONEHOME_UPDATE_URL to enable auto-updates, e.g.:
+# Environment=PHONEHOME_UPDATE_URL=http://your-server/latest/version.json
 
 [Install]
 WantedBy=default.target
