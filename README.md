@@ -82,6 +82,8 @@ Data Flow:
 | **Path Restrictions** | Optional file system access limits |
 | **Auto-Updates** | Clients can self-update from download server |
 | **Cross-Platform** | Linux, Windows, with macOS planned |
+| **Webhooks** | HTTP notifications for client events |
+| **Rate Limiting** | Per-client request rate monitoring |
 
 ---
 
@@ -286,8 +288,10 @@ curl http://localhost:8765/health        # Health check
 | `select_client` | Choose which client to interact with |
 | `find_client` | Search by name, purpose, tags, or capabilities |
 | `describe_client` | Get detailed information about a client |
-| `update_client` | Update metadata (display_name, purpose, tags, allowed_paths) |
+| `update_client` | Update metadata (display_name, purpose, tags) |
 | `accept_key` | Accept a client's new SSH key after legitimate change |
+| `configure_client` | Set per-client webhook URL and rate limits |
+| `get_rate_limit_stats` | Get rate limit statistics for a client |
 
 ### Remote Operations
 
@@ -299,6 +303,7 @@ curl http://localhost:8765/health        # Health check
 | `list_files` | List directory contents |
 | `upload_file` | Send file from server to client |
 | `download_file` | Fetch file from client to server |
+| `get_client_metrics` | Get system health metrics (CPU, memory, disk) |
 
 ---
 
@@ -319,6 +324,30 @@ When a client reconnects with a different SSH key:
 - Use `describe_client` to see details
 - Use `accept_key` to accept legitimate changes (key rotation)
 - Investigate before accepting unexpected changes
+
+### Webhooks
+
+Send HTTP notifications when events occur:
+
+| Event | Trigger |
+|-------|---------|
+| `client.connected` | Client connects to server |
+| `client.disconnected` | Client disconnects |
+| `client.key_mismatch` | SSH key changed |
+| `client.unhealthy` | Health check failures |
+| `command_executed` | Shell command run |
+| `file_accessed` | File read/write/list |
+
+Configure via environment variables or per-client with `configure_client`.
+See [Webhooks Guide](docs/webhooks-guide.md) for integration examples.
+
+### Rate Limiting
+
+Monitor request frequency per client (warn-only mode):
+- Tracks requests per minute (RPM) and concurrent requests
+- Logs warnings when limits exceeded (does not block)
+- Per-client limits configurable via `configure_client`
+- View stats with `get_rate_limit_stats`
 
 ---
 
@@ -369,6 +398,7 @@ log_level: INFO
 | [MCP Server Setup](docs/mcp-server-setup-guide.md) | Complete Linux/Windows server setup |
 | [SSH + Claude Code](docs/ssh-claude-code-guide.md) | Remote MCP access via SSH |
 | [Management Guide](docs/management-guide.md) | Client management workflows |
+| [Webhooks Guide](docs/webhooks-guide.md) | Webhook integration examples |
 | [Hostinger Setup](docs/hostinger-server-setup.md) | VPS deployment reference |
 | [Download Server](docs/download-server-setup.md) | Client distribution setup |
 | [Roadmap](docs/roadmap.md) | Planned features |

@@ -58,7 +58,10 @@ etphonehome/
 │   ├── http_server.py      # HTTP/SSE transport for daemon mode
 │   ├── client_registry.py  # Track connected clients
 │   ├── client_connection.py # Communicate with client tunnels
-│   └── client_store.py     # Persistent client identity storage
+│   ├── client_store.py     # Persistent client identity storage
+│   ├── health_monitor.py   # Background client health checks
+│   ├── webhooks.py         # Async webhook dispatch system
+│   └── rate_limiter.py     # Per-client rate limiting
 ├── shared/
 │   ├── protocol.py         # JSON-RPC message definitions
 │   └── version.py          # Version info and update URL
@@ -96,9 +99,12 @@ The server exposes these tools to Claude CLI:
 - `list_clients` / `select_client` - Client management
 - `find_client` / `describe_client` / `update_client` - Client search and metadata
 - `accept_key` - Clear SSH key mismatch flag after legitimate key change
+- `configure_client` - Set per-client webhook URL and rate limits
+- `get_rate_limit_stats` - Get rate limit statistics for a client
 - `run_command` - Execute shell commands
 - `read_file` / `write_file` / `list_files` - File operations
 - `upload_file` / `download_file` - File transfer
+- `get_client_metrics` - Get system health metrics (CPU, memory, disk)
 
 ## Key Dependencies
 
