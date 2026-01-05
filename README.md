@@ -395,6 +395,7 @@ log_level: INFO
 
 | Guide | Description |
 |-------|-------------|
+| [API Reference](docs/API.md) | Complete MCP tool reference, error codes, webhooks |
 | [MCP Server Setup](docs/mcp-server-setup-guide.md) | Complete Linux/Windows server setup |
 | [SSH + Claude Code](docs/ssh-claude-code-guide.md) | Remote MCP access via SSH |
 | [Management Guide](docs/management-guide.md) | Client management workflows |

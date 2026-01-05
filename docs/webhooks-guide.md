@@ -30,12 +30,12 @@ All webhooks use this JSON structure:
 ```json
 {
   "event": "client.connected",
-  "timestamp": "2024-01-15T10:30:00Z",
+  "timestamp": "2026-01-05T10:30:00Z",
   "client_uuid": "abc-123-def-456",
   "client_display_name": "Production Server",
   "data": {
     "hostname": "prod.example.com",
-    "platform": "Linux 5.15"
+    "platform": "Linux 6.8"
   }
 }
 ```
@@ -47,7 +47,7 @@ All webhooks use this JSON structure:
 {
   "data": {
     "hostname": "server.example.com",
-    "platform": "Linux 5.15",
+    "platform": "Linux 6.8",
     "username": "deploy"
   }
 }

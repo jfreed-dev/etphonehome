@@ -730,8 +730,16 @@ Add-Content -Path "C:\Users\etphonehome\.ssh\authorized_keys" -Value "ssh-ed2551
 |------|-------------|
 | `list_clients` | List connected clients |
 | `select_client` | Select active client |
-| `find_client` | Search by name/purpose/tags |
+| `find_client` | Search by name/purpose/tags/capabilities |
+| `describe_client` | Get detailed client information |
+| `update_client` | Update client metadata |
+| `accept_key` | Accept new SSH key after verification |
+| `configure_client` | Set webhook URL and rate limits |
 | `run_command` | Execute shell command |
 | `read_file` | Read file from client |
 | `write_file` | Write file to client |
 | `list_files` | List directory contents |
+| `upload_file` | Send file from server to client |
+| `download_file` | Fetch file from client to server |
+| `get_client_metrics` | Get system health metrics (CPU, memory, disk) |
+| `get_rate_limit_stats` | View rate limit statistics |
