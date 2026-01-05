@@ -13,6 +13,9 @@ Manage connected clients using Claude CLI with MCP tools.
 "Find clients with docker"            → find_client
 "Show details for client X"           → describe_client
 "Update client purpose to staging"    → update_client
+"Set webhook URL for client"          → configure_client
+"Check rate limit stats"              → get_rate_limit_stats
+"Get system metrics"                  → get_client_metrics
 ```
 
 **Common Filters:**
@@ -95,6 +98,8 @@ claude
 | `describe_client` | Get detailed info | `describe_client {"uuid": "..."}` |
 | `update_client` | Modify metadata | `update_client {"uuid": "...", "purpose": "staging"}` |
 | `accept_key` | Accept new SSH key | `accept_key {"uuid": "..."}` |
+| `configure_client` | Set webhook/rate limits | `configure_client {"uuid": "...", "webhook_url": "..."}` |
+| `get_rate_limit_stats` | View rate limit stats | `get_rate_limit_stats {"uuid": "..."}` |
 
 ### Remote Operations
 
@@ -106,6 +111,7 @@ claude
 | `list_files` | List directory | `list_files {"path": "/home/user"}` |
 | `upload_file` | Push file to client | `upload_file {"local_path": "...", "remote_path": "..."}` |
 | `download_file` | Pull file from client | `download_file {"remote_path": "...", "local_path": "..."}` |
+| `get_client_metrics` | Get system metrics | `get_client_metrics {"summary": true}` |
 
 ---
 
@@ -201,6 +207,55 @@ claude
 │                                                          │
 │ Claude: [accept_key]                                     │
 │ Key accepted for prod-server-01.                         │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 7. Configure Webhooks
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ You: "Set up webhook notifications for the prod server"  │
+│                                                          │
+│ Claude: [configure_client]                               │
+│ configure_client {                                       │
+│   "uuid": "...",                                         │
+│   "webhook_url": "https://slack.example.com/webhook"     │
+│ }                                                        │
+│                                                          │
+│ Configured webhook for prod-server-01.                   │
+│ Events will be sent to: https://slack.example.com/webhook│
+└──────────────────────────────────────────────────────────┘
+```
+
+### 8. Monitor Rate Limits
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ You: "Check rate limit stats for the dev client"         │
+│                                                          │
+│ Claude: [get_rate_limit_stats]                           │
+│                                                          │
+│ Rate limit stats for lokipopcosmic:                      │
+│ - Current RPM: 12/60                                     │
+│ - Concurrent: 2/10                                       │
+│ - RPM warnings: 0                                        │
+│ - Concurrent warnings: 0                                 │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 9. Get System Metrics
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ You: "Check system health on production"                 │
+│                                                          │
+│ Claude: [get_client_metrics]                             │
+│                                                          │
+│ System metrics for prod-server-01:                       │
+│ - CPU: 23% (4 cores)                                     │
+│ - Memory: 4.2 GB / 16 GB (26%)                           │
+│ - Disk: 45 GB / 100 GB (45%)                             │
+│ - Uptime: 14 days, 3 hours                               │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -301,4 +356,5 @@ run_command {"cmd": "nohup ./script.sh &"}
 
 - [SSH + Claude Code Guide](ssh-claude-code-guide.md) - Remote access setup
 - [MCP Server Setup](mcp-server-setup-guide.md) - Server configuration
+- [Webhooks Guide](webhooks-guide.md) - Webhook integration examples
 - [Roadmap](roadmap.md) - Planned features including web dashboard
