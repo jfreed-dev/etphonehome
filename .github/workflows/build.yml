@@ -189,7 +189,7 @@ jobs:
         run: mv dist/phonehome.exe dist/${{ matrix.artifact }}${{ matrix.ext }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact }}
           path: dist/${{ matrix.artifact }}${{ matrix.ext }}
@@ -251,7 +251,7 @@ jobs:
           & ${{ matrix.script }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: portable-${{ matrix.name }}
           path: dist/${{ matrix.artifact }}
