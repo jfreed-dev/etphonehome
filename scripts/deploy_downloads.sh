@@ -8,11 +8,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 DIST_DIR="$PROJECT_DIR/dist"
 
-# Server configuration
-VPS_HOST="${PHONEHOME_VPS_HOST:-YOUR_SERVER_IP}"
+# Server configuration (no defaults for host - must be set)
+VPS_HOST="${PHONEHOME_VPS_HOST:-}"
 VPS_USER="${PHONEHOME_VPS_USER:-root}"
 VPS_KEY="${PHONEHOME_VPS_KEY:-$HOME/.ssh/id_ed25519}"
 DEPLOY_DIR="/var/www/phonehome"
+
+# Require VPS_HOST to be set
+if [ -z "$VPS_HOST" ]; then
+    echo "Error: PHONEHOME_VPS_HOST environment variable must be set"
+    exit 1
+fi
 
 # Colors
 RED='\033[0;31m'
@@ -29,7 +35,7 @@ usage() {
     echo "  version    Version tag (e.g., v0.1.0)"
     echo ""
     echo "Environment variables:"
-    echo "  PHONEHOME_VPS_HOST  Server hostname (default: YOUR_SERVER_IP)"
+    echo "  PHONEHOME_VPS_HOST  Server hostname (required)"
     echo "  PHONEHOME_VPS_USER  SSH user (default: root)"
     echo "  PHONEHOME_VPS_KEY   SSH key path (default: ~/.ssh/id_ed25519)"
     exit 1
