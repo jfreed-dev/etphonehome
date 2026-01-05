@@ -37,9 +37,17 @@ jobs:
               # Skip negation patterns (start with !)
               [[ "$pattern" =~ ^!.*$ ]] && continue
 
-              # Remove matching files/directories
-              echo "  Removing: $pattern"
-              rm -rf $pattern 2>/dev/null || true
+              # Remove matching files/directories using bash glob expansion
+              echo "  Pattern: $pattern"
+              # Use eval to expand globs, with shopt for ** support
+              shopt -s globstar nullglob
+              for file in $pattern; do
+                if [ -e "$file" ]; then
+                  echo "    Removing: $file"
+                  rm -rf "$file"
+                fi
+              done
+              shopt -u globstar nullglob
             done < .gitignore.public
           fi
 
@@ -48,6 +56,32 @@ jobs:
           rm -f .gitattributes
 
           echo "Private files removed."
+
+      - name: Verify no secrets remain
+        run: |
+          echo "Verifying sensitive files are removed..."
+          FOUND_SECRETS=0
+
+          # Check for known secret patterns
+          for pattern in ".secrets" ".project_settings" ".mcp.json" "*.pem" "*.key"; do
+            if ls $pattern 2>/dev/null | grep -q .; then
+              echo "ERROR: Found secret files matching: $pattern"
+              FOUND_SECRETS=1
+            fi
+          done
+
+          # Check for IP addresses in remaining files
+          if grep -r "72\.60\.125\.7" --include="*.md" --include="*.py" --include="*.sh" . 2>/dev/null; then
+            echo "ERROR: Found hardcoded IP address"
+            FOUND_SECRETS=1
+          fi
+
+          if [ $FOUND_SECRETS -eq 1 ]; then
+            echo "ABORTING: Secrets would be exposed in public repo"
+            exit 1
+          fi
+
+          echo "Verification passed - no secrets found"
 
       - name: Configure git
         run: |

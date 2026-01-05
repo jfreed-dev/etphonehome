@@ -12,6 +12,7 @@
 
 # Ansible secrets
 ansible/secrets/*.yml filter=git-crypt diff=git-crypt
+ansible/credentials/** filter=git-crypt diff=git-crypt
 # Note: *.yml.example files won't match *.yml pattern, so they stay unencrypted
 
 # Vault passwords
