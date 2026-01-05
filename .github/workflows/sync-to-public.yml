@@ -8,12 +8,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      force:
-        description: 'Force push (overwrite public history)'
-        required: false
-        default: 'false'
-        type: boolean
 
 jobs:
   sync:
@@ -104,14 +98,8 @@ jobs:
           # Add public remote (etphonehome-public)
           git remote add public https://x-access-token:${PUBLIC_REPO_PAT}@github.com/${{ github.repository_owner }}/etphonehome-public.git
 
-          # Determine push flags
-          PUSH_FLAGS=""
-          if [ "${{ github.event.inputs.force }}" == "true" ]; then
-            PUSH_FLAGS="--force"
-            echo "Force push enabled"
-          fi
-
-          # Push to public
-          git push public main $PUSH_FLAGS
+          # Always force push since each sync creates a new commit
+          # The public repo is a one-way mirror - direct changes will be overwritten
+          git push public main --force
 
           echo "Successfully synced to public repository"
