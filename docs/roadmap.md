@@ -4,7 +4,7 @@ Planned features and improvements for ET Phone Home.
 
 ---
 
-## Current Version: 0.1.4
+## Current Version: 0.1.5
 
 ### Completed Features
 
@@ -29,6 +29,8 @@ Planned features and improvements for ET Phone Home.
 | Automatic disconnect detection | Done | 0.1.4 |
 | `--list-clients` CLI command | Done | 0.1.4 |
 | `allowed_paths` in update_client | Done | 0.1.4 |
+| Smart auto-update (portable only) | Done | 0.1.5 |
+| Installation type detection | Done | 0.1.5 |
 
 ---
 
@@ -112,6 +114,7 @@ Planned features and improvements for ET Phone Home.
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.1.5 | 2026-01-05 | Fixed auto-update loop for non-portable installs, installation detection |
 | 0.1.4 | 2026-01-05 | Automatic disconnect detection, `--list-clients` CLI, `allowed_paths` |
 | 0.1.3 | 2026-01-04 | Systemd service, HTTP daemon mode, SSH key detection |
 | 0.1.2 | 2026-01-03 | Tunnel port persistence, run_mcp.sh script |

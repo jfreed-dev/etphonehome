@@ -1,10 +1,16 @@
 # ET Phone Home - Project Status
 
 **Last Updated**: 2026-01-05
-**Version**: 0.1.4
+**Version**: 0.1.5
 **Status**: Production-ready
 
-## Recent Changes (v0.1.4)
+## Recent Changes (v0.1.5)
+
+- **Fixed auto-update loop**: Non-portable installations (pip/dev) now skip auto-updates to prevent infinite restart loops
+- **Installation detection**: Added `is_portable_installation()` to detect PyInstaller vs pip/source installs
+- **Update notifications**: Users running from pip/source are notified of updates without attempting auto-install
+
+## Changes in v0.1.4
 
 - **Fixed client online status tracking**: SSH registration handler now notifies HTTP daemon via internal API
 - **Added `/internal/register` endpoint**: Enables SSH handler to update in-memory client registry
