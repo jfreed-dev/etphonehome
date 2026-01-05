@@ -97,6 +97,9 @@ jobs:
         env:
           PUBLIC_REPO_PAT: ${{ secrets.PUBLIC_REPO_PAT }}
         run: |
+          # Remove GitHub Actions credential helper that overrides PAT auth
+          git config --unset-all http.https://github.com/.extraheader || true
+
           # Add public remote (etphonehome-public)
           git remote add public https://x-access-token:${PUBLIC_REPO_PAT}@github.com/${{ github.repository_owner }}/etphonehome-public.git
 
