@@ -46,7 +46,13 @@ jobs:
             done < .gitignore.public
           fi
 
-          # Also remove .gitignore.public and .gitattributes from public
+          # Replace .gitignore with public version
+          if [ -f .gitignore.public.replace ]; then
+            mv .gitignore.public.replace .gitignore
+            echo "Replaced .gitignore with public version"
+          fi
+
+          # Remove private repo specific files
           rm -f .gitignore.public
           rm -f .gitattributes
 

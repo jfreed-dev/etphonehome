@@ -1,0 +1,69 @@
+# =============================================================================
+# PUBLIC REPO .gitignore
+# =============================================================================
+# This is the public repository. Secrets and credentials are NOT tracked here.
+# See the contributing guide for setup instructions.
+# =============================================================================
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ansible
+*.retry
+ansible/roles/geerlingguy.*/
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Pre-commit
+.pre-commit-cache/
+
+# Logs
+*.log
+logs/
+
+# Firmware images (too large for git)
+*.img
+*.img.xz
+*.raw
+*.raw.xz
+
+# Secrets and credentials (not tracked in public repo)
+.secrets/
+.project_settings/
+ansible/secrets/*.yml
+!ansible/secrets/*.yml.example
+ansible/credentials/
+.vault_pass
+.vault_password
+*.pem
+*.key
+!*.key.example
+kubeconfig
+talosconfig
+.mcp.json
