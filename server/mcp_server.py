@@ -8,7 +8,7 @@ Exposes tools to Claude CLI for interacting with connected remote clients.
 import argparse
 import asyncio
 import json
-import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -21,14 +21,36 @@ from server.client_connection import ClientConnection
 from server.client_registry import ClientRegistry
 from server.client_store import ClientStore
 from server.health_monitor import HealthMonitor
+from server.rate_limiter import (
+    RateLimitConfig,
+    RateLimitContext,
+    RateLimiter,
+    get_rate_limiter,
+    set_rate_limiter,
+)
+from server.webhooks import (
+    EventType,
+    WebhookDispatcher,
+    get_dispatcher,
+    set_dispatcher,
+)
+from shared.logging_config import get_default_log_file, setup_logging
 
-# Configure logging to stderr (stdout is used for MCP protocol)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+# Get logging configuration from environment
+_log_level = os.environ.get("ETPHONEHOME_LOG_LEVEL", "INFO")
+_log_file = os.environ.get("ETPHONEHOME_LOG_FILE", str(get_default_log_file("server")))
+_log_max_bytes = int(os.environ.get("ETPHONEHOME_LOG_MAX_BYTES", 10 * 1024 * 1024))
+_log_backup_count = int(os.environ.get("ETPHONEHOME_LOG_BACKUP_COUNT", 5))
+
+# Configure logging to stderr (stdout is used for MCP protocol) and file with rotation
+logger = setup_logging(
+    name="etphonehome",
+    level=_log_level,
+    log_file=_log_file,
+    max_bytes=_log_max_bytes,
+    backup_count=_log_backup_count,
     stream=sys.stderr,
 )
-logger = logging.getLogger("etphonehome")
 
 # Global store and registry
 store = ClientStore()
@@ -266,7 +288,7 @@ def create_server() -> Server:
             ),
             Tool(
                 name="update_client",
-                description="Update client metadata (display_name, purpose, tags, allowed_paths)",
+                description="Update client metadata (display_name, purpose, tags)",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -278,11 +300,6 @@ def create_server() -> Server:
                             "items": {"type": "string"},
                             "description": "New tags (replaces existing)",
                         },
-                        "allowed_paths": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "Allowed path prefixes for file operations (replaces existing, null for all paths)",
-                        },
                     },
                     "required": ["uuid"],
                 },
@@ -290,6 +307,57 @@ def create_server() -> Server:
             Tool(
                 name="accept_key",
                 description="Accept a client's new SSH key, clearing the key_mismatch flag. Use after verifying a key change is legitimate.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "uuid": {"type": "string", "description": "Client UUID"},
+                    },
+                    "required": ["uuid"],
+                },
+            ),
+            Tool(
+                name="get_client_metrics",
+                description="Get system health metrics from a client (CPU, memory, disk, network, uptime)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "client_id": {
+                            "type": "string",
+                            "description": "Specific client ID (optional, uses active client if not specified)",
+                        },
+                        "summary": {
+                            "type": "boolean",
+                            "description": "Return summary only (default: false for full metrics)",
+                        },
+                    },
+                },
+            ),
+            Tool(
+                name="configure_client",
+                description="Configure per-client webhook URL and rate limits",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "uuid": {"type": "string", "description": "Client UUID"},
+                        "webhook_url": {
+                            "type": "string",
+                            "description": "Per-client webhook URL (empty string to clear)",
+                        },
+                        "rate_limit_rpm": {
+                            "type": "integer",
+                            "description": "Requests per minute limit (null for default)",
+                        },
+                        "rate_limit_concurrent": {
+                            "type": "integer",
+                            "description": "Max concurrent requests limit (null for default)",
+                        },
+                    },
+                    "required": ["uuid"],
+                },
+            ),
+            Tool(
+                name="get_rate_limit_stats",
+                description="Get rate limit statistics for a client",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -335,25 +403,159 @@ async def _handle_tool(name: str, args: dict) -> Any:
             return {"error": f"Client not found: {client_id}"}
 
     elif name == "run_command":
-        conn = await get_connection(args.get("client_id"))
-        result = await conn.run_command(
-            cmd=args["cmd"], cwd=args.get("cwd"), timeout=args.get("timeout")
+        client_id = args.get("client_id")
+        conn = await get_connection(client_id)
+
+        # Get client UUID for rate limiting and webhooks
+        client = (
+            await registry.get_client(client_id)
+            if client_id
+            else await registry.get_active_client()
         )
+        client_uuid = client.identity.uuid if client else None
+        client_display_name = client.identity.display_name if client else "Unknown"
+        client_webhook_url = client.identity.webhook_url if client else None
+
+        limiter = get_rate_limiter()
+        if limiter and client_uuid:
+            async with RateLimitContext(limiter, client_uuid, "run_command"):
+                result = await conn.run_command(
+                    cmd=args["cmd"], cwd=args.get("cwd"), timeout=args.get("timeout")
+                )
+        else:
+            result = await conn.run_command(
+                cmd=args["cmd"], cwd=args.get("cwd"), timeout=args.get("timeout")
+            )
+
+        # Dispatch command executed webhook
+        dispatcher = get_dispatcher()
+        if dispatcher and client_uuid:
+            dispatcher.dispatch(
+                event=EventType.COMMAND_EXECUTED,
+                client_uuid=client_uuid,
+                client_display_name=client_display_name,
+                data={
+                    "cmd": args["cmd"],
+                    "cwd": args.get("cwd"),
+                    "returncode": result.get("returncode"),
+                },
+                client_webhook_url=client_webhook_url,
+            )
+
         return result
 
     elif name == "read_file":
-        conn = await get_connection(args.get("client_id"))
-        result = await conn.read_file(args["path"])
+        client_id = args.get("client_id")
+        conn = await get_connection(client_id)
+
+        # Get client UUID for rate limiting and webhooks
+        client = (
+            await registry.get_client(client_id)
+            if client_id
+            else await registry.get_active_client()
+        )
+        client_uuid = client.identity.uuid if client else None
+        client_display_name = client.identity.display_name if client else "Unknown"
+        client_webhook_url = client.identity.webhook_url if client else None
+
+        limiter = get_rate_limiter()
+        if limiter and client_uuid:
+            async with RateLimitContext(limiter, client_uuid, "read_file"):
+                result = await conn.read_file(args["path"])
+        else:
+            result = await conn.read_file(args["path"])
+
+        # Dispatch file accessed webhook
+        dispatcher = get_dispatcher()
+        if dispatcher and client_uuid:
+            dispatcher.dispatch(
+                event=EventType.FILE_ACCESSED,
+                client_uuid=client_uuid,
+                client_display_name=client_display_name,
+                data={
+                    "operation": "read",
+                    "path": args["path"],
+                    "size": result.get("size"),
+                },
+                client_webhook_url=client_webhook_url,
+            )
+
         return result
 
     elif name == "write_file":
-        conn = await get_connection(args.get("client_id"))
-        result = await conn.write_file(args["path"], args["content"])
+        client_id = args.get("client_id")
+        conn = await get_connection(client_id)
+
+        # Get client UUID for rate limiting and webhooks
+        client = (
+            await registry.get_client(client_id)
+            if client_id
+            else await registry.get_active_client()
+        )
+        client_uuid = client.identity.uuid if client else None
+        client_display_name = client.identity.display_name if client else "Unknown"
+        client_webhook_url = client.identity.webhook_url if client else None
+
+        limiter = get_rate_limiter()
+        if limiter and client_uuid:
+            async with RateLimitContext(limiter, client_uuid, "write_file"):
+                result = await conn.write_file(args["path"], args["content"])
+        else:
+            result = await conn.write_file(args["path"], args["content"])
+
+        # Dispatch file accessed webhook
+        dispatcher = get_dispatcher()
+        if dispatcher and client_uuid:
+            dispatcher.dispatch(
+                event=EventType.FILE_ACCESSED,
+                client_uuid=client_uuid,
+                client_display_name=client_display_name,
+                data={
+                    "operation": "write",
+                    "path": args["path"],
+                    "size": result.get("size"),
+                },
+                client_webhook_url=client_webhook_url,
+            )
+
         return result
 
     elif name == "list_files":
-        conn = await get_connection(args.get("client_id"))
-        result = await conn.list_files(args["path"])
+        client_id = args.get("client_id")
+        conn = await get_connection(client_id)
+
+        # Get client UUID for rate limiting and webhooks
+        client = (
+            await registry.get_client(client_id)
+            if client_id
+            else await registry.get_active_client()
+        )
+        client_uuid = client.identity.uuid if client else None
+        client_display_name = client.identity.display_name if client else "Unknown"
+        client_webhook_url = client.identity.webhook_url if client else None
+
+        limiter = get_rate_limiter()
+        if limiter and client_uuid:
+            async with RateLimitContext(limiter, client_uuid, "list_files"):
+                result = await conn.list_files(args["path"])
+        else:
+            result = await conn.list_files(args["path"])
+
+        # Dispatch file accessed webhook
+        dispatcher = get_dispatcher()
+        if dispatcher and client_uuid:
+            dispatcher.dispatch(
+                event=EventType.FILE_ACCESSED,
+                client_uuid=client_uuid,
+                client_display_name=client_display_name,
+                data={
+                    "operation": "list",
+                    "path": args["path"],
+                    "count": len(result.get("files", [])),
+                },
+                client_webhook_url=client_webhook_url,
+            )
+
         return result
 
     elif name == "upload_file":
@@ -435,6 +637,61 @@ async def _handle_tool(name: str, args: dict) -> Any:
             return {"message": f"Client {uuid} had no key mismatch to clear"}
         return {"accepted": result, "message": f"Accepted new key for client: {uuid}"}
 
+    elif name == "get_client_metrics":
+        conn = await get_connection(args.get("client_id"))
+        summary = args.get("summary", False)
+        result = await conn.get_metrics(summary=summary)
+        return result
+
+    elif name == "configure_client":
+        uuid = args["uuid"]
+        webhook_url = args.get("webhook_url")
+        rate_limit_rpm = args.get("rate_limit_rpm")
+        rate_limit_concurrent = args.get("rate_limit_concurrent")
+
+        # Update client store
+        result = await registry.update_client(
+            uuid=uuid,
+            webhook_url=webhook_url,
+            rate_limit_rpm=rate_limit_rpm,
+            rate_limit_concurrent=rate_limit_concurrent,
+        )
+
+        if not result:
+            return {"error": f"Client not found: {uuid}"}
+
+        # Update rate limiter config if provided
+        limiter = get_rate_limiter()
+        if limiter and (rate_limit_rpm is not None or rate_limit_concurrent is not None):
+            config = limiter.get_client_config(uuid)
+            new_config = RateLimitConfig(
+                requests_per_minute=(
+                    rate_limit_rpm if rate_limit_rpm is not None else config.requests_per_minute
+                ),
+                max_concurrent=(
+                    rate_limit_concurrent
+                    if rate_limit_concurrent is not None
+                    else config.max_concurrent
+                ),
+            )
+            limiter.set_client_config(uuid, new_config)
+
+        return {
+            "configured": uuid,
+            "webhook_url": webhook_url,
+            "rate_limit_rpm": rate_limit_rpm,
+            "rate_limit_concurrent": rate_limit_concurrent,
+            "message": f"Configured client: {uuid}",
+        }
+
+    elif name == "get_rate_limit_stats":
+        uuid = args["uuid"]
+        limiter = get_rate_limiter()
+        if not limiter:
+            return {"error": "Rate limiter not initialized"}
+        stats = limiter.get_stats(uuid)
+        return {"uuid": uuid, "stats": stats}
+
     else:
         raise ValueError(f"Unknown tool: {name}")
 
@@ -472,6 +729,19 @@ async def run_stdio():
 
     server = create_server()
 
+    # Initialize and start webhook dispatcher
+    dispatcher = WebhookDispatcher()
+    set_dispatcher(dispatcher)
+    await dispatcher.start()
+    logger.info("Webhook dispatcher started")
+
+    # Initialize rate limiter
+    limiter = RateLimiter()
+    set_rate_limiter(limiter)
+    logger.info(
+        f"Rate limiter initialized (rpm={limiter.default_rpm}, concurrent={limiter.default_concurrent})"
+    )
+
     # Start health monitor for automatic disconnect detection
     _health_monitor = HealthMonitor(registry, _connections)
     await _health_monitor.start()
@@ -483,6 +753,9 @@ async def run_stdio():
     finally:
         if _health_monitor:
             await _health_monitor.stop()
+        if dispatcher:
+            await dispatcher.stop()
+            logger.info("Webhook dispatcher stopped")
 
 
 async def run_http(host: str, port: int, api_key: str = None):
@@ -490,6 +763,19 @@ async def run_http(host: str, port: int, api_key: str = None):
     global _health_monitor
 
     from server.http_server import run_http_server
+
+    # Initialize and start webhook dispatcher
+    dispatcher = WebhookDispatcher()
+    set_dispatcher(dispatcher)
+    await dispatcher.start()
+    logger.info("Webhook dispatcher started")
+
+    # Initialize rate limiter
+    limiter = RateLimiter()
+    set_rate_limiter(limiter)
+    logger.info(
+        f"Rate limiter initialized (rpm={limiter.default_rpm}, concurrent={limiter.default_concurrent})"
+    )
 
     # Start health monitor for automatic disconnect detection
     _health_monitor = HealthMonitor(registry, _connections)
@@ -500,6 +786,9 @@ async def run_http(host: str, port: int, api_key: str = None):
     finally:
         if _health_monitor:
             await _health_monitor.stop()
+        if dispatcher:
+            await dispatcher.stop()
+            logger.info("Webhook dispatcher stopped")
 
 
 def main():

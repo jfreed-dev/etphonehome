@@ -14,6 +14,7 @@ METHOD_WRITE_FILE = "write_file"
 METHOD_LIST_FILES = "list_files"
 METHOD_HEARTBEAT = "heartbeat"
 METHOD_REGISTER = "register"
+METHOD_GET_METRICS = "get_metrics"
 
 
 @dataclass
@@ -78,6 +79,11 @@ class ClientIdentity:
     key_mismatch: bool = False  # True if key changed since registration
     previous_fingerprint: str | None = None  # Previous key if mismatched
     allowed_paths: list[str] | None = None  # Allowed path prefixes (None = all paths)
+    # Webhook configuration
+    webhook_url: str | None = None  # Per-client webhook URL override
+    # Rate limit configuration
+    rate_limit_rpm: int | None = None  # Per-client requests per minute (None = default)
+    rate_limit_concurrent: int | None = None  # Per-client max concurrent (None = default)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -89,6 +95,9 @@ class ClientIdentity:
         data.setdefault("key_mismatch", False)
         data.setdefault("previous_fingerprint", None)
         data.setdefault("allowed_paths", None)
+        data.setdefault("webhook_url", None)
+        data.setdefault("rate_limit_rpm", None)
+        data.setdefault("rate_limit_concurrent", None)
         return cls(**data)
 
 

@@ -251,8 +251,11 @@ class ClientStore:
         purpose: str = None,
         tags: list[str] = None,
         allowed_paths: list[str] = None,
+        webhook_url: str = None,
+        rate_limit_rpm: int = None,
+        rate_limit_concurrent: int = None,
     ) -> StoredClient | None:
-        """Update client metadata."""
+        """Update client metadata including webhook and rate limit settings."""
         if uuid not in self._clients:
             return None
 
@@ -272,6 +275,15 @@ class ClientStore:
             key_mismatch=identity.key_mismatch,
             previous_fingerprint=identity.previous_fingerprint,
             allowed_paths=allowed_paths if allowed_paths is not None else identity.allowed_paths,
+            webhook_url=webhook_url if webhook_url is not None else identity.webhook_url,
+            rate_limit_rpm=(
+                rate_limit_rpm if rate_limit_rpm is not None else identity.rate_limit_rpm
+            ),
+            rate_limit_concurrent=(
+                rate_limit_concurrent
+                if rate_limit_concurrent is not None
+                else identity.rate_limit_concurrent
+            ),
         )
 
         updated = StoredClient(
@@ -303,7 +315,7 @@ class ClientStore:
         if not identity.key_mismatch:
             return {"no_mismatch": True, "uuid": uuid}
 
-        # Create updated identity with cleared mismatch
+        # Create updated identity with cleared mismatch (preserve other fields)
         updated_identity = ClientIdentity(
             uuid=identity.uuid,
             display_name=identity.display_name,
@@ -315,6 +327,10 @@ class ClientStore:
             created_by=identity.created_by,
             key_mismatch=False,
             previous_fingerprint=None,
+            allowed_paths=identity.allowed_paths,
+            webhook_url=identity.webhook_url,
+            rate_limit_rpm=identity.rate_limit_rpm,
+            rate_limit_concurrent=identity.rate_limit_concurrent,
         )
 
         updated = StoredClient(

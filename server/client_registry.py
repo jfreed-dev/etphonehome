@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from server.client_store import ClientStore
+from server.rate_limiter import RateLimitConfig, get_rate_limiter
+from server.webhooks import EventType, get_dispatcher
 from shared.protocol import ClientIdentity, ClientInfo
 
 logger = logging.getLogger(__name__)
@@ -80,6 +82,20 @@ class ClientRegistry:
                     )
                     identity_data["key_mismatch"] = True
                     identity_data["previous_fingerprint"] = stored_fp
+
+                    # Dispatch key mismatch webhook
+                    dispatcher = get_dispatcher()
+                    if dispatcher:
+                        dispatcher.dispatch(
+                            event=EventType.CLIENT_KEY_MISMATCH,
+                            client_uuid=uuid,
+                            client_display_name=identity_data.get("display_name", ""),
+                            data={
+                                "previous_fingerprint": stored_fp[:20] + "...",
+                                "new_fingerprint": new_fp[:20] + "...",
+                            },
+                            client_webhook_url=existing.identity.webhook_url,
+                        )
                 # Preserve first_seen from stored identity
                 identity_data["first_seen"] = existing.identity.first_seen
 
@@ -102,6 +118,35 @@ class ClientRegistry:
                 f"Registered client: {identity.display_name} "
                 f"(uuid={uuid[:8]}..., client_id={client_info.client_id})"
             )
+
+            # Dispatch connected webhook
+            dispatcher = get_dispatcher()
+            if dispatcher:
+                dispatcher.dispatch(
+                    event=EventType.CLIENT_CONNECTED,
+                    client_uuid=uuid,
+                    client_display_name=identity.display_name,
+                    data={
+                        "hostname": client_info.hostname,
+                        "platform": client_info.platform,
+                        "tunnel_port": client_info.tunnel_port,
+                    },
+                    client_webhook_url=identity.webhook_url,
+                )
+
+            # Initialize rate limiter config if per-client overrides exist
+            if identity.rate_limit_rpm or identity.rate_limit_concurrent:
+                limiter = get_rate_limiter()
+                if limiter:
+                    limiter.set_client_config(
+                        uuid,
+                        RateLimitConfig(
+                            requests_per_minute=identity.rate_limit_rpm or limiter.default_rpm,
+                            max_concurrent=(
+                                identity.rate_limit_concurrent or limiter.default_concurrent
+                            ),
+                        ),
+                    )
 
             # Auto-select if this is the only client
             if len(self._active_clients) == 1:
@@ -140,6 +185,22 @@ class ClientRegistry:
             if uuid in self._active_clients:
                 client = self._active_clients[uuid]
                 logger.info(f"Unregistering client: {client.identity.display_name}")
+
+                # Dispatch disconnected webhook before cleanup
+                dispatcher = get_dispatcher()
+                if dispatcher:
+                    dispatcher.dispatch(
+                        event=EventType.CLIENT_DISCONNECTED,
+                        client_uuid=uuid,
+                        client_display_name=client.identity.display_name,
+                        data={"hostname": client.info.hostname},
+                        client_webhook_url=client.identity.webhook_url,
+                    )
+
+                # Clean up rate limiter state
+                limiter = get_rate_limiter()
+                if limiter:
+                    limiter.remove_client(uuid)
 
                 # Clean up mappings
                 client_id = self._uuid_to_client_id.pop(uuid, None)
@@ -398,10 +459,22 @@ class ClientRegistry:
         purpose: str = None,
         tags: list[str] = None,
         allowed_paths: list[str] = None,
+        webhook_url: str = None,
+        rate_limit_rpm: int = None,
+        rate_limit_concurrent: int = None,
     ) -> dict | None:
-        """Update client metadata."""
+        """Update client metadata including webhook and rate limit settings."""
         async with self._lock:
-            updated = self.store.update_identity(uuid, display_name, purpose, tags, allowed_paths)
+            updated = self.store.update_identity(
+                uuid,
+                display_name,
+                purpose,
+                tags,
+                allowed_paths,
+                webhook_url,
+                rate_limit_rpm,
+                rate_limit_concurrent,
+            )
             if not updated:
                 return None
 
@@ -409,12 +482,30 @@ class ClientRegistry:
             if uuid in self._active_clients:
                 self._active_clients[uuid].identity = updated.identity
 
+            # Update rate limiter config if rate limits changed
+            if rate_limit_rpm is not None or rate_limit_concurrent is not None:
+                limiter = get_rate_limiter()
+                if limiter:
+                    identity = updated.identity
+                    limiter.set_client_config(
+                        uuid,
+                        RateLimitConfig(
+                            requests_per_minute=identity.rate_limit_rpm or limiter.default_rpm,
+                            max_concurrent=(
+                                identity.rate_limit_concurrent or limiter.default_concurrent
+                            ),
+                        ),
+                    )
+
             return {
                 "uuid": uuid,
                 "display_name": updated.identity.display_name,
                 "purpose": updated.identity.purpose,
                 "tags": updated.identity.tags,
                 "allowed_paths": updated.identity.allowed_paths,
+                "webhook_url": updated.identity.webhook_url,
+                "rate_limit_rpm": updated.identity.rate_limit_rpm,
+                "rate_limit_concurrent": updated.identity.rate_limit_concurrent,
             }
 
     async def accept_key(self, uuid: str) -> dict | None:

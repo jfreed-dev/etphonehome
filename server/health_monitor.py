@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from server.client_connection import ClientConnection
 from server.client_registry import ClientRegistry
+from server.webhooks import EventType, get_dispatcher
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +181,25 @@ class HealthMonitor:
             logger.info(
                 f"Unregistering client {uuid[:8]}... after {health.consecutive_failures} failures"
             )
+
+            # Dispatch unhealthy webhook before unregistering
+            dispatcher = get_dispatcher()
+            if dispatcher:
+                # Get client info before unregister
+                async with self.registry._lock:
+                    client = self.registry._active_clients.get(uuid)
+                    if client:
+                        dispatcher.dispatch(
+                            event=EventType.CLIENT_UNHEALTHY,
+                            client_uuid=uuid,
+                            client_display_name=client.identity.display_name,
+                            data={
+                                "reason": reason,
+                                "consecutive_failures": health.consecutive_failures,
+                            },
+                            client_webhook_url=client.identity.webhook_url,
+                        )
+
             await self.registry.unregister(uuid)
 
             # Clean up connection cache
