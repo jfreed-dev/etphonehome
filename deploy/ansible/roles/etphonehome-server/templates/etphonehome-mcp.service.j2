@@ -1,0 +1,28 @@
+# ET Phone Home MCP Server Service
+# Managed by Ansible
+
+[Unit]
+Description=ET Phone Home MCP Server
+After=network.target sshd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ etphonehome_user }}
+Group={{ etphonehome_group }}
+EnvironmentFile={{ etphonehome_config_dir }}/server.env
+ExecStart={{ etphonehome_home }}/venv/bin/etphonehome-server --transport http --host ${ETPHONEHOME_HOST} --port ${ETPHONEHOME_PORT}
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ReadWritePaths={{ etphonehome_data_dir }} {{ etphonehome_log_dir }}
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,61 @@
+# ET Phone Home - Client Dockerfile
+# Multi-stage build for minimal image size
+
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install dependencies
+COPY pyproject.toml .
+COPY client/ client/
+COPY server/ server/
+COPY shared/ shared/
+
+RUN pip install --no-cache-dir -e .
+
+
+FROM python:3.12-slim AS runtime
+
+WORKDIR /app
+
+# Install runtime dependencies (ssh client for key generation)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssh-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash etphonehome
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy application code
+COPY --chown=etphonehome:etphonehome client/ client/
+COPY --chown=etphonehome:etphonehome server/ server/
+COPY --chown=etphonehome:etphonehome shared/ shared/
+COPY --chown=etphonehome:etphonehome pyproject.toml .
+
+# Create directories for config and logs
+RUN mkdir -p /home/etphonehome/.etphonehome/logs \
+    && chown -R etphonehome:etphonehome /home/etphonehome/.etphonehome
+
+# Environment configuration
+ENV PYTHONUNBUFFERED=1
+
+# Switch to non-root user
+USER etphonehome
+
+# Default command
+CMD ["phonehome"]

@@ -1,0 +1,18 @@
+# ET Phone Home Client Service
+# Managed by Ansible
+
+[Unit]
+Description=ET Phone Home Client
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{ _etphonehome_home }}/.etphonehome/venv/bin/phonehome
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

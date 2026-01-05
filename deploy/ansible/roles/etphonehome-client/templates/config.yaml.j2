@@ -1,0 +1,40 @@
+# ET Phone Home Client Configuration
+# Managed by Ansible
+
+# Server connection
+server_host: {{ etphonehome_server_host }}
+server_port: {{ etphonehome_server_port }}
+server_user: {{ etphonehome_server_user }}
+key_file: {{ _etphonehome_home }}/.etphonehome/id_ed25519
+
+# Client identity
+{% if etphonehome_display_name is defined and etphonehome_display_name %}
+display_name: {{ etphonehome_display_name }}
+{% endif %}
+{% if etphonehome_purpose is defined and etphonehome_purpose %}
+purpose: {{ etphonehome_purpose }}
+{% endif %}
+{% if etphonehome_tags is defined and etphonehome_tags %}
+tags:
+{% for tag in etphonehome_tags %}
+  - {{ tag }}
+{% endfor %}
+{% endif %}
+
+# Connection settings
+reconnect_delay: {{ etphonehome_reconnect_delay }}
+max_reconnect_delay: {{ etphonehome_max_reconnect_delay }}
+
+{% if etphonehome_allowed_paths is defined and etphonehome_allowed_paths %}
+# Path restrictions
+allowed_paths:
+{% for path in etphonehome_allowed_paths %}
+  - {{ path }}
+{% endfor %}
+{% endif %}
+
+# Logging
+log_level: {{ etphonehome_log_level }}
+log_file: {{ _etphonehome_home }}/.etphonehome/logs/client.log
+log_max_bytes: {{ etphonehome_log_max_bytes }}
+log_backup_count: {{ etphonehome_log_backup_count }}

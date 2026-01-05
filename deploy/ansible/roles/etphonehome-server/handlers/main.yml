@@ -1,0 +1,19 @@
+# ET Phone Home Server Handlers
+---
+- name: Reload systemd
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart SSH
+  become: true
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted
+
+- name: Restart etphonehome-server
+  become: true
+  ansible.builtin.systemd:
+    name: etphonehome-mcp
+    state: restarted
+  when: etphonehome_start_service | bool

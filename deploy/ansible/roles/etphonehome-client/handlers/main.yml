@@ -1,0 +1,17 @@
+# ET Phone Home Client Handlers
+---
+- name: Reload user systemd
+  become: true
+  become_user: "{{ _etphonehome_user }}"
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user
+
+- name: Restart etphonehome-client
+  become: true
+  become_user: "{{ _etphonehome_user }}"
+  ansible.builtin.systemd:
+    name: etphonehome-client
+    state: restarted
+    scope: user
+  when: etphonehome_start_service | bool

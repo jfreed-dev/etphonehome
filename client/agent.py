@@ -5,12 +5,14 @@ import stat
 import subprocess
 from pathlib import Path
 
+from client.metrics import collect_metrics, get_metrics_summary
 from shared.protocol import (
     ERR_COMMAND_FAILED,
     ERR_FILE_NOT_FOUND,
     ERR_INVALID_PARAMS,
     ERR_METHOD_NOT_FOUND,
     ERR_PATH_DENIED,
+    METHOD_GET_METRICS,
     METHOD_HEARTBEAT,
     METHOD_LIST_FILES,
     METHOD_READ_FILE,
@@ -66,6 +68,8 @@ class Agent:
                 result = self._list_files(request.params)
             elif request.method == METHOD_HEARTBEAT:
                 result = {"status": "alive"}
+            elif request.method == METHOD_GET_METRICS:
+                result = self._get_metrics(request.params)
             else:
                 return Response.error_response(
                     ERR_METHOD_NOT_FOUND, f"Unknown method: {request.method}", request.id
@@ -196,3 +200,13 @@ class Agent:
                 )
 
         return {"path": str(path), "entries": entries}
+
+    def _get_metrics(self, params: dict) -> dict:
+        """Collect system health metrics."""
+        summary_only = params.get("summary", False)
+
+        if summary_only:
+            return get_metrics_summary()
+        else:
+            metrics = collect_metrics()
+            return metrics.to_dict()

@@ -1,0 +1,37 @@
+# ET Phone Home - Ansible Inventory Example
+# Copy to inventory.yml and customize
+
+all:
+  children:
+    etphonehome_servers:
+      hosts:
+        server1:
+          ansible_host: 192.168.1.100
+          ansible_user: ubuntu
+          # ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+
+    etphonehome_clients:
+      hosts:
+        client1:
+          ansible_host: 192.168.1.101
+          ansible_user: ubuntu
+          etphonehome_display_name: "Development Machine"
+          etphonehome_purpose: "Development"
+          etphonehome_tags:
+            - dev
+            - linux
+
+        client2:
+          ansible_host: 192.168.1.102
+          ansible_user: ubuntu
+          etphonehome_display_name: "CI Runner"
+          etphonehome_purpose: "CI/CD"
+          etphonehome_tags:
+            - ci
+            - runner
+
+  vars:
+    # Common variables for all hosts
+    etphonehome_version: "latest"
+    etphonehome_server_host: server1
+    etphonehome_server_port: 2222

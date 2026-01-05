@@ -7,7 +7,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
-cd "$PROJECT_DIR"
+cd "$PROJECT_DIR" || exit 1
 
 # Colors
 GREEN='\033[0;32m'

@@ -1,0 +1,109 @@
+# ET Phone Home Server Role
+---
+- name: Create etphonehome group
+  become: true
+  ansible.builtin.group:
+    name: "{{ etphonehome_group }}"
+    state: present
+
+- name: Create etphonehome user
+  become: true
+  ansible.builtin.user:
+    name: "{{ etphonehome_user }}"
+    group: "{{ etphonehome_group }}"
+    home: "{{ etphonehome_home }}"
+    shell: /bin/bash
+    system: true
+    create_home: true
+
+- name: Create directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ etphonehome_user }}"
+    group: "{{ etphonehome_group }}"
+    mode: "0755"
+  loop:
+    - "{{ etphonehome_config_dir }}"
+    - "{{ etphonehome_data_dir }}"
+    - "{{ etphonehome_log_dir }}"
+    - "{{ etphonehome_home }}"
+
+- name: Install system dependencies
+  become: true
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+      - openssh-server
+    state: present
+    update_cache: true
+  when: ansible_os_family == "Debian"
+
+- name: Create Python virtual environment
+  become: true
+  become_user: "{{ etphonehome_user }}"
+  ansible.builtin.command:
+    cmd: python3 -m venv {{ etphonehome_home }}/venv
+    creates: "{{ etphonehome_home }}/venv/bin/python"
+
+- name: Install etphonehome package
+  become: true
+  become_user: "{{ etphonehome_user }}"
+  ansible.builtin.pip:
+    name: "etphonehome[server]{% if etphonehome_version != 'latest' %}=={{ etphonehome_version }}{% endif %}"
+    virtualenv: "{{ etphonehome_home }}/venv"
+    state: "{{ 'latest' if etphonehome_version == 'latest' else 'present' }}"
+  when: etphonehome_install_method == "pip"
+
+- name: Configure SSH for etphonehome
+  become: true
+  ansible.builtin.template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config.d/etphonehome.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart SSH
+
+- name: Create server environment file
+  become: true
+  ansible.builtin.template:
+    src: server.env.j2
+    dest: "{{ etphonehome_config_dir }}/server.env"
+    owner: "{{ etphonehome_user }}"
+    group: "{{ etphonehome_group }}"
+    mode: "0600"
+  notify: Restart etphonehome-server
+
+- name: Create systemd service for MCP server
+  become: true
+  ansible.builtin.template:
+    src: etphonehome-mcp.service.j2
+    dest: /etc/systemd/system/etphonehome-mcp.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart etphonehome-server
+
+- name: Enable and start etphonehome-mcp service
+  become: true
+  ansible.builtin.systemd:
+    name: etphonehome-mcp
+    enabled: "{{ etphonehome_enable_service }}"
+    state: "{{ 'started' if etphonehome_start_service else 'stopped' }}"
+    daemon_reload: true
+
+- name: Configure UFW firewall
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "{{ etphonehome_ssh_port }}"
+  when: etphonehome_configure_firewall | bool

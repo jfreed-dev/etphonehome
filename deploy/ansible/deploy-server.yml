@@ -1,0 +1,33 @@
+# ET Phone Home Server Deployment Playbook
+#
+# Usage:
+#   ansible-playbook -i inventory.yml deploy-server.yml
+#
+---
+- name: Deploy ET Phone Home Server
+  hosts: etphonehome_servers
+  gather_facts: true
+
+  pre_tasks:
+    - name: Verify target is Debian-based
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "Debian"
+        fail_msg: "This playbook currently only supports Debian-based systems"
+        success_msg: "Target OS verified: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+  roles:
+    - role: etphonehome-server
+
+  post_tasks:
+    - name: Display server status
+      ansible.builtin.debug:
+        msg: |
+          ET Phone Home Server deployed successfully!
+
+          SSH Port: {{ etphonehome_ssh_port }}
+          HTTP Port: {{ etphonehome_http_port }}
+
+          Next steps:
+          1. Add client public keys to {{ etphonehome_home }}/.ssh/authorized_keys
+          2. Configure Claude Code to use the MCP server

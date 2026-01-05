@@ -1,0 +1,40 @@
+# ET Phone Home Client Deployment Playbook
+#
+# Usage:
+#   ansible-playbook -i inventory.yml deploy-client.yml
+#
+---
+- name: Deploy ET Phone Home Client
+  hosts: etphonehome_clients
+  gather_facts: true
+
+  pre_tasks:
+    - name: Verify target is Debian-based
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "Debian"
+        fail_msg: "This playbook currently only supports Debian-based systems"
+        success_msg: "Target OS verified: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    - name: Verify server host is configured
+      ansible.builtin.assert:
+        that:
+          - etphonehome_server_host is defined
+          - etphonehome_server_host | length > 0
+        fail_msg: "etphonehome_server_host must be set in inventory"
+        success_msg: "Server host: {{ etphonehome_server_host }}"
+
+  roles:
+    - role: etphonehome-client
+
+  post_tasks:
+    - name: Display client status
+      ansible.builtin.debug:
+        msg: |
+          ET Phone Home Client deployed on {{ inventory_hostname }}!
+
+          Display Name: {{ etphonehome_display_name | default('(not set)') }}
+          Purpose: {{ etphonehome_purpose | default('(not set)') }}
+          Server: {{ etphonehome_server_host }}:{{ etphonehome_server_port }}
+
+          IMPORTANT: Add the public key to the server's authorized_keys file!

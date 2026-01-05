@@ -22,17 +22,9 @@ from client.agent import Agent
 from client.config import DEFAULT_KEY_FILE, Config, ensure_config_dir, generate_client_id
 from client.tunnel import ReverseTunnel, generate_ssh_keypair
 from client.updater import auto_update, get_current_version
+from shared.logging_config import setup_logging as configure_logging
 
 logger = logging.getLogger("phonehome")
-
-
-def setup_logging(level: str):
-    """Configure logging."""
-    logging.basicConfig(
-        level=getattr(logging, level.upper()),
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
 
 
 def main():
@@ -262,7 +254,14 @@ def main():
         config.client_id = generate_client_id()
         config.save()
 
-    setup_logging(config.log_level)
+    # Configure logging with file rotation
+    configure_logging(
+        name="phonehome",
+        level=config.log_level,
+        log_file=config.log_file,
+        max_bytes=config.log_max_bytes,
+        backup_count=config.log_backup_count,
+    )
 
     logger.info(f"ET Phone Home v{get_current_version()}")
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Handle SSH exec commands for client registration."""
+
 import json
 import os
 import sys

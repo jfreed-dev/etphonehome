@@ -8,6 +8,8 @@ import yaml
 DEFAULT_CONFIG_DIR = Path.home() / ".etphonehome"
 DEFAULT_CONFIG_FILE = DEFAULT_CONFIG_DIR / "config.yaml"
 DEFAULT_KEY_FILE = DEFAULT_CONFIG_DIR / "id_ed25519"
+DEFAULT_LOG_DIR = DEFAULT_CONFIG_DIR / "logs"
+DEFAULT_LOG_FILE = DEFAULT_LOG_DIR / "client.log"
 
 
 @dataclass
@@ -34,7 +36,12 @@ class Config:
     reconnect_delay: int = 5
     max_reconnect_delay: int = 300
     allowed_paths: list[str] = field(default_factory=list)
+
+    # Logging settings
     log_level: str = "INFO"
+    log_file: str = str(DEFAULT_LOG_FILE)
+    log_max_bytes: int = 10 * 1024 * 1024  # 10 MB
+    log_backup_count: int = 5
 
     @classmethod
     def load(cls, path: Path | None = None) -> "Config":
@@ -65,7 +72,11 @@ class Config:
             reconnect_delay=data.get("reconnect_delay", 5),
             max_reconnect_delay=data.get("max_reconnect_delay", 300),
             allowed_paths=data.get("allowed_paths", []),
+            # Logging settings
             log_level=data.get("log_level", "INFO"),
+            log_file=data.get("log_file", str(DEFAULT_LOG_FILE)),
+            log_max_bytes=data.get("log_max_bytes", 10 * 1024 * 1024),
+            log_backup_count=data.get("log_backup_count", 5),
         )
 
     def save(self, path: Path | None = None) -> None:
@@ -91,7 +102,11 @@ class Config:
             "reconnect_delay": self.reconnect_delay,
             "max_reconnect_delay": self.max_reconnect_delay,
             "allowed_paths": self.allowed_paths,
+            # Logging settings
             "log_level": self.log_level,
+            "log_file": self.log_file,
+            "log_max_bytes": self.log_max_bytes,
+            "log_backup_count": self.log_backup_count,
         }
 
         with open(path, "w") as f:

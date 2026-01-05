@@ -1,0 +1,17 @@
+# ET Phone Home SSH Configuration
+# Managed by Ansible
+
+# Listen on dedicated port for etphonehome clients
+Port {{ etphonehome_ssh_port }}
+ListenAddress {{ etphonehome_ssh_listen_address }}
+
+# Only allow etphonehome user
+Match User {{ etphonehome_user }}
+    # Allow reverse port forwarding only
+    AllowTcpForwarding remote
+    GatewayPorts no
+    X11Forwarding no
+    PermitTunnel no
+    ForceCommand /bin/false
+    # Disable shell access
+    PermitTTY no

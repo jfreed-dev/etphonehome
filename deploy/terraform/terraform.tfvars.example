@@ -1,0 +1,36 @@
+# ET Phone Home - Terraform Variables Example
+# Copy to terraform.tfvars and customize
+
+# AWS Configuration
+aws_region  = "us-east-1"
+environment = "prod"
+
+# Network
+vpc_cidr            = "10.0.0.0/16"
+public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+availability_zones  = ["us-east-1a", "us-east-1b"]
+
+# EC2 Instance
+instance_type = "t3.micro"
+# ami_id      = ""  # Leave empty for latest Ubuntu 22.04
+
+# SSH Key
+create_key_pair = true
+# key_name      = "my-existing-key"  # Use if create_key_pair = false
+
+# ET Phone Home Configuration
+ssh_port       = 2222
+http_port      = 8765
+enable_api_key = true
+
+# Access Control
+allowed_ssh_cidrs = ["0.0.0.0/0"]  # Restrict in production!
+# allowed_admin_cidrs = ["YOUR_IP/32"]  # Add your IP for admin access
+
+# Storage
+root_volume_size      = 20
+enable_ebs_encryption = true
+
+# Monitoring (optional)
+enable_cloudwatch_logs = false
+log_retention_days     = 30

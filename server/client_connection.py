@@ -115,3 +115,10 @@ class ClientConnection:
             return response.result.get("status") == "alive"
         except Exception:
             return False
+
+    async def get_metrics(self, summary: bool = False) -> dict:
+        """Get system health metrics from the client."""
+        response = await self.send_request("get_metrics", {"summary": summary})
+        if response.error:
+            raise RuntimeError(f"Metrics failed: {response.error['message']}")
+        return response.result
