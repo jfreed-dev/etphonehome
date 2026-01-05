@@ -114,3 +114,359 @@ ruff check --fix .
 1. **No macOS support** - Darwin builds not yet implemented
 2. **No Windows Server docs** - Setup guide is Linux-focused
 3. **No web dashboard** - Management via Claude CLI only
+
+---
+
+## Code Review & Improvement Suggestions (2026-01-05)
+
+### Executive Summary
+
+The ET Phone Home codebase is well-structured, production-ready, and follows good Python practices. The MCP server integration is functional but can be significantly enhanced to provide a better Claude Code experience. Below are prioritized recommendations based on Claude Code best practices research.
+
+### 1. MCP Tool Design Improvements
+
+#### 1.1 Enhanced Input Schemas (High Priority)
+
+Current tool schemas are functional but lack validation constraints. Enhanced schemas help Claude make better decisions:
+
+```python
+# Current (basic)
+"path": {"type": "string", "description": "Absolute path to the file"}
+
+# Recommended (with constraints)
+"path": {
+    "type": "string",
+    "description": "Absolute path to the file. Must start with /.",
+    "pattern": "^/.*",
+    "minLength": 1,
+    "maxLength": 4096
+}
+```
+
+**Locations to update**: `server/mcp_server.py:115-370` (all tool definitions)
+
+**Specific recommendations**:
+- Add `pattern` for path validation (enforce absolute paths)
+- Add `minLength`/`maxLength` constraints
+- Add `minimum`/`maximum` for numeric fields (timeout)
+- Add `additionalProperties: false` to schemas
+- Use `enum` for constrained options
+
+#### 1.2 Improved Tool Descriptions (Medium Priority)
+
+Tool descriptions guide Claude's decision-making. Current descriptions are functional but could be more specific:
+
+```python
+# Current
+description="Execute a shell command on the active client"
+
+# Improved
+description="Execute a shell command on a remote client. Returns stdout, stderr, and exit code. Use absolute paths for cwd. Default timeout is 300 seconds. Commands run with the client user's permissions."
+```
+
+**Benefits**: Claude will better understand when to use each tool and what to expect.
+
+#### 1.3 Tool Categorization (Low Priority)
+
+Organize tools into logical groups for maintainability:
+
+```python
+def list_tools():
+    return [
+        *_get_client_management_tools(),    # list_clients, select_client, find_client, etc.
+        *_get_execution_tools(),             # run_command
+        *_get_file_operation_tools(),        # read_file, write_file, list_files, etc.
+        *_get_monitoring_tools(),            # get_client_metrics, get_rate_limit_stats
+        *_get_admin_tools(),                 # configure_client, accept_key
+    ]
+```
+
+### 2. Error Handling Improvements (High Priority)
+
+#### 2.1 Structured Error Responses
+
+Current error handling is basic. Implement structured errors with recovery hints:
+
+```python
+# Current (server/mcp_server.py:377-379)
+except Exception as e:
+    return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
+
+# Recommended
+ERROR_HINTS = {
+    "CLIENT_NOT_FOUND": "Use 'list_clients' to see available clients.",
+    "TIMEOUT": "Try with longer timeout or break into smaller commands.",
+    "SSH_KEY_MISMATCH": "Verify the change is legitimate, then use 'accept_key'.",
+}
+
+except ClientNotFoundError as e:
+    return [TextContent(type="text", text=json.dumps({
+        "error": "CLIENT_NOT_FOUND",
+        "message": str(e),
+        "recovery_hint": ERROR_HINTS["CLIENT_NOT_FOUND"]
+    }))]
+```
+
+#### 2.2 Custom Exception Classes
+
+Create specific exceptions in `shared/protocol.py`:
+
+```python
+class ToolError(Exception):
+    def __init__(self, code: str, message: str, details: dict = None):
+        self.code = code
+        self.message = message
+        self.details = details or {}
+
+class ClientNotFoundError(ToolError): ...
+class TimeoutError(ToolError): ...
+class SSHKeyMismatchError(ToolError): ...
+```
+
+### 3. Claude Code Skills Integration (High Priority)
+
+Create skills that teach Claude safe practices for remote access. Skills auto-trigger based on context.
+
+#### 3.1 Recommended Skills to Create
+
+**Location**: `.claude/skills/` in project root
+
+1. **`etphonehome-remote-access/SKILL.md`** - Safe remote access practices
+   - Always verify target client before operations
+   - Use absolute paths for all file operations
+   - Set appropriate timeouts for long commands
+   - Handle SSH key mismatches properly
+
+2. **`etphonehome-diagnostics/SKILL.md`** - Client health monitoring
+   - Interpret metrics (CPU, memory, disk thresholds)
+   - Common diagnostic workflows
+   - Troubleshooting connection issues
+
+3. **`etphonehome-infrastructure/SKILL.md`** - Client management
+   - Tagging strategies for organization
+   - Metadata conventions (purpose, tags)
+   - Rate limiting configuration
+
+#### 3.2 Skill Template
+
+```yaml
+---
+name: etphonehome-remote-access
+description: Best practices for safe remote access using ET Phone Home. Use when executing commands, reading files, or managing remote clients.
+allowed-tools: mcp__etphonehome__*
+---
+
+# ET Phone Home - Safe Remote Access
+
+## Before Any Operation
+1. List clients: `list_clients`
+2. Verify target: `describe_client` with UUID
+3. Select client: `select_client`
+
+## Path Rules
+- ALWAYS use absolute paths (e.g., `/home/user/file.txt`)
+- NEVER use relative paths (e.g., `./file.txt`)
+...
+```
+
+### 4. Code Quality Improvements
+
+#### 4.1 Reduce Code Duplication (Medium Priority)
+
+In `server/mcp_server.py`, the rate limiting and webhook dispatch logic is duplicated across tools:
+
+**Current** (repeated in run_command, read_file, write_file, list_files):
+```python
+client = await registry.get_client(client_id) if client_id else await registry.get_active_client()
+client_uuid = client.identity.uuid if client else None
+limiter = get_rate_limiter()
+if limiter and client_uuid:
+    async with RateLimitContext(limiter, client_uuid, "method_name"):
+        result = await conn.method()
+```
+
+**Recommended**: Extract to helper function:
+```python
+async def _execute_with_tracking(
+    client_id: str | None,
+    method_name: str,
+    operation: Callable,
+    webhook_event: EventType = None,
+    webhook_data: dict = None,
+) -> Any:
+    """Execute operation with rate limiting and webhook dispatch."""
+    client = await registry.get_client(client_id) if client_id else await registry.get_active_client()
+    # ... centralized logic
+```
+
+#### 4.2 Type Hints (Low Priority)
+
+Add return type hints to improve code clarity:
+
+```python
+# server/mcp_server.py:66
+async def get_connection(client_id: str = None) -> ClientConnection:
+
+# Recommended - add proper return types throughout
+async def _handle_tool(name: str, args: dict) -> dict[str, Any]:
+```
+
+### 5. User Experience Improvements
+
+#### 5.1 Client Output Formatting (Medium Priority)
+
+Current `list_clients` output is raw JSON. Consider adding summary formatting:
+
+```python
+# Add to list_clients response
+"summary": f"{online_count} online, {total_count - online_count} offline",
+"active_client_name": active_client.identity.display_name if active_client else None
+```
+
+#### 5.2 Command Progress Feedback (Low Priority)
+
+For long-running commands, consider streaming output support or progress indicators.
+
+#### 5.3 Interactive Client Selection (Medium Priority)
+
+When no client is selected and multiple are available, provide clearer guidance:
+
+```python
+# Current error
+raise RuntimeError("No active client. Use list_clients and select_client first.")
+
+# Improved
+available = [c.identity.display_name for c in await registry.list_clients() if c.online]
+raise RuntimeError(
+    f"No active client selected. {len(available)} clients available: {', '.join(available[:3])}..."
+    "\nUse 'list_clients' then 'select_client' to choose one."
+)
+```
+
+### 6. Documentation Improvements
+
+#### 6.1 API Reference (High Priority)
+
+Create `docs/API.md` with:
+- Tool reference with parameters and examples
+- Error codes and recovery actions
+- Rate limiting behavior
+- Webhook event types
+
+#### 6.2 Workflow Documentation (Medium Priority)
+
+Create `docs/WORKFLOWS.md` with common patterns:
+- Connecting to a new client
+- Executing commands safely
+- File transfer operations
+- Handling key mismatches
+- Monitoring client health
+
+#### 6.3 Error Reference (Medium Priority)
+
+Create `docs/ERRORS.md` documenting all error codes:
+
+| Code | Name | Cause | Recovery |
+|------|------|-------|----------|
+| -32001 | ERR_PATH_DENIED | Path not in allowed list | Check client's allowed_paths |
+| -32002 | ERR_COMMAND_FAILED | Command execution error | Check stderr output |
+| -32003 | ERR_FILE_NOT_FOUND | File doesn't exist | Verify path exists |
+
+### 7. Security Enhancements
+
+#### 7.1 Input Validation (High Priority)
+
+Add comprehensive input validation before processing:
+
+```python
+def _validate_command(cmd: str) -> None:
+    """Validate command before execution."""
+    if len(cmd) > 10000:
+        raise ValueError("Command too long (max 10000 chars)")
+    # Additional validation as needed
+```
+
+#### 7.2 Audit Logging (Medium Priority)
+
+Enhance logging for security auditing:
+
+```python
+logger.info(
+    f"AUDIT: {tool_name} by user={user} client={client_uuid} "
+    f"args={sanitized_args}"
+)
+```
+
+### 8. Implementation Priority
+
+| Priority | Item | Effort | Impact |
+|----------|------|--------|--------|
+| **High** | Enhanced input schemas | Medium | High |
+| **High** | Structured error responses | Medium | High |
+| **High** | Create Claude Code skills | Low | High |
+| **High** | API documentation | Medium | High |
+| **Medium** | Improved tool descriptions | Low | Medium |
+| **Medium** | Code deduplication | Medium | Medium |
+| **Medium** | Workflow documentation | Medium | Medium |
+| **Medium** | Interactive client selection | Low | Medium |
+| **Low** | Tool categorization | Low | Low |
+| **Low** | Command progress feedback | High | Low |
+| **Low** | Type hints completion | Low | Low |
+
+### 9. Testing Recommendations
+
+#### 9.1 Missing Test Coverage
+
+Consider adding tests for:
+- Schema validation edge cases
+- Error response formatting
+- Rate limiting behavior under load
+- Webhook delivery retries
+
+#### 9.2 Integration Tests
+
+Add end-to-end tests that simulate Claude Code usage patterns:
+- Tool discovery and selection
+- Multi-client workflows
+- Error recovery paths
+
+---
+
+## Appendix: Claude Code Integration Notes
+
+### MCP Server Registration
+
+The server can be registered in Claude Code's settings:
+
+**stdio mode** (current, launched per-session):
+```json
+{
+  "mcpServers": {
+    "etphonehome": {
+      "command": "python",
+      "args": ["-m", "server.mcp_server"],
+      "cwd": "/path/to/etphonehome"
+    }
+  }
+}
+```
+
+**HTTP mode** (recommended for persistent service):
+```json
+{
+  "mcpServers": {
+    "etphonehome": {
+      "type": "sse",
+      "url": "http://localhost:8765/sse"
+    }
+  }
+}
+```
+
+### Skill Installation
+
+Skills can be installed at:
+- Project level: `.claude/skills/` (shared with team)
+- User level: `~/.claude/skills/` (personal)
+
+Skills activate automatically when Claude detects relevant context.
