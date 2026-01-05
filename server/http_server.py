@@ -34,9 +34,9 @@ class AuthMiddleware:
 
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http" and self.api_key:
-            # Skip auth for health and internal endpoints (localhost only)
+            # Skip auth for health, clients list, and internal endpoints (localhost only)
             path = scope.get("path", "")
-            if path not in ("/health", "/internal/register"):
+            if path not in ("/health", "/clients", "/internal/register"):
                 headers = dict(scope.get("headers", []))
                 auth = headers.get(b"authorization", b"").decode()
                 if not auth.startswith("Bearer ") or auth[7:] != self.api_key:
@@ -80,6 +80,17 @@ def create_http_app(api_key: Optional[str] = None) -> Starlette:
             }
         )
 
+    async def list_clients(request: Request) -> JSONResponse:
+        """List all registered clients."""
+        clients = await registry.list_clients()
+        return JSONResponse(
+            {
+                "clients": clients,
+                "online_count": registry.online_count,
+                "total_count": registry.total_count,
+            }
+        )
+
     async def internal_register(request: Request) -> JSONResponse:
         """Internal endpoint for registering clients from SSH handler."""
         try:
@@ -96,6 +107,7 @@ def create_http_app(api_key: Optional[str] = None) -> Starlette:
     # Define routes
     routes = [
         Route("/health", endpoint=health_check, methods=["GET"]),
+        Route("/clients", endpoint=list_clients, methods=["GET"]),
         Route("/sse", endpoint=handle_sse, methods=["GET"]),
         Mount("/messages/", app=sse_transport.handle_post_message),
         Route("/internal/register", endpoint=internal_register, methods=["POST"]),

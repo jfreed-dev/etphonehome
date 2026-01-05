@@ -6,11 +6,15 @@ Creates a reverse SSH tunnel to the server, allowing remote access to this machi
 """
 
 import argparse
+import json
 import logging
 import os
 import signal
+import socket
+import subprocess
 import sys
 import time
+import urllib.request
 import uuid as uuid_mod
 from pathlib import Path
 
@@ -51,6 +55,7 @@ def main():
     )
     parser.add_argument("--tags", nargs="+", help="Tags for this client")
     parser.add_argument("--show-uuid", action="store_true", help="Show client UUID and exit")
+    parser.add_argument("--list-clients", action="store_true", help="List all clients on the server")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
@@ -129,6 +134,97 @@ def main():
                 print(f"Tags: {', '.join(config.tags)}")
         else:
             print("No UUID assigned. Run 'phonehome --init' first.")
+        return 0
+
+    # Handle --list-clients
+    if args.list_clients:
+        config = Config.load(args.config)
+        if not config.server_host:
+            print("Error: No server configured. Run 'phonehome --init' first.")
+            return 1
+
+        key_path = Path(config.key_file)
+        if not key_path.exists():
+            print(f"Error: SSH key not found: {key_path}")
+            return 1
+
+        # Find a free local port
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("127.0.0.1", 0))
+            local_port = s.getsockname()[1]
+
+        # Start SSH tunnel in background
+        ssh_cmd = [
+            "ssh",
+            "-o", "ConnectTimeout=10",
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "BatchMode=yes",
+            "-i", str(key_path),
+            "-p", str(config.server_port),
+            "-L", f"{local_port}:127.0.0.1:8765",
+            f"{config.server_user}@{config.server_host}",
+            "-N",
+        ]
+
+        ssh_proc = subprocess.Popen(
+            ssh_cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+
+        try:
+            # Wait for tunnel to establish
+            time.sleep(2)
+
+            if ssh_proc.poll() is not None:
+                stderr = ssh_proc.stderr.read().decode() if ssh_proc.stderr else ""
+                print(f"Error: SSH tunnel failed: {stderr}")
+                return 1
+
+            # Query the clients endpoint
+            url = f"http://127.0.0.1:{local_port}/clients"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+
+            # Display results
+            clients = data.get("clients", [])
+            online = data.get("online_count", 0)
+            total = data.get("total_count", 0)
+
+            print(f"Clients: {online} online / {total} total\n")
+
+            if not clients:
+                print("No clients registered.")
+            else:
+                for client in clients:
+                    status = "ONLINE" if client.get("online") else "offline"
+                    name = client.get("display_name", "unnamed")
+                    uuid = client.get("uuid", "?")[:8]
+                    purpose = client.get("purpose", "")
+                    tags = client.get("tags", [])
+
+                    status_icon = "\033[32m●\033[0m" if client.get("online") else "\033[90m○\033[0m"
+                    print(f"  {status_icon} {name} ({uuid}...)")
+                    if purpose:
+                        print(f"      Purpose: {purpose}")
+                    if tags:
+                        print(f"      Tags: {', '.join(tags)}")
+                    last_seen = client.get("last_seen", "")
+                    if last_seen and not client.get("online"):
+                        print(f"      Last seen: {last_seen}")
+                    print()
+
+        except urllib.error.URLError as e:
+            print(f"Error: Could not connect to server API: {e}")
+            return 1
+        except Exception as e:
+            print(f"Error: {e}")
+            return 1
+        finally:
+            ssh_proc.terminate()
+            ssh_proc.wait(timeout=5)
+
         return 0
 
     # Load configuration
