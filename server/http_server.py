@@ -7,6 +7,7 @@ Provides HTTP/SSE transport so the MCP server can run as a persistent daemon.
 
 import logging
 import os
+from typing import Optional
 
 from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
@@ -14,7 +15,8 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-from starlette.routing import Route
+from starlette.routing import Mount, Route
+from starlette.types import ASGIApp
 
 logger = logging.getLogger("etphonehome.http")
 
@@ -26,15 +28,15 @@ DEFAULT_PORT = 8765
 class AuthMiddleware:
     """Simple bearer token authentication middleware."""
 
-    def __init__(self, app, api_key: str | None = None):
+    def __init__(self, app, api_key: Optional[str] = None):
         self.app = app
         self.api_key = api_key or os.environ.get("ETPHONEHOME_API_KEY")
 
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http" and self.api_key:
-            # Skip auth for health endpoint
+            # Skip auth for health and internal endpoints (localhost only)
             path = scope.get("path", "")
-            if path != "/health":
+            if path not in ("/health", "/internal/register"):
                 headers = dict(scope.get("headers", []))
                 auth = headers.get(b"authorization", b"").decode()
                 if not auth.startswith("Bearer ") or auth[7:] != self.api_key:
@@ -44,7 +46,7 @@ class AuthMiddleware:
         await self.app(scope, receive, send)
 
 
-def create_http_app(api_key: str | None = None) -> Starlette:
+def create_http_app(api_key: Optional[str] = None) -> Starlette:
     """Create the Starlette ASGI application with MCP SSE transport."""
     # Import here to avoid circular imports and ensure globals are initialized
     from server.mcp_server import create_server, registry
@@ -57,22 +59,15 @@ def create_http_app(api_key: str | None = None) -> Starlette:
 
     async def handle_sse(request: Request) -> Response:
         """Handle SSE connection requests."""
-        async with sse_transport.connect_sse(request.scope, request.receive, request._send) as (
-            read_stream,
-            write_stream,
-        ):
+        async with sse_transport.connect_sse(
+            request.scope, request.receive, request._send
+        ) as (read_stream, write_stream):
             await mcp_server.run(
                 read_stream,
                 write_stream,
                 mcp_server.create_initialization_options(),
             )
         return Response()
-
-    async def handle_messages(request: Request) -> Response:
-        """Handle POST messages from clients."""
-        return await sse_transport.handle_post_message(
-            request.scope, request.receive, request._send
-        )
 
     async def health_check(request: Request) -> JSONResponse:
         """Health check endpoint for monitoring."""
@@ -85,11 +80,25 @@ def create_http_app(api_key: str | None = None) -> Starlette:
             }
         )
 
+    async def internal_register(request: Request) -> JSONResponse:
+        """Internal endpoint for registering clients from SSH handler."""
+        try:
+            registration = await request.json()
+            await registry.register(registration)
+            uuid = registration.get("identity", {}).get("uuid", "unknown")
+            display_name = registration.get("identity", {}).get("display_name", "unknown")
+            logger.info(f"Registered client via internal API: {display_name} ({uuid[:8]}...)")
+            return JSONResponse({"registered": uuid, "display_name": display_name})
+        except Exception as e:
+            logger.error(f"Internal registration error: {e}")
+            return JSONResponse({"error": str(e)}, status_code=500)
+
     # Define routes
     routes = [
         Route("/health", endpoint=health_check, methods=["GET"]),
         Route("/sse", endpoint=handle_sse, methods=["GET"]),
-        Route("/messages/", endpoint=handle_messages, methods=["POST"]),
+        Mount("/messages/", app=sse_transport.handle_post_message),
+        Route("/internal/register", endpoint=internal_register, methods=["POST"]),
     ]
 
     # Create middleware stack
@@ -117,7 +126,7 @@ def create_http_app(api_key: str | None = None) -> Starlette:
 async def run_http_server(
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
-    api_key: str | None = None,
+    api_key: Optional[str] = None,
 ):
     """Run the HTTP/SSE server."""
     import uvicorn
