@@ -233,6 +233,29 @@ Once connected, Claude CLI can use these tools:
 | `find_client` | Search clients by name, purpose, tags, or capabilities |
 | `describe_client` | Get detailed information about a specific client |
 | `update_client` | Update client metadata (display_name, purpose, tags) |
+| `accept_key` | Accept a client's new SSH key after legitimate key change |
+
+## Server Features
+
+### Automatic Disconnect Detection
+
+The server runs a background health monitor that automatically detects disconnected clients:
+
+- Heartbeats all active clients every 30 seconds
+- Clients that fail 3 consecutive health checks are automatically unregistered
+- New clients have a 60-second grace period before health checks begin
+- Reconnecting clients are automatically re-registered
+
+This ensures `list_clients` always reflects the actual connection state, even when clients disconnect unexpectedly (network issues, crashes, etc.).
+
+### SSH Key Change Detection
+
+When a client reconnects with a different SSH key, the server flags it with `key_mismatch: true`. This helps detect:
+
+- Legitimate key rotations (use `accept_key` to clear the flag)
+- Potential security issues (investigate before accepting)
+
+Use `describe_client` to see key mismatch details and `accept_key` to accept legitimate changes.
 
 ## Configuration
 
