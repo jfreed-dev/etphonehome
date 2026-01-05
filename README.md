@@ -1,5 +1,10 @@
 # ET Phone Home
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Build Status](https://github.com/jfreed-dev/etphonehome-public/actions/workflows/build.yml/badge.svg)](https://github.com/jfreed-dev/etphonehome-public/actions/workflows/build.yml)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io/)
+
 Remote access system enabling Claude CLI to assist machines via reverse SSH tunnels.
 
 ---
