@@ -4,7 +4,7 @@ Planned features and improvements for ET Phone Home.
 
 ---
 
-## Current Version: 0.1.5
+## Current Version: 0.1.6
 
 ### Completed Features
 
@@ -31,6 +31,15 @@ Planned features and improvements for ET Phone Home.
 | `allowed_paths` in update_client | Done | 0.1.4 |
 | Smart auto-update (portable only) | Done | 0.1.5 |
 | Installation type detection | Done | 0.1.5 |
+| Comprehensive test suite | Done | 0.1.6 |
+| Pre-commit hooks (Black, Ruff, etc.) | Done | 0.1.6 |
+| Client health metrics (`get_client_metrics`) | Done | 0.1.6 |
+| Structured logging with rotation | Done | 0.1.6 |
+| Client connection webhooks | Done | 0.1.6 |
+| Rate limiting per client | Done | 0.1.6 |
+| Ansible playbooks | Done | 0.1.6 |
+| Docker containers | Done | 0.1.6 |
+| Terraform modules | Done | 0.1.6 |
 
 ---
 
@@ -38,21 +47,15 @@ Planned features and improvements for ET Phone Home.
 
 ### Short Term (Next Release)
 
-#### Code Quality
-- [ ] Comprehensive test suite expansion
-- [ ] Code coverage reporting (target: 80%+)
-- [ ] Pre-commit hooks for linting
-
-#### Client Improvements
+#### Platform Expansion
 - [ ] macOS support (Intel and Apple Silicon)
 - [ ] Windows ARM64 support
 - [ ] Windows service wrapper (NSSM alternative)
-- [ ] Client health monitoring dashboard data
 
-#### Server Improvements
-- [ ] Persistent logging with rotation
-- [ ] Client connection webhooks
-- [ ] Rate limiting per client
+#### Observability
+- [ ] Prometheus metrics endpoint
+- [ ] Grafana dashboard template
+- [ ] Connection status alerts (email, Slack integration)
 
 ### Medium Term
 
@@ -81,18 +84,6 @@ Planned features and improvements for ET Phone Home.
 - [ ] Multi-client command execution UI
 - [ ] User authentication and RBAC
 
-#### Deployment Automation
-- [ ] Ansible playbook for bulk client deployment
-- [ ] Docker container for server
-- [ ] Terraform module for cloud deployment
-- [ ] Configuration management integration
-
-#### Monitoring & Alerting
-- [ ] Client health metrics (CPU, memory, disk)
-- [ ] Connection status alerts (email, Slack, webhook)
-- [ ] Prometheus metrics endpoint
-- [ ] Grafana dashboard template
-
 ### Long Term
 
 #### Enterprise Features
@@ -114,6 +105,7 @@ Planned features and improvements for ET Phone Home.
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.1.6 | 2026-01-05 | Webhooks, rate limiting, metrics, deployment automation (Ansible/Docker/Terraform), comprehensive tests |
 | 0.1.5 | 2026-01-05 | Fixed auto-update loop for non-portable installs, installation detection |
 | 0.1.4 | 2026-01-05 | Automatic disconnect detection, `--list-clients` CLI, `allowed_paths` |
 | 0.1.3 | 2026-01-04 | Systemd service, HTTP daemon mode, SSH key detection |
