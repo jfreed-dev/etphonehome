@@ -2,56 +2,102 @@
 
 Remote access system enabling Claude CLI to assist machines via reverse SSH tunnels.
 
+---
+
+## Quick Reference
+
+```bash
+# Client Setup (one-time)
+phonehome --init                    # Initialize config
+phonehome --generate-key            # Generate SSH keypair
+# Add public key to server's authorized_keys
+
+# Client Connection
+phonehome                           # Connect with config defaults
+phonehome -s host.example.com -p 443  # Connect with overrides
+phonehome --list-clients            # Query server for all clients
+
+# Server (systemd recommended)
+sudo systemctl start etphonehome-mcp   # Start MCP server
+curl http://localhost:8765/health      # Health check
+```
+
+**Claude CLI Examples:**
+```
+"List all connected clients"
+"Run 'df -h' on the laptop"
+"Read /etc/hostname from production"
+"Find clients with docker capability"
+```
+
+---
+
 ## Overview
 
 ET Phone Home allows remote machines to "phone home" to your Claude CLI instance, enabling Claude to:
 - Execute commands on remote machines
 - Read and write files
-- Run tests and builds
 - Transfer files between server and clients
+- Search and filter clients by capabilities, tags, or purpose
 
 This is useful for assisting machines behind firewalls, NAT, or otherwise inaccessible networks.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     SERVER (Your Host)                       │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐  │
-│  │ Claude CLI  │────│ MCP Server  │────│ Client Registry │  │
-│  └─────────────┘    └──────┬──────┘    └─────────────────┘  │
-│                            │                                 │
-│                     ┌──────┴──────┐                         │
-│                     │  SSH Server │ :443                    │
-│                     └──────┬──────┘                         │
-└────────────────────────────┼────────────────────────────────┘
-                             │ Reverse SSH Tunnels
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-   ┌────┴────┐          ┌────┴────┐          ┌────┴────┐
-   │Client A │          │Client B │          │Client C │
-   │ (Linux) │          │(Windows)│          │  (VM)   │
-   └─────────┘          └─────────┘          └─────────┘
+                           YOUR NETWORK                              REMOTE NETWORKS
+    ┌─────────────────────────────────────────────┐      ┌─────────────────────────────────┐
+    │                 SERVER HOST                 │      │         REMOTE CLIENTS          │
+    │                                             │      │                                 │
+    │  ┌─────────────┐      ┌─────────────────┐  │      │  ┌─────────┐    ┌─────────┐    │
+    │  │ Claude CLI  │─────►│   MCP Server    │  │      │  │Client A │    │Client B │    │
+    │  └─────────────┘      │ (HTTP/stdio)    │  │      │  │ (Linux) │    │(Windows)│    │
+    │                       └────────┬────────┘  │      │  └────┬────┘    └────┬────┘    │
+    │                                │           │      │       │              │         │
+    │                       ┌────────▼────────┐  │      │       │              │         │
+    │                       │  SSH Server     │◄─┼──────┼───────┴──────────────┘         │
+    │                       │  (Port 443)     │  │      │    Reverse SSH Tunnels         │
+    │                       └─────────────────┘  │      │                                 │
+    └─────────────────────────────────────────────┘      └─────────────────────────────────┘
+
+Data Flow:
+1. Clients establish reverse SSH tunnels to server (outbound from client)
+2. MCP server communicates with clients through tunnels
+3. Claude CLI invokes MCP tools to manage remote clients
 ```
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Reverse Tunnels** | Clients behind NAT/firewalls connect out to server |
+| **MCP Integration** | Native Claude CLI support via Model Context Protocol |
+| **Persistent Identity** | Clients maintain UUID across reconnections |
+| **Capability Detection** | Auto-detects Docker, Python, GPU, etc. |
+| **Path Restrictions** | Optional file system access limits |
+| **Auto-Updates** | Clients can self-update from download server |
+| **Cross-Platform** | Linux, Windows, with macOS planned |
+
+---
 
 ## Quick Start
 
 ### Server Setup
 
-1. Install dependencies:
+1. **Install dependencies:**
    ```bash
    cd etphonehome
    pip install -e ".[server]"
    ```
 
-2. Run the setup script for configuration guidance:
+2. **Run setup script:**
    ```bash
    ./scripts/setup_server.sh
    ```
 
-3. Configure SSH (see setup script output for details)
+3. **Configure SSH** (see setup script output)
 
-4. Configure MCP server (choose one option):
+4. **Configure MCP server:**
 
    **Option A: stdio mode** (launched by Claude Code):
    ```json
@@ -68,7 +114,6 @@ This is useful for assisting machines behind firewalls, NAT, or otherwise inacce
 
    **Option B: HTTP daemon mode** (persistent service):
    ```bash
-   # Deploy as systemd service
    sudo ./scripts/deploy_mcp_service.sh
    ```
 
@@ -89,177 +134,196 @@ This is useful for assisting machines behind firewalls, NAT, or otherwise inacce
 
 ### Client Deployment
 
-The client is designed to run from a user's home folder without admin/root access.
-Two distribution formats are available:
+The client runs from the user's home folder without admin/root access.
 
 #### Option A: Single Executable (Recommended)
 
-Download from GitHub Releases and run directly:
-
 ```bash
-# Linux
+# Linux - install to ~/phonehome/
+mkdir -p ~/phonehome && cd ~/phonehome
+curl -LO http://your-server/latest/phonehome-linux
 chmod +x phonehome-linux
 ./phonehome-linux --init
 ./phonehome-linux --generate-key
 ./phonehome-linux -s your-server.example.com -p 443
+```
 
-# Windows (PowerShell)
-.\phonehome-windows.exe --init
-.\phonehome-windows.exe --generate-key
-.\phonehome-windows.exe -s your-server.example.com -p 443
+```powershell
+# Windows - install to %USERPROFILE%\phonehome\
+New-Item -ItemType Directory -Path "$env:USERPROFILE\phonehome" -Force
+Set-Location "$env:USERPROFILE\phonehome"
+Invoke-WebRequest -Uri "http://your-server/latest/phonehome-windows.exe" -OutFile "phonehome.exe"
+.\phonehome.exe --init
+.\phonehome.exe --generate-key
+.\phonehome.exe -s your-server.example.com -p 443
 ```
 
 #### Option B: Portable Archive
 
-Contains bundled Python - no system dependencies required:
-
 ```bash
-# Linux
+# Linux - install to ~/phonehome/
+cd ~
+curl -LO http://your-server/latest/phonehome-linux-x86_64.tar.gz
 tar xzf phonehome-linux-x86_64.tar.gz
-cd phonehome
-./setup.sh                           # First-time setup
+cd phonehome && ./setup.sh
 ./run.sh -s your-server.example.com
+```
 
-# Windows
-Expand-Archive phonehome-windows-amd64.zip -DestinationPath .
-cd phonehome
-.\setup.bat                          # First-time setup
+```powershell
+# Windows - install to %USERPROFILE%\phonehome\
+Set-Location $env:USERPROFILE
+Invoke-WebRequest -Uri "http://your-server/latest/phonehome-windows-amd64.zip" -OutFile "phonehome.zip"
+Expand-Archive -Path "phonehome.zip" -DestinationPath "."
+Set-Location phonehome
+.\setup.bat
 .\run.bat -s your-server.example.com
 ```
 
 #### Option C: From Source (Development)
 
 ```bash
+# Linux
+cd ~
+git clone https://github.com/jfreed-dev/etphonehome.git ~/etphonehome
+cd ~/etphonehome
+pip install -e .
+phonehome --init && phonehome --generate-key
+phonehome -s your-server.example.com -p 443
+```
+
+```powershell
+# Windows
+Set-Location $env:USERPROFILE
+git clone https://github.com/jfreed-dev/etphonehome.git "$env:USERPROFILE\etphonehome"
+Set-Location "$env:USERPROFILE\etphonehome"
 pip install -e .
 phonehome --init
 phonehome --generate-key
-phonehome -s your-server.example.com -p 2222
+phonehome -s your-server.example.com -p 443
 ```
+
+### Client CLI Options
+
+| Option | Description |
+|--------|-------------|
+| `--init` | Initialize config directory and create default config |
+| `--generate-key` | Generate a new SSH keypair |
+| `--show-key` | Display the public key |
+| `--show-uuid` | Display the client UUID |
+| `--list-clients` | Query the server for all connected clients |
+| `-s`, `--server` | Override server hostname |
+| `-p`, `--port` | Override server port |
+| `-v`, `--verbose` | Enable verbose logging |
 
 ### Post-Setup
 
-After running `--init` and `--generate-key`:
+1. Add your public key to the server's `authorized_keys`:
+   - Linux: `~/.etphonehome/id_ed25519.pub`
+   - Windows: `%USERPROFILE%\.etphonehome\id_ed25519.pub`
+2. Edit config with server details (optional if using CLI flags):
+   - Linux: `~/.etphonehome/config.yaml`
+   - Windows: `%USERPROFILE%\.etphonehome\config.yaml`
+3. Connect: `phonehome` (Linux) or `.\phonehome.exe` (Windows)
 
-1. Add your public key (`~/.etphonehome/id_ed25519.pub`) to the server's `authorized_keys`
-2. Edit `~/.etphonehome/config.yaml` with server details (optional if using CLI flags)
-3. Connect: `phonehome` or `./run.sh`
+---
 
-### Running as a Service (Linux)
+## Running as a Service
 
-Install the client as a systemd service for automatic startup and reconnection:
+### Client Service (Linux)
 
 ```bash
 # User service (no root required)
 ./scripts/install-service.sh --user
-systemctl --user start phonehome
-systemctl --user enable phonehome
+systemctl --user enable --now phonehome
 
 # Enable start on boot (before login)
 loginctl enable-linger $USER
 ```
 
-Service commands:
-
+**Service commands:**
 ```bash
-systemctl --user status phonehome    # Check status
-systemctl --user restart phonehome   # Restart
-journalctl --user -u phonehome -f    # View logs
+systemctl --user status phonehome     # Check status
+systemctl --user restart phonehome    # Restart
+journalctl --user -u phonehome -f     # View logs
 ```
 
-For system-wide installation (requires root):
+### MCP Server Daemon (Linux)
 
 ```bash
-sudo ./scripts/install-service.sh --system
-sudo systemctl enable phonehome@username
-sudo systemctl start phonehome@username
-```
-
-### Running MCP Server as a Daemon (Linux)
-
-The MCP server can run as a persistent HTTP daemon instead of being launched by Claude Code:
-
-```bash
-# Deploy using the install script
 sudo ./scripts/deploy_mcp_service.sh
-
-# Or manually:
-sudo cp scripts/etphonehome-mcp.service /etc/systemd/system/
-sudo mkdir -p /etc/etphonehome
-sudo cp scripts/server.env.example /etc/etphonehome/server.env
-echo "ETPHONEHOME_API_KEY=$(openssl rand -hex 32)" | sudo tee -a /etc/etphonehome/server.env
-sudo systemctl daemon-reload
-sudo systemctl enable etphonehome-mcp
-sudo systemctl start etphonehome-mcp
 ```
 
-Server commands:
-
+**Server commands:**
 ```bash
-# Manual invocation
-etphonehome-server --transport http --port 8765
-
-# Service management
-sudo systemctl status etphonehome-mcp
-sudo systemctl restart etphonehome-mcp
-sudo journalctl -u etphonehome-mcp -f
-
-# Health check
-curl http://localhost:8765/health
+sudo systemctl status etphonehome-mcp    # Check status
+sudo journalctl -u etphonehome-mcp -f    # View logs
+curl http://localhost:8765/health        # Health check
 ```
 
-Server CLI options:
+**Server CLI options:**
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--transport` | `stdio` | Transport mode: `stdio` or `http` |
 | `--host` | `127.0.0.1` | HTTP server bind address |
 | `--port` | `8765` | HTTP server port |
-| `--api-key` | (none) | API key for authentication (or use `ETPHONEHOME_API_KEY` env var) |
+| `--api-key` | (none) | API key (or `ETPHONEHOME_API_KEY` env var) |
 
-## MCP Tools
+---
 
-Once connected, Claude CLI can use these tools:
+## MCP Tools Reference
+
+### Client Management
 
 | Tool | Description |
 |------|-------------|
-| `list_clients` | List all connected clients |
+| `list_clients` | List all connected clients with status |
 | `select_client` | Choose which client to interact with |
+| `find_client` | Search by name, purpose, tags, or capabilities |
+| `describe_client` | Get detailed information about a client |
+| `update_client` | Update metadata (display_name, purpose, tags, allowed_paths) |
+| `accept_key` | Accept a client's new SSH key after legitimate change |
+
+### Remote Operations
+
+| Tool | Description |
+|------|-------------|
 | `run_command` | Execute shell commands |
 | `read_file` | Read file contents |
 | `write_file` | Write to files |
 | `list_files` | List directory contents |
 | `upload_file` | Send file from server to client |
 | `download_file` | Fetch file from client to server |
-| `find_client` | Search clients by name, purpose, tags, or capabilities |
-| `describe_client` | Get detailed information about a specific client |
-| `update_client` | Update client metadata (display_name, purpose, tags) |
-| `accept_key` | Accept a client's new SSH key after legitimate key change |
+
+---
 
 ## Server Features
 
 ### Automatic Disconnect Detection
 
-The server runs a background health monitor that automatically detects disconnected clients:
-
-- Heartbeats all active clients every 30 seconds
-- Clients that fail 3 consecutive health checks are automatically unregistered
-- New clients have a 60-second grace period before health checks begin
+The server monitors client connections with automatic cleanup:
+- Heartbeats all clients every 30 seconds
+- Clients failing 3 consecutive checks are unregistered
+- 60-second grace period for new connections
 - Reconnecting clients are automatically re-registered
-
-This ensures `list_clients` always reflects the actual connection state, even when clients disconnect unexpectedly (network issues, crashes, etc.).
 
 ### SSH Key Change Detection
 
-When a client reconnects with a different SSH key, the server flags it with `key_mismatch: true`. This helps detect:
+When a client reconnects with a different SSH key:
+- Server flags it with `key_mismatch: true`
+- Use `describe_client` to see details
+- Use `accept_key` to accept legitimate changes (key rotation)
+- Investigate before accepting unexpected changes
 
-- Legitimate key rotations (use `accept_key` to clear the flag)
-- Potential security issues (investigate before accepting)
-
-Use `describe_client` to see key mismatch details and `accept_key` to accept legitimate changes.
+---
 
 ## Configuration
 
-### Client Config (`~/.etphonehome/config.yaml`)
+### Client Config
+
+**Location:**
+- Linux: `~/.etphonehome/config.yaml`
+- Windows: `%USERPROFILE%\.etphonehome\config.yaml`
 
 ```yaml
 server_host: localhost
@@ -275,41 +339,47 @@ log_level: INFO
 
 ### Security
 
-- **SSH Keys Only**: Password authentication is not supported
-- **Path Restrictions**: Optionally limit which paths the agent can access
-- **Tunnel Binding**: Reverse tunnels bind to localhost only
+| Feature | Description |
+|---------|-------------|
+| **SSH Keys Only** | Password authentication not supported |
+| **Path Restrictions** | Optional limits on accessible paths |
+| **Tunnel Binding** | Reverse tunnels bind to localhost only |
+| **Key Verification** | Client keys verified on each connection |
 
 ### Windows Security Notes
 
-Windows security tools may require additional configuration:
-
 | Issue | Solution |
 |-------|----------|
-| **Antivirus blocks executable** | Add to exclusions, or use portable archive instead |
-| **SmartScreen warning** | Click "More info" → "Run anyway" |
-| **Firewall blocks connection** | Allow outbound on port 443 |
-| **PowerShell execution policy** | `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` |
+| Antivirus blocks executable | Add to exclusions, or use portable archive |
+| SmartScreen warning | Click "More info" → "Run anyway" |
+| Firewall blocks connection | Allow outbound on port 443 |
+| PowerShell execution policy | `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` |
 
-The default port is 443 (SSH over HTTPS port) to maximize compatibility with corporate firewalls. You can change this if needed.
+---
 
 ## Documentation
 
-- [SSH + Claude Code Guide](docs/ssh-claude-code-guide.md) - Connect via SSH and use Claude Code to manage clients
-- [Management Guide](docs/management-guide.md) - Detailed client management workflows
-- [Server Setup (Hostinger)](docs/hostinger-server-setup.md) - VPS deployment reference
+| Guide | Description |
+|-------|-------------|
+| [MCP Server Setup](docs/mcp-server-setup-guide.md) | Complete Linux/Windows server setup |
+| [SSH + Claude Code](docs/ssh-claude-code-guide.md) | Remote MCP access via SSH |
+| [Management Guide](docs/management-guide.md) | Client management workflows |
+| [Hostinger Setup](docs/hostinger-server-setup.md) | VPS deployment reference |
+| [Download Server](docs/download-server-setup.md) | Client distribution setup |
+| [Roadmap](docs/roadmap.md) | Planned features |
+
+---
 
 ## Building Releases
 
-Build scripts are in the `build/` directory:
-
 ```bash
 # PyInstaller (single executable)
-./build/pyinstaller/build_linux.sh      # Linux
-.\build\pyinstaller\build_windows.bat   # Windows
+./build/pyinstaller/build_linux.sh
+.\build\pyinstaller\build_windows.bat
 
 # Portable archive (bundled Python)
-./build/portable/package_linux.sh       # Linux
-.\build\portable\package_windows.ps1    # Windows
+./build/portable/package_linux.sh
+.\build\portable\package_windows.ps1
 ```
 
 Releases are automatically built via GitHub Actions on version tags (`v*`).
@@ -317,16 +387,12 @@ Releases are automatically built via GitHub Actions on version tags (`v*`).
 ## Development
 
 ```bash
-# Install dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Format code
-black .
-ruff check --fix .
+pip install -e ".[dev]"    # Install dev dependencies
+pytest                      # Run tests
+black . && ruff check --fix .  # Format and lint
 ```
+
+---
 
 ## License
 
