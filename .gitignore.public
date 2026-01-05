@@ -34,6 +34,10 @@ CODEX.md
 .gemini/
 .codex/
 
+# Private infrastructure documentation (contains server IPs)
+docs/hostinger-server-setup.md
+PROJECT_STATUS.md
+
 # Private repo specific files
 .gitignore.public
 .gitattributes

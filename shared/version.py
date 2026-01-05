@@ -1,6 +1,9 @@
 """Version information for ET Phone Home."""
 
+import os
+
 __version__ = "0.1.4"
 
-# Update server URL
-UPDATE_URL = "http://YOUR_SERVER_IP/latest/version.json"
+# Update server URL - set PHONEHOME_UPDATE_URL environment variable
+# or configure in client config.yml
+UPDATE_URL = os.environ.get("PHONEHOME_UPDATE_URL", "")
