@@ -7,7 +7,6 @@ Provides HTTP/SSE transport so the MCP server can run as a persistent daemon.
 
 import logging
 import os
-from typing import Optional
 
 from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
@@ -15,7 +14,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-from starlette.routing import Mount, Route
+from starlette.routing import Route
 
 logger = logging.getLogger("etphonehome.http")
 
@@ -27,7 +26,7 @@ DEFAULT_PORT = 8765
 class AuthMiddleware:
     """Simple bearer token authentication middleware."""
 
-    def __init__(self, app, api_key: Optional[str] = None):
+    def __init__(self, app, api_key: str | None = None):
         self.app = app
         self.api_key = api_key or os.environ.get("ETPHONEHOME_API_KEY")
 
@@ -45,7 +44,7 @@ class AuthMiddleware:
         await self.app(scope, receive, send)
 
 
-def create_http_app(api_key: Optional[str] = None) -> Starlette:
+def create_http_app(api_key: str | None = None) -> Starlette:
     """Create the Starlette ASGI application with MCP SSE transport."""
     # Import here to avoid circular imports and ensure globals are initialized
     from server.mcp_server import create_server, registry
@@ -58,9 +57,10 @@ def create_http_app(api_key: Optional[str] = None) -> Starlette:
 
     async def handle_sse(request: Request) -> Response:
         """Handle SSE connection requests."""
-        async with sse_transport.connect_sse(
-            request.scope, request.receive, request._send
-        ) as (read_stream, write_stream):
+        async with sse_transport.connect_sse(request.scope, request.receive, request._send) as (
+            read_stream,
+            write_stream,
+        ):
             await mcp_server.run(
                 read_stream,
                 write_stream,
@@ -70,7 +70,9 @@ def create_http_app(api_key: Optional[str] = None) -> Starlette:
 
     async def handle_messages(request: Request) -> Response:
         """Handle POST messages from clients."""
-        return await sse_transport.handle_post_message(request.scope, request.receive, request._send)
+        return await sse_transport.handle_post_message(
+            request.scope, request.receive, request._send
+        )
 
     async def health_check(request: Request) -> JSONResponse:
         """Health check endpoint for monitoring."""
@@ -115,7 +117,7 @@ def create_http_app(api_key: Optional[str] = None) -> Starlette:
 async def run_http_server(
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
 ):
     """Run the HTTP/SSE server."""
     import uvicorn

@@ -1,9 +1,5 @@
 """Tests for client/config.py - YAML configuration management."""
 
-import tempfile
-from pathlib import Path
-
-import pytest
 import yaml
 
 from client.config import Config, ensure_config_dir, generate_client_id
