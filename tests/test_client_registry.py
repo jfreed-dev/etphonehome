@@ -30,6 +30,8 @@ def make_registration(
     purpose: str = "",
     tags: list = None,
     capabilities: list = None,
+    key_mismatch: bool = False,
+    previous_fingerprint: str = None,
 ):
     """Helper to create registration data."""
     now = datetime.utcnow().isoformat() + "Z"
@@ -42,6 +44,8 @@ def make_registration(
             "capabilities": capabilities or [],
             "public_key_fingerprint": f"SHA256:{uuid}",
             "first_seen": now,
+            "key_mismatch": key_mismatch,
+            "previous_fingerprint": previous_fingerprint,
         },
         "client_info": {
             "client_id": client_id,
@@ -357,3 +361,72 @@ class TestRegisteredClient:
         assert result["client_id"] == "test-client"
         assert result["tunnel_port"] == 12345
         assert result["active"] is True
+
+
+class TestClientRegistryAcceptKey:
+    """Tests for accepting client SSH key changes."""
+
+    @pytest.mark.asyncio
+    async def test_accept_key_clears_mismatch(self, registry):
+        # Register a client with key mismatch
+        await registry.register(
+            make_registration(
+                "uuid-1",
+                "Test",
+                "client-1",
+                key_mismatch=True,
+                previous_fingerprint="SHA256:old-key",
+            )
+        )
+
+        # Verify mismatch is set
+        described = await registry.describe_client("uuid-1")
+        assert described["key_mismatch"] is True
+
+        # Accept the key
+        result = await registry.accept_key("uuid-1")
+        assert result is not None
+        assert result["key_mismatch"] is False
+
+        # Verify mismatch is cleared
+        described = await registry.describe_client("uuid-1")
+        assert described["key_mismatch"] is False
+
+    @pytest.mark.asyncio
+    async def test_accept_key_no_mismatch(self, registry):
+        # Register a client without key mismatch
+        await registry.register(make_registration("uuid-1", "Test", "client-1"))
+
+        # Accept key on client with no mismatch
+        result = await registry.accept_key("uuid-1")
+        assert result is not None
+        assert result.get("no_mismatch") is True
+
+    @pytest.mark.asyncio
+    async def test_accept_key_nonexistent_client(self, registry):
+        result = await registry.accept_key("nonexistent")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_accept_key_updates_active_client(self, registry):
+        # Register a client with key mismatch
+        await registry.register(
+            make_registration(
+                "uuid-1",
+                "Test",
+                "client-1",
+                key_mismatch=True,
+                previous_fingerprint="SHA256:old-key",
+            )
+        )
+
+        # Verify active client has mismatch
+        active = await registry.get_active_client()
+        assert active.identity.key_mismatch is True
+
+        # Accept the key
+        await registry.accept_key("uuid-1")
+
+        # Verify active client identity is updated
+        active = await registry.get_active_client()
+        assert active.identity.key_mismatch is False
