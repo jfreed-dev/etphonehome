@@ -20,6 +20,7 @@ from mcp.types import TextContent, Tool
 from server.client_connection import ClientConnection
 from server.client_registry import ClientRegistry
 from server.client_store import ClientStore
+from server.health_monitor import HealthMonitor
 
 # Configure logging to stderr (stdout is used for MCP protocol)
 logging.basicConfig(
@@ -35,6 +36,9 @@ registry = ClientRegistry(store)
 
 # Cache of client connections
 _connections: dict[str, ClientConnection] = {}
+
+# Health monitor for automatic disconnect detection
+_health_monitor: HealthMonitor | None = None
 
 
 async def get_connection(client_id: str = None) -> ClientConnection:
@@ -278,6 +282,17 @@ def create_server() -> Server:
                     "required": ["uuid"],
                 },
             ),
+            Tool(
+                name="accept_key",
+                description="Accept a client's new SSH key, clearing the key_mismatch flag. Use after verifying a key change is legitimate.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "uuid": {"type": "string", "description": "Client UUID"},
+                    },
+                    "required": ["uuid"],
+                },
+            ),
         ]
 
     @server.call_tool()
@@ -405,6 +420,15 @@ async def _handle_tool(name: str, args: dict) -> Any:
             return {"error": f"Client not found: {uuid}"}
         return {"updated": result, "message": f"Updated client: {uuid}"}
 
+    elif name == "accept_key":
+        uuid = args["uuid"]
+        result = await registry.accept_key(uuid)
+        if not result:
+            return {"error": f"Client not found: {uuid}"}
+        if result.get("no_mismatch"):
+            return {"message": f"Client {uuid} had no key mismatch to clear"}
+        return {"accepted": result, "message": f"Accepted new key for client: {uuid}"}
+
     else:
         raise ValueError(f"Unknown tool: {name}")
 
@@ -436,20 +460,40 @@ async def register_client_handler(reader: asyncio.StreamReader, writer: asyncio.
 
 async def run_stdio():
     """Run the MCP server with stdio transport."""
+    global _health_monitor
+
     logger.info("Starting ET Phone Home MCP server (stdio)")
 
     server = create_server()
 
-    async with stdio_server() as (read_stream, write_stream):
-        logger.info("MCP server ready")
-        await server.run(read_stream, write_stream, server.create_initialization_options())
+    # Start health monitor for automatic disconnect detection
+    _health_monitor = HealthMonitor(registry, _connections)
+    await _health_monitor.start()
+
+    try:
+        async with stdio_server() as (read_stream, write_stream):
+            logger.info("MCP server ready")
+            await server.run(read_stream, write_stream, server.create_initialization_options())
+    finally:
+        if _health_monitor:
+            await _health_monitor.stop()
 
 
 async def run_http(host: str, port: int, api_key: str = None):
     """Run the MCP server with HTTP/SSE transport."""
+    global _health_monitor
+
     from server.http_server import run_http_server
 
-    await run_http_server(host=host, port=port, api_key=api_key)
+    # Start health monitor for automatic disconnect detection
+    _health_monitor = HealthMonitor(registry, _connections)
+    await _health_monitor.start()
+
+    try:
+        await run_http_server(host=host, port=port, api_key=api_key)
+    finally:
+        if _health_monitor:
+            await _health_monitor.stop()
 
 
 def main():
