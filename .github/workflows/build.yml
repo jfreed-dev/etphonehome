@@ -111,14 +111,15 @@ jobs:
 
       - name: Run detect-secrets
         run: |
-          # Exclude git-crypt encrypted files/directories (they appear as binary blobs)
+          # Exclude git-crypt encrypted files and workflow files (which reference secrets.*)
           RESULT=$(detect-secrets scan \
             --exclude-files '\.git/' \
             --exclude-files '__pycache__' \
             --exclude-files '\.secrets/' \
             --exclude-files '\.project_settings/' \
             --exclude-files '\.git-crypt/' \
-            --exclude-files '\.mcp\.json')
+            --exclude-files '\.mcp\.json' \
+            --exclude-files '\.github/')
           SECRETS=$(echo "$RESULT" | python3 -c "import sys, json; d=json.load(sys.stdin); print(len(d.get('results', {})))")
           if [ "$SECRETS" != "0" ]; then
             echo "Potential secrets detected!"
