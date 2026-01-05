@@ -5,6 +5,7 @@ ET Phone Home - MCP Server
 Exposes tools to Claude CLI for interacting with connected remote clients.
 """
 
+import argparse
 import asyncio
 import json
 import logging
@@ -433,9 +434,9 @@ async def register_client_handler(reader: asyncio.StreamReader, writer: asyncio.
         writer.close()
 
 
-async def main():
-    """Run the MCP server."""
-    logger.info("Starting ET Phone Home MCP server")
+async def run_stdio():
+    """Run the MCP server with stdio transport."""
+    logger.info("Starting ET Phone Home MCP server (stdio)")
 
     server = create_server()
 
@@ -444,5 +445,48 @@ async def main():
         await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
+async def run_http(host: str, port: int, api_key: str = None):
+    """Run the MCP server with HTTP/SSE transport."""
+    from server.http_server import run_http_server
+
+    await run_http_server(host=host, port=port, api_key=api_key)
+
+
+def main():
+    """Entry point with transport selection."""
+    parser = argparse.ArgumentParser(description="ET Phone Home MCP Server")
+    parser.add_argument(
+        "--transport",
+        "-t",
+        choices=["stdio", "http"],
+        default="stdio",
+        help="Transport to use (default: stdio)",
+    )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="HTTP server host (default: 127.0.0.1)",
+    )
+    parser.add_argument(
+        "--port",
+        "-p",
+        type=int,
+        default=8765,
+        help="HTTP server port (default: 8765)",
+    )
+    parser.add_argument(
+        "--api-key",
+        default=None,
+        help="API key for authentication (or set ETPHONEHOME_API_KEY env var)",
+    )
+
+    args = parser.parse_args()
+
+    if args.transport == "http":
+        asyncio.run(run_http(args.host, args.port, args.api_key))
+    else:
+        asyncio.run(run_stdio())
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

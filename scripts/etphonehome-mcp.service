@@ -1,0 +1,48 @@
+[Unit]
+Description=ET Phone Home MCP Server (HTTP/SSE)
+Documentation=https://github.com/jfreed-dev/etphonehome
+After=network-online.target etphonehome-ssh.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=etphonehome
+Group=etphonehome
+
+# Working directory
+WorkingDirectory=/opt/etphonehome
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/etphonehome/server.env
+
+# Start command
+ExecStart=/opt/etphonehome/venv/bin/python -m server.mcp_server \
+    --transport http \
+    --host 127.0.0.1 \
+    --port 8765
+
+# Restart policy
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/etphonehome/.etphonehome-server
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=etphonehome-mcp
+
+[Install]
+WantedBy=multi-user.target

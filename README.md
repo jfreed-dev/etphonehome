@@ -51,7 +51,9 @@ This is useful for assisting machines behind firewalls, NAT, or otherwise inacce
 
 3. Configure SSH (see setup script output for details)
 
-4. Add MCP configuration to Claude Code:
+4. Configure MCP server (choose one option):
+
+   **Option A: stdio mode** (launched by Claude Code):
    ```json
    {
      "mcpServers": {
@@ -59,6 +61,27 @@ This is useful for assisting machines behind firewalls, NAT, or otherwise inacce
          "command": "python",
          "args": ["-m", "server.mcp_server"],
          "cwd": "/path/to/etphonehome"
+       }
+     }
+   }
+   ```
+
+   **Option B: HTTP daemon mode** (persistent service):
+   ```bash
+   # Deploy as systemd service
+   sudo ./scripts/deploy_mcp_service.sh
+   ```
+
+   Then configure Claude Code to connect via HTTP:
+   ```json
+   {
+     "mcpServers": {
+       "etphonehome": {
+         "type": "sse",
+         "url": "http://localhost:8765/sse",
+         "headers": {
+           "Authorization": "Bearer YOUR_API_KEY"
+         }
        }
      }
    }
@@ -150,6 +173,48 @@ sudo ./scripts/install-service.sh --system
 sudo systemctl enable phonehome@username
 sudo systemctl start phonehome@username
 ```
+
+### Running MCP Server as a Daemon (Linux)
+
+The MCP server can run as a persistent HTTP daemon instead of being launched by Claude Code:
+
+```bash
+# Deploy using the install script
+sudo ./scripts/deploy_mcp_service.sh
+
+# Or manually:
+sudo cp scripts/etphonehome-mcp.service /etc/systemd/system/
+sudo mkdir -p /etc/etphonehome
+sudo cp scripts/server.env.example /etc/etphonehome/server.env
+echo "ETPHONEHOME_API_KEY=$(openssl rand -hex 32)" | sudo tee -a /etc/etphonehome/server.env
+sudo systemctl daemon-reload
+sudo systemctl enable etphonehome-mcp
+sudo systemctl start etphonehome-mcp
+```
+
+Server commands:
+
+```bash
+# Manual invocation
+etphonehome-server --transport http --port 8765
+
+# Service management
+sudo systemctl status etphonehome-mcp
+sudo systemctl restart etphonehome-mcp
+sudo journalctl -u etphonehome-mcp -f
+
+# Health check
+curl http://localhost:8765/health
+```
+
+Server CLI options:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--transport` | `stdio` | Transport mode: `stdio` or `http` |
+| `--host` | `127.0.0.1` | HTTP server bind address |
+| `--port` | `8765` | HTTP server port |
+| `--api-key` | (none) | API key for authentication (or use `ETPHONEHOME_API_KEY` env var) |
 
 ## MCP Tools
 

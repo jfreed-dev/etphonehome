@@ -48,6 +48,10 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+*.egg-info/
+
+# MCP config (may contain API keys)
+.mcp.json
 
 # Pre-commit
 .pre-commit-cache/
