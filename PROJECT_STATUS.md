@@ -6,6 +6,21 @@
 
 ## Recent Changes (v0.1.6)
 
+### Code Quality & Claude Code Integration (2026-01-05)
+
+- **Enhanced MCP tool schemas**: Added JSON Schema validation with patterns, constraints, and `additionalProperties: false`
+- **Structured error handling**: Custom exception classes (`ToolError`, `ClientNotFoundError`, etc.) with recovery hints
+- **API documentation**: Comprehensive `docs/API.md` with tool reference, error codes, and webhook events
+- **Claude Code skills**: Created 4 specialized skills:
+  - `etphonehome-remote-access` - Safe remote access practices
+  - `etphonehome-diagnostics` - Client health monitoring
+  - `etphonehome-infrastructure` - Client management
+  - `etphonehome-build` - Cross-architecture builds and publishing
+- **ARM64 support**: Native builds for DGX Spark and other ARM64 systems
+- **Update server**: Configured at `http://72.60.125.7/latest/version.json` with both x86_64 and aarch64 builds
+
+### Infrastructure (v0.1.6 base)
+
 - **Deployment infrastructure**: Added Ansible playbooks, Docker containers, and Terraform modules
 - **Comprehensive testing**: 8 new test files with expanded coverage
 - **Client metrics**: New `get_client_metrics` tool for CPU, memory, disk monitoring
@@ -32,15 +47,16 @@
 | Component | Status | Notes |
 |-----------|--------|-------|
 | Client (tunnel, agent, config, CLI, updater, capabilities, metrics) | ✓ Complete | ~1200 lines across 7 modules |
-| Server (MCP tools, registry, store, webhooks, rate limiter) | ✓ Complete | ~1800 lines across 7 modules |
-| Protocol (JSON-RPC, length-prefixed) | ✓ Complete | 150+ lines in shared/protocol.py |
+| Server (MCP tools, registry, store, webhooks, rate limiter) | ✓ Complete | ~1800 lines, enhanced schemas & error handling |
+| Protocol (JSON-RPC, length-prefixed) | ✓ Complete | 150+ lines + custom exception classes |
 | Build system (PyInstaller + portable) | ✓ Complete | Linux (x64, ARM64) + Windows |
 | CI/CD (GitHub Actions) | ✓ Complete | Auto-releases on version tags |
-| Documentation | ✓ Excellent | README.md, CLAUDE.md, docs/*.md |
+| Documentation | ✓ Excellent | README.md, CLAUDE.md, docs/API.md |
 | Tests | ✓ Comprehensive | 12 test files with broad coverage |
 | Systemd service | ✓ Complete | User and system service files |
-| Download server | ✓ Complete | http://YOUR_SERVER_IP/latest/ |
+| Update server | ✓ Complete | http://72.60.125.7/latest/version.json |
 | Deployment automation | ✓ Complete | Ansible, Docker, Terraform |
+| Claude Code skills | ✓ Complete | 4 skills for remote access, diagnostics, infra, build |
 
 ## Next Steps (Priority Order)
 
@@ -73,11 +89,13 @@ Messages: [4-byte length][JSON-RPC payload]
 
 - **Entry points**: `client/phonehome.py`, `server/mcp_server.py`
 - **Core logic**: `client/tunnel.py`, `client/agent.py`, `server/client_connection.py`
-- **Protocol**: `shared/protocol.py`
+- **Protocol**: `shared/protocol.py` (includes custom exception classes)
 - **Webhooks**: `server/webhooks.py`
 - **Rate limiting**: `server/rate_limiter.py`
 - **Build**: `build/pyinstaller/`, `build/portable/`
 - **Deployment**: `deploy/ansible/`, `deploy/docker/`, `deploy/terraform/`
+- **Documentation**: `docs/API.md` (tool reference, error codes, webhooks)
+- **Skills**: `.claude/skills/etphonehome-*/SKILL.md`
 
 ## Quick Reference
 
@@ -114,6 +132,15 @@ ruff check --fix .
 1. **No macOS support** - Darwin builds not yet implemented
 2. **No Windows Server docs** - Setup guide is Linux-focused
 3. **No web dashboard** - Management via Claude CLI only
+
+## Active Deployments
+
+| Client | Architecture | Version | Status |
+|--------|--------------|---------|--------|
+| lokipopcosmic (Jon Laptop) | x86_64 | 0.1.6 | Online |
+| spark-2f34 (DGX Spark) | aarch64 | 0.1.6 | Online |
+
+**Update Server**: http://72.60.125.7/latest/version.json
 
 ---
 
@@ -399,19 +426,19 @@ logger.info(
 
 ### 8. Implementation Priority
 
-| Priority | Item | Effort | Impact |
-|----------|------|--------|--------|
-| **High** | Enhanced input schemas | Medium | High |
-| **High** | Structured error responses | Medium | High |
-| **High** | Create Claude Code skills | Low | High |
-| **High** | API documentation | Medium | High |
-| **Medium** | Improved tool descriptions | Low | Medium |
-| **Medium** | Code deduplication | Medium | Medium |
-| **Medium** | Workflow documentation | Medium | Medium |
-| **Medium** | Interactive client selection | Low | Medium |
-| **Low** | Tool categorization | Low | Low |
-| **Low** | Command progress feedback | High | Low |
-| **Low** | Type hints completion | Low | Low |
+| Priority | Item | Effort | Impact | Status |
+|----------|------|--------|--------|--------|
+| **High** | Enhanced input schemas | Medium | High | ✅ Done |
+| **High** | Structured error responses | Medium | High | ✅ Done |
+| **High** | Create Claude Code skills | Low | High | ✅ Done |
+| **High** | API documentation | Medium | High | ✅ Done |
+| **Medium** | Improved tool descriptions | Low | Medium | ✅ Done |
+| **Medium** | Code deduplication | Medium | Medium | Pending |
+| **Medium** | Workflow documentation | Medium | Medium | Pending |
+| **Medium** | Interactive client selection | Low | Medium | Pending |
+| **Low** | Tool categorization | Low | Low | Pending |
+| **Low** | Command progress feedback | High | Low | Pending |
+| **Low** | Type hints completion | Low | Low | Pending |
 
 ### 9. Testing Recommendations
 
