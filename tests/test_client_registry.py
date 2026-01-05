@@ -1,6 +1,6 @@
 """Tests for server/client_registry.py - Client tracking and management."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -34,7 +34,7 @@ def make_registration(
     previous_fingerprint: str = None,
 ):
     """Helper to create registration data."""
-    now = datetime.utcnow().isoformat() + "Z"
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     return {
         "identity": {
             "uuid": uuid,

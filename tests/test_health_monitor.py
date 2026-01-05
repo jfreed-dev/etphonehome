@@ -1,7 +1,7 @@
 """Tests for server/health_monitor.py - Client health monitoring."""
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -53,7 +53,7 @@ def make_registration(
     tunnel_port: int = 12345,
 ):
     """Helper to create registration data."""
-    now = datetime.utcnow().isoformat() + "Z"
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     return {
         "identity": {
             "uuid": uuid,
@@ -204,7 +204,7 @@ class TestGracePeriod:
         monitor = HealthMonitor(registry, connections, config)
 
         # Initialize health tracking to simulate fresh registration
-        monitor._client_health["test-uuid"] = ClientHealth(registered_at=datetime.utcnow())
+        monitor._client_health["test-uuid"] = ClientHealth(registered_at=datetime.now(timezone.utc))
 
         # Run check - client should be skipped during grace period
         await monitor._check_all_clients()
@@ -221,7 +221,7 @@ class TestGracePeriod:
 
         # Initialize health tracking with past registration time
         monitor._client_health["test-uuid"] = ClientHealth(
-            registered_at=datetime.utcnow() - timedelta(seconds=120)
+            registered_at=datetime.now(timezone.utc) - timedelta(seconds=120)
         )
 
         # Create mock connection
@@ -349,7 +349,7 @@ class TestClientHealth:
         assert health.registered_at is not None
 
     def test_custom_values(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         health = ClientHealth(consecutive_failures=3, registered_at=now)
         assert health.consecutive_failures == 3
         assert health.registered_at == now

@@ -4,7 +4,7 @@ import json
 import platform
 import socket
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 # Method constants
@@ -121,7 +121,7 @@ class ClientInfo:
         """Create ClientInfo for the local machine."""
         import getpass
 
-        now = datetime.utcnow().isoformat() + "Z"
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         return cls(
             client_id=client_id,
             hostname=socket.gethostname(),

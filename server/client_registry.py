@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 from server.client_store import ClientStore
 from shared.protocol import ClientIdentity, ClientInfo
@@ -17,7 +17,7 @@ class RegisteredClient:
 
     identity: ClientIdentity
     info: ClientInfo
-    last_seen: datetime = field(default_factory=datetime.utcnow)
+    last_seen: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     active: bool = True
 
     def to_dict(self) -> dict:
@@ -91,7 +91,7 @@ class ClientRegistry:
 
             # Track as active connection
             self._active_clients[uuid] = RegisteredClient(
-                identity=identity, info=client_info, last_seen=datetime.utcnow()
+                identity=identity, info=client_info, last_seen=datetime.now(timezone.utc)
             )
 
             # Update mappings
@@ -127,7 +127,7 @@ class ClientRegistry:
                 "tags": [],
                 "capabilities": [],
                 "public_key_fingerprint": "",
-                "first_seen": datetime.utcnow().isoformat() + "Z",
+                "first_seen": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "created_by": "legacy",
             },
             "client_info": info.to_dict(),
@@ -169,7 +169,7 @@ class ClientRegistry:
         """Update the last seen time for a client."""
         async with self._lock:
             if uuid in self._active_clients:
-                self._active_clients[uuid].last_seen = datetime.utcnow()
+                self._active_clients[uuid].last_seen = datetime.now(timezone.utc)
                 self.store.update_last_seen(uuid)
 
     async def mark_inactive(self, uuid: str) -> None:

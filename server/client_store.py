@@ -3,7 +3,7 @@
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from shared.protocol import ClientIdentity
@@ -205,7 +205,7 @@ class ClientStore:
         If the UUID exists, updates the identity and increments connection count.
         If new, creates a new stored client.
         """
-        now = datetime.utcnow().isoformat() + "Z"
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
         existing = self._clients.get(identity.uuid)
         if existing:
@@ -234,7 +234,7 @@ class ClientStore:
     def update_last_seen(self, uuid: str) -> None:
         """Update the last_seen timestamp for a client."""
         if uuid in self._clients:
-            now = datetime.utcnow().isoformat() + "Z"
+            now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
             client = self._clients[uuid]
             self._clients[uuid] = StoredClient(
                 identity=client.identity,

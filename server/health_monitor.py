@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from server.client_connection import ClientConnection
 from server.client_registry import ClientRegistry
@@ -26,8 +26,8 @@ class ClientHealth:
     """Tracks health state for a single client."""
 
     consecutive_failures: int = 0
-    last_check: datetime = field(default_factory=datetime.utcnow)
-    registered_at: datetime = field(default_factory=datetime.utcnow)
+    last_check: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    registered_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class HealthMonitor:
@@ -111,13 +111,13 @@ class HealthMonitor:
         """Check a single client's health."""
         # Initialize or get health tracking
         if uuid not in self._client_health:
-            self._client_health[uuid] = ClientHealth(registered_at=datetime.utcnow())
+            self._client_health[uuid] = ClientHealth(registered_at=datetime.now(timezone.utc))
 
         health = self._client_health[uuid]
 
         # Skip if in grace period
         grace_end = health.registered_at + timedelta(seconds=self.config.grace_period)
-        if datetime.utcnow() < grace_end:
+        if datetime.now(timezone.utc) < grace_end:
             logger.debug(f"Client {uuid[:8]}... in grace period, skipping check")
             return
 
@@ -146,7 +146,7 @@ class HealthMonitor:
             if is_alive:
                 # Client is healthy
                 health.consecutive_failures = 0
-                health.last_check = datetime.utcnow()
+                health.last_check = datetime.now(timezone.utc)
                 await self.registry.update_heartbeat(uuid)
                 logger.debug(f"Client {uuid[:8]}... heartbeat OK")
             else:
@@ -169,7 +169,7 @@ class HealthMonitor:
     ) -> None:
         """Handle a failed health check."""
         health.consecutive_failures += 1
-        health.last_check = datetime.utcnow()
+        health.last_check = datetime.now(timezone.utc)
 
         logger.warning(
             f"Client {uuid[:8]}... health check failed ({reason}), "
