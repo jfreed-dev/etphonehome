@@ -41,8 +41,13 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 .venv/
+.venv-build/
 venv/
 *.egg-info/
+
+# Build artifacts
+build/phonehome/
+dist/
 
 # Pre-commit
 .pre-commit-cache/
