@@ -1,0 +1,39 @@
+# Files to EXCLUDE when syncing to public repo
+# These are tracked in private repo but removed before pushing to public
+
+# Secrets and credentials (encrypted in private repo)
+.secrets/
+.project_settings/
+ansible/secrets/*.yml
+!ansible/secrets/*.yml.example
+ansible/credentials/
+.vault_pass
+.vault_password
+*.pem
+*.key
+!*.key.example
+kubeconfig
+talosconfig
+
+# MCP config (may contain API keys)
+.mcp.json
+
+# IDE settings (personal preference)
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# AI coding assistant context
+CLAUDE.md
+AGENT.md
+AGENTS.md
+GEMINI.md
+CODEX.md
+.claude/
+.gemini/
+.codex/
+
+# Private repo specific files
+.gitignore.public
+.gitattributes

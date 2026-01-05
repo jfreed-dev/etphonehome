@@ -1,0 +1,79 @@
+# Sync private repo to public repo
+# Runs on push to main or manual trigger
+# Removes private files before pushing to public
+
+name: Sync to Public Repo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force push (overwrite public history)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove private files
+        run: |
+          echo "Removing files listed in .gitignore.public..."
+
+          # Read .gitignore.public and remove matching files
+          if [ -f .gitignore.public ]; then
+            while IFS= read -r pattern || [ -n "$pattern" ]; do
+              # Skip comments and empty lines
+              [[ "$pattern" =~ ^#.*$ ]] && continue
+              [[ -z "$pattern" ]] && continue
+              # Skip negation patterns (start with !)
+              [[ "$pattern" =~ ^!.*$ ]] && continue
+
+              # Remove matching files/directories
+              echo "  Removing: $pattern"
+              rm -rf $pattern 2>/dev/null || true
+            done < .gitignore.public
+          fi
+
+          # Also remove .gitignore.public and .gitattributes from public
+          rm -f .gitignore.public
+          rm -f .gitattributes
+
+          echo "Private files removed."
+
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Commit changes for public
+        run: |
+          git add -A
+          git commit -m "Sync from private repository" --allow-empty
+
+      - name: Push to public repo
+        env:
+          PUBLIC_REPO_PAT: ${{ secrets.PUBLIC_REPO_PAT }}
+        run: |
+          # Add public remote
+          git remote add public https://x-access-token:${PUBLIC_REPO_PAT}@github.com/${{ github.repository_owner }}/etphonehome.git
+
+          # Determine push flags
+          PUSH_FLAGS=""
+          if [ "${{ github.event.inputs.force }}" == "true" ]; then
+            PUSH_FLAGS="--force"
+            echo "Force push enabled"
+          fi
+
+          # Push to public
+          git push public main $PUSH_FLAGS
+
+          echo "Successfully synced to public repository"
