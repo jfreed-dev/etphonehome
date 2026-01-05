@@ -41,3 +41,6 @@ PROJECT_STATUS.md
 # Private repo specific files
 .gitignore.public
 .gitattributes
+
+# GitHub workflows (private repo only)
+.github/workflows/sync-to-public.yml
