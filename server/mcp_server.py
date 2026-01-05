@@ -266,7 +266,7 @@ def create_server() -> Server:
             ),
             Tool(
                 name="update_client",
-                description="Update client metadata (display_name, purpose, tags)",
+                description="Update client metadata (display_name, purpose, tags, allowed_paths)",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -277,6 +277,11 @@ def create_server() -> Server:
                             "type": "array",
                             "items": {"type": "string"},
                             "description": "New tags (replaces existing)",
+                        },
+                        "allowed_paths": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Allowed path prefixes for file operations (replaces existing, null for all paths)",
                         },
                     },
                     "required": ["uuid"],
@@ -415,6 +420,7 @@ async def _handle_tool(name: str, args: dict) -> Any:
             display_name=args.get("display_name"),
             purpose=args.get("purpose"),
             tags=args.get("tags"),
+            allowed_paths=args.get("allowed_paths"),
         )
         if not result:
             return {"error": f"Client not found: {uuid}"}

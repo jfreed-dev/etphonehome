@@ -77,6 +77,7 @@ class ClientIdentity:
     created_by: str = "auto"  # "auto" or "manual"
     key_mismatch: bool = False  # True if key changed since registration
     previous_fingerprint: str | None = None  # Previous key if mismatched
+    allowed_paths: list[str] | None = None  # Allowed path prefixes (None = all paths)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -87,6 +88,7 @@ class ClientIdentity:
         data.setdefault("created_by", "auto")
         data.setdefault("key_mismatch", False)
         data.setdefault("previous_fingerprint", None)
+        data.setdefault("allowed_paths", None)
         return cls(**data)
 
 

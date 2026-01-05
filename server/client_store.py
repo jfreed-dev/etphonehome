@@ -245,7 +245,12 @@ class ClientStore:
             self._save()
 
     def update_identity(
-        self, uuid: str, display_name: str = None, purpose: str = None, tags: list[str] = None
+        self,
+        uuid: str,
+        display_name: str = None,
+        purpose: str = None,
+        tags: list[str] = None,
+        allowed_paths: list[str] = None,
     ) -> StoredClient | None:
         """Update client metadata."""
         if uuid not in self._clients:
@@ -266,6 +271,7 @@ class ClientStore:
             created_by=identity.created_by,
             key_mismatch=identity.key_mismatch,
             previous_fingerprint=identity.previous_fingerprint,
+            allowed_paths=allowed_paths if allowed_paths is not None else identity.allowed_paths,
         )
 
         updated = StoredClient(
