@@ -55,7 +55,9 @@ def main():
     )
     parser.add_argument("--tags", nargs="+", help="Tags for this client")
     parser.add_argument("--show-uuid", action="store_true", help="Show client UUID and exit")
-    parser.add_argument("--list-clients", action="store_true", help="List all clients on the server")
+    parser.add_argument(
+        "--list-clients", action="store_true", help="List all clients on the server"
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
@@ -156,12 +158,18 @@ def main():
         # Start SSH tunnel in background
         ssh_cmd = [
             "ssh",
-            "-o", "ConnectTimeout=10",
-            "-o", "StrictHostKeyChecking=no",
-            "-o", "BatchMode=yes",
-            "-i", str(key_path),
-            "-p", str(config.server_port),
-            "-L", f"{local_port}:127.0.0.1:8765",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "BatchMode=yes",
+            "-i",
+            str(key_path),
+            "-p",
+            str(config.server_port),
+            "-L",
+            f"{local_port}:127.0.0.1:8765",
             f"{config.server_user}@{config.server_host}",
             "-N",
         ]
@@ -198,7 +206,6 @@ def main():
                 print("No clients registered.")
             else:
                 for client in clients:
-                    status = "ONLINE" if client.get("online") else "offline"
                     name = client.get("display_name", "unnamed")
                     uuid = client.get("uuid", "?")[:8]
                     purpose = client.get("purpose", "")

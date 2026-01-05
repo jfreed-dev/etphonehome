@@ -2,7 +2,7 @@
 
 import asyncio
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -309,9 +309,7 @@ class TestMultipleClients:
         mock_conn2.heartbeat.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_one_client_failing_doesnt_affect_others(
-        self, registry, connections, config
-    ):
+    async def test_one_client_failing_doesnt_affect_others(self, registry, connections, config):
         # Register multiple clients
         await registry.register(make_registration("uuid-1", "Client1", "client-1", 12345))
         await registry.register(make_registration("uuid-2", "Client2", "client-2", 12346))
