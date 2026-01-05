@@ -103,6 +103,22 @@ def _get_install_dir() -> Path:
         raise RuntimeError(f"Unsupported platform: {system}")
 
 
+def is_portable_installation() -> bool:
+    """Check if running from a portable installation.
+
+    Returns True if the current process is running from the portable
+    installation directory, False if running from pip/dev environment.
+    """
+    try:
+        install_dir = _get_install_dir()
+        # Get the directory containing the client module
+        client_dir = Path(__file__).resolve().parent
+        # Check if we're running from within the portable installation
+        return install_dir.resolve() in client_dir.parents or client_dir == install_dir.resolve()
+    except Exception:
+        return False
+
+
 def perform_update(update_info: dict) -> bool:
     """Download and install update.
 
@@ -288,14 +304,38 @@ del "%~f0"
     return True
 
 
+def check_and_notify() -> dict | None:
+    """Check for updates and log if available.
+
+    Returns update info if available, None otherwise.
+    Does not perform the update - just notifies.
+    """
+    update_info = check_for_update()
+    if update_info:
+        logger.info(f"Update available: {update_info['version']} (current: {__version__})")
+        if not is_portable_installation():
+            logger.info(
+                "Auto-update not available for pip/dev installs. "
+                "Download the latest portable release to update."
+            )
+    return update_info
+
+
 def auto_update() -> bool:
     """Check for updates and apply if available.
 
     Returns True if an update was applied (restart needed).
+    Only performs updates when running from a portable installation.
     """
     # Skip if updates are disabled
     if os.environ.get("PHONEHOME_NO_UPDATE"):
         logger.debug("Auto-update disabled via PHONEHOME_NO_UPDATE")
+        return False
+
+    # Skip if not running from portable installation
+    if not is_portable_installation():
+        # Still check and notify about updates
+        check_and_notify()
         return False
 
     update_info = check_for_update()
