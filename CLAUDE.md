@@ -52,7 +52,8 @@ etphonehome/
 │   ├── agent.py            # JSON-RPC request handler
 │   ├── config.py           # YAML config management
 │   ├── capabilities.py     # System capability detection
-│   └── updater.py          # Auto-update mechanism
+│   ├── updater.py          # Auto-update mechanism
+│   └── metrics.py          # System metrics collection
 ├── server/                  # MCP server
 │   ├── mcp_server.py       # MCP tools exposed to Claude (stdio/HTTP entry point)
 │   ├── http_server.py      # HTTP/SSE transport for daemon mode
@@ -64,7 +65,12 @@ etphonehome/
 │   └── rate_limiter.py     # Per-client rate limiting
 ├── shared/
 │   ├── protocol.py         # JSON-RPC message definitions
-│   └── version.py          # Version info and update URL
+│   ├── version.py          # Version info and update URL
+│   └── logging_config.py   # Structured logging configuration
+├── deploy/                  # Deployment automation
+│   ├── ansible/            # Ansible playbooks and roles
+│   ├── docker/             # Docker containers
+│   └── terraform/          # Terraform modules
 ├── scripts/
 │   ├── setup_server.sh     # Server setup guidance
 │   ├── generate_keys.py    # Standalone SSH key generator

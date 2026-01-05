@@ -399,6 +399,7 @@ log_level: INFO
 | [SSH + Claude Code](docs/ssh-claude-code-guide.md) | Remote MCP access via SSH |
 | [Management Guide](docs/management-guide.md) | Client management workflows |
 | [Webhooks Guide](docs/webhooks-guide.md) | Webhook integration examples |
+| [Deployment Guide](deploy/README.md) | Ansible, Docker, Terraform automation |
 | [Hostinger Setup](docs/hostinger-server-setup.md) | VPS deployment reference |
 | [Download Server](docs/download-server-setup.md) | Client distribution setup |
 | [Roadmap](docs/roadmap.md) | Planned features |
@@ -422,9 +423,10 @@ Releases are automatically built via GitHub Actions on version tags (`v*`).
 ## Development
 
 ```bash
-pip install -e ".[dev]"    # Install dev dependencies
-pytest                      # Run tests
-black . && ruff check --fix .  # Format and lint
+pip install -e ".[dev]"        # Install dev dependencies
+pre-commit install             # Set up pre-commit hooks
+pytest                         # Run tests
+pre-commit run --all-files     # Run all linters
 ```
 
 ---
