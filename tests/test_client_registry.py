@@ -291,6 +291,30 @@ class TestClientRegistryUpdate:
         assert result["tags"] == ["prod", "critical"]
 
     @pytest.mark.asyncio
+    async def test_update_allowed_paths(self, registry):
+        await registry.register(make_registration("uuid-1", "Test", "client-1"))
+
+        result = await registry.update_client("uuid-1", allowed_paths=["/home/user", "/tmp"])
+        assert result is not None
+        assert result["allowed_paths"] == ["/home/user", "/tmp"]
+
+        # Verify persistence
+        described = await registry.describe_client("uuid-1")
+        assert described["allowed_paths"] == ["/home/user", "/tmp"]
+
+    @pytest.mark.asyncio
+    async def test_update_allowed_paths_to_empty(self, registry):
+        """Test updating allowed_paths to empty list (restrict all paths)."""
+        await registry.register(make_registration("uuid-1", "Test", "client-1"))
+
+        # First set some paths
+        await registry.update_client("uuid-1", allowed_paths=["/home"])
+
+        # Then set to empty list
+        result = await registry.update_client("uuid-1", allowed_paths=[])
+        assert result["allowed_paths"] == []
+
+    @pytest.mark.asyncio
     async def test_update_nonexistent_client(self, registry):
         result = await registry.update_client("nonexistent", display_name="New")
         assert result is None

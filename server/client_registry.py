@@ -368,6 +368,7 @@ class ClientRegistry:
                 "connection_count": stored.connection_count,
                 "created_by": stored.identity.created_by,
                 "key_mismatch": stored.identity.key_mismatch,
+                "allowed_paths": stored.identity.allowed_paths,
                 "online": is_online,
                 "is_selected": is_selected,
             }
@@ -391,11 +392,16 @@ class ClientRegistry:
             return result
 
     async def update_client(
-        self, uuid: str, display_name: str = None, purpose: str = None, tags: list[str] = None
+        self,
+        uuid: str,
+        display_name: str = None,
+        purpose: str = None,
+        tags: list[str] = None,
+        allowed_paths: list[str] = None,
     ) -> dict | None:
         """Update client metadata."""
         async with self._lock:
-            updated = self.store.update_identity(uuid, display_name, purpose, tags)
+            updated = self.store.update_identity(uuid, display_name, purpose, tags, allowed_paths)
             if not updated:
                 return None
 
@@ -408,6 +414,7 @@ class ClientRegistry:
                 "display_name": updated.identity.display_name,
                 "purpose": updated.identity.purpose,
                 "tags": updated.identity.tags,
+                "allowed_paths": updated.identity.allowed_paths,
             }
 
     async def accept_key(self, uuid: str) -> dict | None:
