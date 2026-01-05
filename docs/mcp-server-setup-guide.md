@@ -1,6 +1,33 @@
 # ET Phone Home MCP Server Setup Guide
 
-This guide covers setting up an ET Phone Home MCP server on Linux and Windows systems.
+Complete setup guide for ET Phone Home MCP server on Linux and Windows.
+
+---
+
+## Quick Reference
+
+```bash
+# Linux Quick Setup
+sudo useradd -m -s /bin/bash etphonehome
+sudo git clone https://github.com/jfreed-dev/etphonehome.git /opt/etphonehome
+sudo -u etphonehome python3 -m venv /opt/etphonehome/venv
+sudo -u etphonehome /opt/etphonehome/venv/bin/pip install -e "/opt/etphonehome[server]"
+sudo ./scripts/deploy_mcp_service.sh
+
+# Verify
+curl http://localhost:8765/health
+sudo journalctl -u etphonehome-mcp -f
+```
+
+```powershell
+# Windows Quick Setup
+Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+git clone https://github.com/jfreed-dev/etphonehome.git C:\etphonehome
+python -m venv C:\etphonehome\venv
+C:\etphonehome\venv\Scripts\pip install -e "C:\etphonehome[server]"
+```
+
+---
 
 ## Table of Contents
 
@@ -515,27 +542,66 @@ For local development:
 
 ## Adding Clients
 
-### Step 1: Initialize Client
+### Step 1: Install Client
 
-On the client machine:
+On the client machine, install to the user's home directory:
 
+**Linux:**
 ```bash
-# Install phonehome client
-pip install etphonehome
-# OR from source:
-pip install -e /path/to/etphonehome
+# Download and install to ~/phonehome/
+mkdir -p ~/phonehome && cd ~/phonehome
+curl -LO http://your-server/latest/phonehome-linux-x86_64.tar.gz
+tar xzf phonehome-linux-x86_64.tar.gz
+cd phonehome && ./setup.sh
 
 # Initialize configuration
-phonehome --init
+./phonehome --init
 # Enter: display_name, purpose, tags (when prompted)
 
 # Generate SSH keypair
+./phonehome --generate-key
+```
+
+**Windows:**
+```powershell
+# Download and install to %USERPROFILE%\phonehome\
+New-Item -ItemType Directory -Path "$env:USERPROFILE\phonehome" -Force
+Set-Location "$env:USERPROFILE\phonehome"
+Invoke-WebRequest -Uri "http://your-server/latest/phonehome-windows-amd64.zip" -OutFile "phonehome.zip"
+Expand-Archive -Path "phonehome.zip" -DestinationPath "."
+
+# Initialize configuration
+.\phonehome.exe --init
+# Enter: display_name, purpose, tags (when prompted)
+
+# Generate SSH keypair
+.\phonehome.exe --generate-key
+```
+
+**From Source (Development):**
+```bash
+# Linux
+git clone https://github.com/jfreed-dev/etphonehome.git ~/etphonehome
+cd ~/etphonehome && pip install -e .
+phonehome --init && phonehome --generate-key
+```
+
+```powershell
+# Windows
+git clone https://github.com/jfreed-dev/etphonehome.git "$env:USERPROFILE\etphonehome"
+Set-Location "$env:USERPROFILE\etphonehome"
+pip install -e .
+phonehome --init
 phonehome --generate-key
 ```
 
 ### Step 2: Add Client Key to Server
 
-Copy the client's public key (`~/.etphonehome/id_ed25519.pub`) to the server:
+Copy the client's public key to the server's authorized_keys:
+
+**Client key location:**
+- Linux: `~/.etphonehome/id_ed25519.pub`
+- Windows: `%USERPROFILE%\.etphonehome\id_ed25519.pub`
 
 ```bash
 # On Linux server
@@ -547,13 +613,16 @@ Add-Content -Path "C:\Users\etphonehome\.ssh\authorized_keys" -Value "ssh-ed2551
 
 ### Step 3: Configure Client
 
-Edit `~/.etphonehome/config.yaml`:
+Edit the client config file:
+- Linux: `~/.etphonehome/config.yaml`
+- Windows: `%USERPROFILE%\.etphonehome\config.yaml`
 
 ```yaml
 server_host: your-server-ip
 server_port: 443
 server_user: etphonehome
-key_file: ~/.etphonehome/id_ed25519
+key_file: ~/.etphonehome/id_ed25519   # Linux
+# key_file: %USERPROFILE%\.etphonehome\id_ed25519  # Windows (use full path)
 display_name: My Client Name
 purpose: Development
 tags:
@@ -564,7 +633,11 @@ tags:
 ### Step 4: Test Connection
 
 ```bash
+# Linux
 phonehome --verbose
+
+# Windows
+.\phonehome.exe --verbose
 ```
 
 ---

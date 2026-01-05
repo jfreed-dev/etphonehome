@@ -1,25 +1,69 @@
 # Using Claude Code via SSH
 
-This guide explains how to SSH into the ET Phone Home server and use Claude Code to manage connected clients.
+Access ET Phone Home MCP tools remotely through SSH.
 
-## Prerequisites
+---
 
-- SSH key authorized for server access (admin key for root, or client key for etphonehome user)
-- Claude Code installed on the server (or use MCP remote invocation)
+## Quick Reference
 
-## Option 1: SSH to Server and Run Claude Code Locally
+```bash
+# Option 1: SSH to server, run Claude locally
+ssh root@your-server
+claude
+
+# Option 2: Local Claude with remote MCP (add to ~/.claude/settings.json)
+{
+  "mcpServers": {
+    "etphonehome": {
+      "command": "ssh",
+      "args": ["-i", "~/.ssh/key", "root@your-server", "/opt/etphonehome/run_mcp.sh"]
+    }
+  }
+}
+```
+
+**Then ask Claude:**
+```
+"List all clients"
+"Run 'uptime' on the dev machine"
+"Download /etc/hosts from production"
+```
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         REMOTE MCP ACCESS                               │
+│                                                                         │
+│  LOCAL MACHINE                          SERVER                          │
+│  ┌─────────────┐     SSH tunnel     ┌─────────────────────────────────┐ │
+│  │ Claude Code │ ──────────────────►│ run_mcp.sh → MCP Server         │ │
+│  └─────────────┘                    │              │                  │ │
+│                                     │              ▼                  │ │
+│                                     │        Client Tunnels           │ │
+│                                     │         /    |    \             │ │
+│                                     │     Client Client Client        │ │
+│                                     └─────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Option 1: SSH to Server and Run Claude Code
 
 Connect to the server and run Claude Code directly:
 
 ```bash
 # SSH to the server
-ssh -i ~/.ssh/your_admin_key root@YOUR_SERVER_IP
+ssh -i ~/.ssh/your_admin_key root@your-server
 
 # Start Claude Code
 claude
 ```
 
-Once in Claude Code, the ET Phone Home MCP tools are available. Use natural language:
+Once in Claude Code, the ET Phone Home MCP tools are available:
 
 ```
 You: List all connected clients
@@ -30,23 +74,13 @@ You: Download the nginx config from prod-server
 
 ### Server-Side MCP Configuration
 
-Ensure `/opt/etphonehome` has the MCP server configured:
-
-```bash
-# Check MCP is installed
-ls /opt/etphonehome/
-
-# Verify the run script exists
-cat /opt/etphonehome/run_mcp.sh
-```
-
-Claude Code on the server should have this in its settings:
+Ensure the server has MCP configured in Claude Code settings:
 
 ```json
 {
   "mcpServers": {
     "etphonehome": {
-      "command": "/opt/etphonehome/.venv/bin/python",
+      "command": "/opt/etphonehome/venv/bin/python",
       "args": ["-m", "server.mcp_server"],
       "cwd": "/opt/etphonehome"
     }
@@ -54,11 +88,37 @@ Claude Code on the server should have this in its settings:
 }
 ```
 
-## Option 2: Remote MCP via SSH (No SSH Session Required)
+---
 
-Run Claude Code locally and invoke the MCP server remotely via SSH:
+## Option 2: Remote MCP via SSH (Recommended)
 
-Add to your local Claude Code settings (`~/.claude/settings.json`):
+Run Claude Code locally and invoke the MCP server remotely via SSH.
+
+### Step 1: Create run_mcp.sh on Server
+
+```bash
+# On the server
+cat > /opt/etphonehome/run_mcp.sh << 'EOF'
+#!/bin/bash
+cd /opt/etphonehome
+exec venv/bin/python -m server.mcp_server
+EOF
+
+chmod +x /opt/etphonehome/run_mcp.sh
+```
+
+### Step 2: Create Client Store Symlink
+
+When MCP runs as root via SSH, it needs access to the client store:
+
+```bash
+# On the server (as root)
+ln -sfn /home/etphonehome/.etphonehome-server /root/.etphonehome-server
+```
+
+### Step 3: Configure Local Claude Code
+
+Add to `~/.claude/settings.json`:
 
 ```json
 {
@@ -66,9 +126,9 @@ Add to your local Claude Code settings (`~/.claude/settings.json`):
     "etphonehome": {
       "command": "ssh",
       "args": [
-        "-i", "/path/to/your/admin_key",
+        "-i", "/path/to/your/ssh/key",
         "-o", "StrictHostKeyChecking=no",
-        "root@YOUR_SERVER_IP",
+        "root@your-server",
         "/opt/etphonehome/run_mcp.sh"
       ]
     }
@@ -76,126 +136,118 @@ Add to your local Claude Code settings (`~/.claude/settings.json`):
 }
 ```
 
-Create `/opt/etphonehome/run_mcp.sh` on the server:
-
-```bash
-#!/bin/bash
-cd /opt/etphonehome
-exec .venv/bin/python -m server.mcp_server
-```
-
-Make it executable:
-
-```bash
-chmod +x /opt/etphonehome/run_mcp.sh
-```
-
-### Client Store Symlink (Required for Root Access)
-
-When the MCP server runs as root (via SSH), it looks for the client store in `/root/.etphonehome-server/`. However, client registrations are saved to `/home/etphonehome/.etphonehome-server/`. Create a symlink to share the store:
-
-```bash
-# On the server (as root)
-ln -sfn /home/etphonehome/.etphonehome-server /root/.etphonehome-server
-```
-
-This ensures the MCP server can see registered clients and their tunnel ports.
-
 Now Claude Code on your local machine can manage remote clients without SSHing manually.
+
+---
 
 ## Available Commands
 
-Once connected, ask Claude to:
+| Request | Tool Used | Result |
+|---------|-----------|--------|
+| "List clients" | `list_clients` | Shows all clients with status |
+| "Select the dev machine" | `select_client` | Sets active client |
+| "Run 'df -h'" | `run_command` | Executes on active client |
+| "Read /var/log/syslog" | `read_file` | Fetches file contents |
+| "Write 'hello' to /tmp/test" | `write_file` | Creates/overwrites file |
+| "List files in /home" | `list_files` | Shows directory contents |
+| "Upload config.yaml to /tmp/" | `upload_file` | Sends file to client |
+| "Download /etc/hosts" | `download_file` | Fetches from client |
+| "Find production clients" | `find_client` | Searches by purpose/tags |
+| "Describe client X" | `describe_client` | Shows detailed info |
+| "Accept new key for X" | `accept_key` | Clears key mismatch flag |
 
-| Request | What Happens |
-|---------|--------------|
-| "List clients" | Shows all connected clients with status |
-| "Select the dev machine" | Sets active client for commands |
-| "Run 'df -h'" | Executes command on active client |
-| "Read /var/log/syslog" | Fetches file contents |
-| "Write 'hello' to /tmp/test" | Creates/overwrites file |
-| "List files in /home" | Shows directory contents |
-| "Upload config.yaml to /tmp/" | Sends file to client |
-| "Download /etc/hosts" | Fetches file from client |
-| "Find production clients" | Searches by purpose/tags |
-| "Describe client X" | Shows detailed client info |
+---
 
 ## Workflow Example
 
 ```
-You: List all connected clients
-
-Claude: [Uses list_clients]
-Connected clients:
-- dev-workstation (Development) - Online, Ubuntu 22.04
-- prod-server-01 (Production) - Online, Debian 12
-
-You: Select the prod server and check disk space
-
-Claude: [Uses select_client, then run_command]
-Selected prod-server-01. Disk usage:
-/dev/sda1  100G  45G  55G  45%  /
-
-You: Are there any clients with docker installed?
-
-Claude: [Uses find_client]
-Found 1 client with docker capability:
-- dev-workstation (has docker 24.0.5)
+┌────────────────────────────────────────────────────────────────────┐
+│ You: "List all connected clients"                                  │
+│                                                                    │
+│ Claude: [Uses list_clients]                                        │
+│ Connected clients:                                                 │
+│ - dev-workstation (Development) - Online, Ubuntu 22.04            │
+│ - prod-server-01 (Production) - Online, Debian 12                 │
+├────────────────────────────────────────────────────────────────────┤
+│ You: "Select the prod server and check disk space"                 │
+│                                                                    │
+│ Claude: [Uses select_client, then run_command]                     │
+│ Selected prod-server-01. Disk usage:                               │
+│ /dev/sda1  100G  45G  55G  45%  /                                 │
+├────────────────────────────────────────────────────────────────────┤
+│ You: "Are there any clients with docker installed?"                │
+│                                                                    │
+│ Claude: [Uses find_client]                                         │
+│ Found 1 client with docker capability:                             │
+│ - dev-workstation (has docker 24.0.5)                              │
+└────────────────────────────────────────────────────────────────────┘
 ```
+
+---
 
 ## Troubleshooting
 
 ### Claude Code Not Finding MCP Server
 
-Verify the MCP configuration path:
-
 ```bash
-# On server
-cat ~/.claude/settings.json
+# Verify the run script exists and works
+ssh root@your-server '/opt/etphonehome/run_mcp.sh'
+# Should wait for input (Ctrl+C to exit)
 
 # Check MCP server runs manually
-cd /opt/etphonehome
-.venv/bin/python -m server.mcp_server
-# Should output nothing (waiting for JSON-RPC input)
-# Ctrl+C to exit
+ssh root@your-server 'cd /opt/etphonehome && venv/bin/python -m server.mcp_server'
 ```
 
 ### SSH Connection Timeout
 
-Ensure SSH is configured for keepalive:
+Add keepalive settings to `~/.ssh/config`:
 
-```bash
-# In ~/.ssh/config
+```
 Host etphonehome-server
-    HostName YOUR_SERVER_IP
+    HostName your-server
     User root
-    IdentityFile ~/.ssh/your_admin_key
+    IdentityFile ~/.ssh/your_key
     ServerAliveInterval 30
     ServerAliveCountMax 3
 ```
 
 ### No Clients Connected
 
-Check if clients are running:
-
 ```bash
 # On client machine
-ps aux | grep phonehome
+ps aux | grep phonehome              # Check if running
+cat ~/.etphonehome/phonehome.log     # Check logs
 
-# Check client logs
-cat ~/.etphonehome/logs/phonehome.log
+# On server
+cat /home/etphonehome/.etphonehome-server/authorized_keys  # Verify key
 ```
 
-Verify the client's public key is in the server's authorized_keys:
+### Permission Denied on SSH
 
 ```bash
-# On server
-cat /home/etphonehome/.etphonehome-server/authorized_keys
+# Check key permissions
+chmod 600 ~/.ssh/your_key
+
+# Test SSH directly
+ssh -v -i ~/.ssh/your_key root@your-server echo "OK"
 ```
+
+---
 
 ## Security Notes
 
-- Admin SSH access (port 22) is separate from client tunnels (port 443)
-- All commands execute with the client's user privileges
-- File operations respect client's `allowed_paths` configuration
-- SSH keys provide authentication; no passwords
+| Aspect | Details |
+|--------|---------|
+| **Admin SSH (port 22)** | Separate from client tunnels (port 443) |
+| **Command execution** | Uses client's user privileges |
+| **File operations** | Respect client's `allowed_paths` |
+| **Authentication** | SSH keys only, no passwords |
+| **Key changes** | Flagged with `key_mismatch` for review |
+
+---
+
+## See Also
+
+- [MCP Server Setup](mcp-server-setup-guide.md) - Full server installation
+- [Management Guide](management-guide.md) - Client management workflows
+- [Main README](../README.md) - Project overview

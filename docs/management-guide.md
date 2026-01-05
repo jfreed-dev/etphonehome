@@ -1,10 +1,46 @@
 # ET Phone Home Management Guide
 
-This guide explains how to manage connected clients using SSH and Claude CLI.
+Manage connected clients using Claude CLI with MCP tools.
+
+---
+
+## Quick Reference
+
+```
+"List all connected clients"          → list_clients
+"Select the dev machine"              → select_client
+"Run 'df -h' on production"           → run_command
+"Find clients with docker"            → find_client
+"Show details for client X"           → describe_client
+"Update client purpose to staging"    → update_client
+```
+
+**Common Filters:**
+```
+find_client {"purpose": "production"}
+find_client {"tags": ["linux", "gpu"]}
+find_client {"capabilities": ["docker"]}
+find_client {"online_only": true}
+```
+
+---
 
 ## Overview
 
 ET Phone Home uses MCP (Model Context Protocol) to expose management tools to Claude CLI. You can manage all connected clients from any machine with Claude CLI configured to use the ET Phone Home MCP server.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         MANAGEMENT WORKFLOW                         │
+│                                                                     │
+│   You ──► Claude CLI ──► MCP Server ──► SSH Tunnel ──► Client      │
+│                                                                     │
+│   "Check disk on prod"                                              │
+│         │                                                           │
+│         ▼                                                           │
+│   [select_client] ──► [run_command "df -h"] ──► Results            │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ## Prerequisites
 
@@ -12,39 +48,42 @@ ET Phone Home uses MCP (Model Context Protocol) to expose management tools to Cl
 2. ET Phone Home MCP server configured in Claude CLI settings
 3. SSH access to the server (optional, for direct management)
 
+---
+
 ## Accessing the Management Interface
 
 ### Option 1: Local Claude CLI with MCP
 
-If your Claude CLI is configured with the ET Phone Home MCP server:
+Configure Claude CLI to invoke MCP remotely via SSH:
 
 ```json
-// ~/.claude/settings.json
 {
   "mcpServers": {
     "etphonehome": {
       "command": "ssh",
-      "args": ["-i", "~/.ssh/your_key", "root@YOUR_SERVER_IP", "/opt/etphonehome/run_mcp.sh"]
+      "args": ["-i", "~/.ssh/your_key", "root@your-server", "/opt/etphonehome/run_mcp.sh"]
     }
   }
 }
 ```
 
-Simply start Claude CLI and use natural language:
+Then use natural language:
 - "List all connected clients"
 - "Run 'uname -a' on the development machine"
 - "Read /var/log/syslog from the production server"
 
 ### Option 2: SSH to Server + Claude CLI
 
-SSH into the VPS and run Claude CLI there:
+SSH into the server and run Claude CLI there:
 
 ```bash
-ssh root@YOUR_SERVER_IP
+ssh root@your-server
 claude
 ```
 
-## Available MCP Tools
+---
+
+## MCP Tools Reference
 
 ### Client Management
 
@@ -55,6 +94,7 @@ claude
 | `find_client` | Search clients | `find_client {"purpose": "production"}` |
 | `describe_client` | Get detailed info | `describe_client {"uuid": "..."}` |
 | `update_client` | Modify metadata | `update_client {"uuid": "...", "purpose": "staging"}` |
+| `accept_key` | Accept new SSH key | `accept_key {"uuid": "..."}` |
 
 ### Remote Operations
 
@@ -67,121 +107,198 @@ claude
 | `upload_file` | Push file to client | `upload_file {"local_path": "...", "remote_path": "..."}` |
 | `download_file` | Pull file from client | `download_file {"remote_path": "...", "local_path": "..."}` |
 
+---
+
 ## Common Workflows
 
-### Check Client Status
+### 1. Check Client Status
 
 ```
-You: List all connected clients
-
-Claude: I'll check the connected clients.
-[Uses list_clients tool]
-
-There are 2 clients connected:
-- lokipopcosmic (Development) - Online
-- prod-server-01 (Production) - Online
+┌──────────────────────────────────────────────────────────┐
+│ You: "List all connected clients"                        │
+│                                                          │
+│ Claude: [Uses list_clients]                              │
+│                                                          │
+│ Connected clients:                                       │
+│ ┌────────────────┬─────────────┬────────┬─────────────┐ │
+│ │ Name           │ Purpose     │ Status │ Capabilities│ │
+│ ├────────────────┼─────────────┼────────┼─────────────┤ │
+│ │ lokipopcosmic  │ Development │ Online │ docker, git │ │
+│ │ prod-server-01 │ Production  │ Online │ nginx, node │ │
+│ └────────────────┴─────────────┴────────┴─────────────┘ │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### Remote Troubleshooting
+### 2. Remote Troubleshooting
 
 ```
-You: Check disk space on the production server
-
-Claude: I'll select the production server and check disk usage.
-[Uses select_client, then run_command with "df -h"]
-
-Disk usage on prod-server-01:
-Filesystem      Size  Used Avail Use% Mounted on
-/dev/sda1       100G   45G   55G  45% /
+┌──────────────────────────────────────────────────────────┐
+│ You: "Check disk space on the production server"         │
+│                                                          │
+│ Claude: [select_client → run_command "df -h"]            │
+│                                                          │
+│ Disk usage on prod-server-01:                            │
+│ Filesystem      Size  Used Avail Use%                    │
+│ /dev/sda1       100G   45G   55G  45%                    │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### Bulk Operations
+### 3. Bulk Operations
 
 ```
-You: Run 'apt update' on all Linux clients
-
-Claude: I'll run the update on each connected Linux client.
-[Uses find_client to get Linux clients, then run_command on each]
-
-Results:
-- lokipopcosmic: 15 packages can be upgraded
-- prod-server-01: 3 packages can be upgraded
+┌──────────────────────────────────────────────────────────┐
+│ You: "Run 'apt update' on all Linux clients"             │
+│                                                          │
+│ Claude: [find_client → run_command on each]              │
+│                                                          │
+│ Results:                                                 │
+│ - lokipopcosmic: 15 packages can be upgraded             │
+│ - prod-server-01: 3 packages can be upgraded             │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### File Transfer
+### 4. File Transfer
 
 ```
-You: Download the nginx config from production to review
-
-Claude: I'll fetch the nginx configuration.
-[Uses download_file]
-
-Downloaded /etc/nginx/nginx.conf to ./nginx.conf
+┌──────────────────────────────────────────────────────────┐
+│ You: "Download nginx config from production"             │
+│                                                          │
+│ Claude: [download_file]                                  │
+│                                                          │
+│ Downloaded /etc/nginx/nginx.conf to ./nginx.conf         │
+└──────────────────────────────────────────────────────────┘
 ```
+
+### 5. Client Metadata Update
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ You: "Mark the dev machine as staging"                   │
+│                                                          │
+│ Claude: [describe_client → update_client]                │
+│                                                          │
+│ Updated lokipopcosmic:                                   │
+│ - Purpose: Development → Staging                         │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 6. Handle Key Mismatch
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ You: "List clients"                                      │
+│                                                          │
+│ Claude: [list_clients]                                   │
+│ Warning: prod-server-01 has key_mismatch=true            │
+│                                                          │
+│ You: "Why does prod have a key mismatch?"                │
+│                                                          │
+│ Claude: [describe_client]                                │
+│ The SSH key changed on 2026-01-04. Previous key was      │
+│ registered on 2026-01-01.                                │
+│                                                          │
+│ You: "That was a planned key rotation, accept it"        │
+│                                                          │
+│ Claude: [accept_key]                                     │
+│ Key accepted for prod-server-01.                         │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
 
 ## Client Filtering
 
 ### By Purpose
 ```
 find_client {"purpose": "production"}
+find_client {"purpose": "development"}
+find_client {"purpose": "staging"}
 ```
 
 ### By Tags
 ```
-find_client {"tags": ["linux", "gpu"]}
+find_client {"tags": ["linux"]}
+find_client {"tags": ["linux", "gpu"]}  # Must have both
+find_client {"tags": ["docker", "kubernetes"]}
 ```
 
 ### By Capabilities
 ```
-find_client {"capabilities": ["docker", "python3.12"]}
+find_client {"capabilities": ["docker"]}
+find_client {"capabilities": ["python3.12"]}
+find_client {"capabilities": ["nvidia-gpu"]}
 ```
 
-### Online Only
+### Combined Filters
 ```
-find_client {"online_only": true}
+find_client {"purpose": "production", "online_only": true}
+find_client {"tags": ["linux"], "capabilities": ["docker"]}
 ```
+
+---
 
 ## Tips
 
-1. **Auto-selection**: The first client to connect is automatically selected. Use `select_client` to switch.
+| Tip | Description |
+|-----|-------------|
+| **Auto-selection** | First client to connect is automatically selected |
+| **Client ID vs UUID** | Both work; UUID persists across reconnects |
+| **Path restrictions** | Clients can configure `allowed_paths` to limit access |
+| **Timeouts** | Default 300s; override with `timeout` parameter |
+| **Large files** | Transfers limited to 10MB; use scp/rsync for larger |
+| **Parallel commands** | Ask Claude to run on "all clients" for bulk ops |
 
-2. **Client ID vs UUID**: Both work for identification. UUID persists across reconnects; client_id changes.
-
-3. **Path restrictions**: Clients can configure `allowed_paths` in their config to restrict file access.
-
-4. **Timeouts**: Commands have a 300-second default timeout. Override with `timeout` parameter.
-
-5. **Large files**: File transfers are limited to 10MB. Use `run_command` with scp/rsync for larger transfers.
+---
 
 ## Security Considerations
 
-- All communication is encrypted via SSH tunnels
-- Client public keys are verified on each connection
-- Path restrictions can limit file system access
-- Command execution uses the client's user context
+| Aspect | Protection |
+|--------|------------|
+| **Transport** | All communication encrypted via SSH tunnels |
+| **Authentication** | Client public keys verified on each connection |
+| **Authorization** | Path restrictions limit file system access |
+| **Execution Context** | Commands run as client's user (not root unless client runs as root) |
+| **Key Rotation** | Key changes flagged with `key_mismatch` for review |
+
+---
 
 ## Troubleshooting
 
 ### Client Not Showing Up
-1. Check client is running: `ps aux | grep phonehome`
-2. Check client logs: `~/.etphonehome/logs/`
-3. Verify SSH connectivity to server
+
+```bash
+# On client machine
+ps aux | grep phonehome           # Check process running
+cat ~/.etphonehome/phonehome.log  # Check logs
+phonehome --verbose               # Run with debug output
+```
 
 ### Command Timeout
-1. Increase timeout: `run_command {"cmd": "...", "timeout": 600}`
-2. Run in background on client and poll for results
+
+```
+# Increase timeout for long-running commands
+run_command {"cmd": "...", "timeout": 600}
+
+# Or run in background on client
+run_command {"cmd": "nohup ./script.sh &"}
+```
 
 ### Permission Denied
-1. Check client's `allowed_paths` config
+
+1. Check client's `allowed_paths` in config
 2. Verify file/directory permissions on client
 3. Check if operation requires root (client runs as user)
 
-## Future: Web Interface
+### Key Mismatch Warning
 
-A web-based management dashboard is planned for a future release. This will provide:
-- Real-time client status dashboard
-- Browser-based terminal
-- File browser and editor
-- Deployment automation
+1. Use `describe_client` to see key details
+2. Verify the key change was legitimate
+3. Use `accept_key` to clear the warning
 
-See [roadmap.md](roadmap.md) for planned features.
+---
+
+## See Also
+
+- [SSH + Claude Code Guide](ssh-claude-code-guide.md) - Remote access setup
+- [MCP Server Setup](mcp-server-setup-guide.md) - Server configuration
+- [Roadmap](roadmap.md) - Planned features including web dashboard

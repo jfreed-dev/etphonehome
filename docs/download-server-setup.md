@@ -144,17 +144,22 @@ Use the deploy script after building:
 ### Linux (curl/wget)
 
 ```bash
-curl -O http://YOUR_SERVER_IP/latest/phonehome-linux-x86_64.tar.gz
-# or
-wget http://YOUR_SERVER_IP/latest/phonehome-linux-x86_64.tar.gz
+# Download to ~/phonehome/
+mkdir -p ~/phonehome && cd ~/phonehome
+curl -LO http://YOUR_SERVER_IP/latest/phonehome-linux-x86_64.tar.gz
+tar xzf phonehome-linux-x86_64.tar.gz
+cd phonehome && ./setup.sh
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-Invoke-WebRequest -Uri http://YOUR_SERVER_IP/latest/phonehome-windows-amd64.zip -OutFile phonehome.zip
-# or
-Start-BitsTransfer -Source http://YOUR_SERVER_IP/latest/phonehome-windows-amd64.zip -Destination phonehome.zip
+# Download to %USERPROFILE%\phonehome\
+New-Item -ItemType Directory -Path "$env:USERPROFILE\phonehome" -Force
+Set-Location "$env:USERPROFILE\phonehome"
+Invoke-WebRequest -Uri "http://YOUR_SERVER_IP/latest/phonehome-windows-amd64.zip" -OutFile "phonehome.zip"
+Expand-Archive -Path "phonehome.zip" -DestinationPath "."
+.\setup.bat
 ```
 
 ### Check Latest Version
