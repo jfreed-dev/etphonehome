@@ -153,6 +153,181 @@ ERR_COMMAND_FAILED = -32002
 ERR_FILE_NOT_FOUND = -32003
 
 
+# =============================================================================
+# Custom Exception Classes for MCP Tools
+# =============================================================================
+
+
+class ToolError(Exception):
+    """Base exception for MCP tool errors with structured error responses."""
+
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        details: dict | None = None,
+        recovery_hint: str | None = None,
+    ):
+        self.code = code
+        self.message = message
+        self.details = details or {}
+        self.recovery_hint = recovery_hint
+        super().__init__(message)
+
+    def to_dict(self) -> dict:
+        """Convert to structured error response."""
+        result = {
+            "error": self.code,
+            "message": self.message,
+        }
+        if self.details:
+            result["details"] = self.details
+        if self.recovery_hint:
+            result["recovery_hint"] = self.recovery_hint
+        return result
+
+
+class ClientNotFoundError(ToolError):
+    """Raised when a specified client cannot be found."""
+
+    def __init__(self, client_id: str, available_clients: list[str] | None = None):
+        details = {"client_id": client_id}
+        if available_clients:
+            details["available_clients"] = available_clients[:5]  # Limit to 5
+        super().__init__(
+            code="CLIENT_NOT_FOUND",
+            message=f"Client not found: {client_id}",
+            details=details,
+            recovery_hint="Use 'list_clients' to see available clients, then 'select_client' to choose one.",
+        )
+
+
+class NoActiveClientError(ToolError):
+    """Raised when no client is selected and operation requires one."""
+
+    def __init__(self, online_count: int = 0, client_names: list[str] | None = None):
+        details = {"online_count": online_count}
+        if client_names:
+            details["available"] = client_names[:5]
+        hint = "Use 'list_clients' to see available clients, then 'select_client' to choose one."
+        if online_count == 0:
+            hint = "No clients are currently online. Wait for a client to connect."
+        super().__init__(
+            code="NO_ACTIVE_CLIENT",
+            message="No active client selected",
+            details=details,
+            recovery_hint=hint,
+        )
+
+
+class CommandTimeoutError(ToolError):
+    """Raised when a command exceeds its timeout."""
+
+    def __init__(self, cmd: str, timeout: int):
+        super().__init__(
+            code="COMMAND_TIMEOUT",
+            message=f"Command timed out after {timeout} seconds",
+            details={"cmd": cmd[:100], "timeout": timeout},
+            recovery_hint="Try with a longer timeout value, or break the command into smaller operations.",
+        )
+
+
+class CommandFailedError(ToolError):
+    """Raised when a command exits with non-zero status."""
+
+    def __init__(self, cmd: str, returncode: int, stderr: str):
+        super().__init__(
+            code="COMMAND_FAILED",
+            message=f"Command exited with code {returncode}",
+            details={
+                "cmd": cmd[:100],
+                "returncode": returncode,
+                "stderr": stderr[:500] if stderr else "",
+            },
+            recovery_hint="Check the stderr output for error details. Verify the command syntax and that required tools are installed.",
+        )
+
+
+class PathDeniedError(ToolError):
+    """Raised when access to a path is denied due to restrictions."""
+
+    def __init__(self, path: str, allowed_paths: list[str] | None = None):
+        details = {"path": path}
+        if allowed_paths:
+            details["allowed_paths"] = allowed_paths
+        super().__init__(
+            code="PATH_DENIED",
+            message=f"Access denied to path: {path}",
+            details=details,
+            recovery_hint="This client has path restrictions. Use 'describe_client' to see allowed_paths.",
+        )
+
+
+class FileNotFoundOnClientError(ToolError):
+    """Raised when a file doesn't exist on the client."""
+
+    def __init__(self, path: str):
+        super().__init__(
+            code="FILE_NOT_FOUND",
+            message=f"File not found: {path}",
+            details={"path": path},
+            recovery_hint="Verify the path exists using 'run_command' with 'test -f <path>' or 'list_files'.",
+        )
+
+
+class FileTooLargeError(ToolError):
+    """Raised when a file exceeds the size limit."""
+
+    def __init__(self, path: str, size: int, limit: int = 10 * 1024 * 1024):
+        super().__init__(
+            code="FILE_TOO_LARGE",
+            message=f"File too large: {size} bytes (limit: {limit} bytes)",
+            details={"path": path, "size": size, "limit": limit},
+            recovery_hint="Use 'download_file' for large files, or read specific portions with 'run_command' using head/tail.",
+        )
+
+
+class SSHKeyMismatchError(ToolError):
+    """Raised when a client's SSH key doesn't match the stored key."""
+
+    def __init__(self, uuid: str, display_name: str):
+        super().__init__(
+            code="SSH_KEY_MISMATCH",
+            message=f"SSH key mismatch for client: {display_name}",
+            details={"uuid": uuid, "display_name": display_name},
+            recovery_hint="Verify the key change is legitimate (reinstall, key rotation). Use 'accept_key' to accept the new key.",
+        )
+
+
+class RateLimitExceededError(ToolError):
+    """Raised when rate limit is exceeded for a client."""
+
+    def __init__(self, uuid: str, limit_type: str, current: int, limit: int):
+        super().__init__(
+            code="RATE_LIMIT_EXCEEDED",
+            message=f"Rate limit exceeded: {limit_type}",
+            details={
+                "uuid": uuid,
+                "limit_type": limit_type,
+                "current": current,
+                "limit": limit,
+            },
+            recovery_hint="Wait before retrying, or use 'configure_client' to adjust rate limits.",
+        )
+
+
+class InvalidArgumentError(ToolError):
+    """Raised when tool arguments are invalid."""
+
+    def __init__(self, argument: str, reason: str):
+        super().__init__(
+            code="INVALID_ARGUMENT",
+            message=f"Invalid argument '{argument}': {reason}",
+            details={"argument": argument, "reason": reason},
+            recovery_hint="Check the argument format and constraints. Paths must be absolute (start with /).",
+        )
+
+
 def encode_message(msg: str) -> bytes:
     """Encode a message with length prefix for transmission."""
     data = msg.encode("utf-8")
