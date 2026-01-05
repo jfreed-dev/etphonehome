@@ -1,10 +1,17 @@
 # ET Phone Home - Project Status
 
-**Last Updated**: 2026-01-04
-**Version**: 0.1.3
+**Last Updated**: 2026-01-05
+**Version**: 0.1.4
 **Status**: Production-ready
 
-## Recent Changes (v0.1.3)
+## Recent Changes (v0.1.4)
+
+- **Fixed client online status tracking**: SSH registration handler now notifies HTTP daemon via internal API
+- **Added `/internal/register` endpoint**: Enables SSH handler to update in-memory client registry
+- **Fixed SSE transport mounting**: Use `Mount()` for `/messages/` endpoint per MCP SDK requirements
+- **New `register_handler.py`**: Standalone script for SSH ForceCommand that notifies MCP server
+
+## Changes in v0.1.3
 
 - **Systemd service support**: Added `phonehome.service` and `install-service.sh` for automatic startup
 - **MCP tunnel port fix**: Server now uses stored tunnel ports, enabling commands on reconnected clients
@@ -39,7 +46,7 @@
 - Audit path validation logic in agent.py
 
 ### 3. Minor Improvements
-- Replace SSH exec-based client registration (`client/tunnel.py:156`) with dedicated handler
+- ~~Replace SSH exec-based client registration~~ - ✓ Fixed in v0.1.4 with `register_handler.py`
 - Windows Server setup documentation (currently Linux-focused)
 - Add retry logic for dropped connections
 
@@ -87,7 +94,7 @@ ruff check --fix .
 
 ## Known Gaps
 
-1. **Registration uses SSH exec workaround** - Works but not elegant
+1. ~~**Registration uses SSH exec workaround**~~ - ✓ Fixed in v0.1.4 with proper internal API
 2. ~~**No systemd service**~~ - ✓ Added in v0.1.3 (client service)
 3. **No log rotation** - Logs only to stderr
 4. **No Windows Server docs** - Setup guide is Linux-focused

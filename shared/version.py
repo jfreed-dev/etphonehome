@@ -1,6 +1,6 @@
 """Version information for ET Phone Home."""
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 # Update server URL
 UPDATE_URL = "http://YOUR_SERVER_IP/latest/version.json"
