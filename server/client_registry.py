@@ -410,6 +410,21 @@ class ClientRegistry:
                 "tags": updated.identity.tags,
             }
 
+    async def accept_key(self, uuid: str) -> dict | None:
+        """Accept a client's new SSH key, clearing the key_mismatch flag."""
+        async with self._lock:
+            result = self.store.accept_key(uuid)
+            if not result:
+                return None
+
+            # Update active client if online (refetch from store to get updated identity)
+            if uuid in self._active_clients and not result.get("no_mismatch"):
+                stored = self.store.get_by_uuid(uuid)
+                if stored:
+                    self._active_clients[uuid].identity = stored.identity
+
+            return result
+
     @property
     def active_client_uuid(self) -> str | None:
         """Get the UUID of the currently selected client."""
