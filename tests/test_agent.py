@@ -1,16 +1,11 @@
 """Tests for client/agent.py - Agent request handlers."""
 
 import base64
-import os
-import stat
-import tempfile
-from pathlib import Path
 
 import pytest
 
 from client.agent import Agent
 from shared.protocol import (
-    ERR_COMMAND_FAILED,
     ERR_FILE_NOT_FOUND,
     ERR_INVALID_PARAMS,
     ERR_METHOD_NOT_FOUND,
@@ -103,9 +98,7 @@ class TestAgentRunCommand:
 
     def test_run_command_with_stderr(self):
         agent = Agent()
-        req = Request(
-            method=METHOD_RUN_COMMAND, params={"cmd": "echo error >&2"}, id="2"
-        )
+        req = Request(method=METHOD_RUN_COMMAND, params={"cmd": "echo error >&2"}, id="2")
         resp = agent.handle_request(req)
         assert resp.error is None
         assert "error" in resp.result["stderr"]

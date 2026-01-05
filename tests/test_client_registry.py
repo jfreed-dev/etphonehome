@@ -1,8 +1,6 @@
 """Tests for server/client_registry.py - Client tracking and management."""
 
-import asyncio
 from datetime import datetime
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -205,12 +203,8 @@ class TestClientRegistryFind:
 
     @pytest.mark.asyncio
     async def test_find_by_purpose(self, registry):
-        await registry.register(
-            make_registration("uuid-1", "Dev", "dev-1", purpose="Development")
-        )
-        await registry.register(
-            make_registration("uuid-2", "Prod", "prod-1", purpose="Production")
-        )
+        await registry.register(make_registration("uuid-1", "Dev", "dev-1", purpose="Development"))
+        await registry.register(make_registration("uuid-2", "Prod", "prod-1", purpose="Production"))
 
         results = await registry.find_clients(purpose="Development")
         assert len(results) == 1
@@ -218,12 +212,8 @@ class TestClientRegistryFind:
 
     @pytest.mark.asyncio
     async def test_find_by_tags(self, registry):
-        await registry.register(
-            make_registration("uuid-1", "GPU", "gpu-1", tags=["gpu", "linux"])
-        )
-        await registry.register(
-            make_registration("uuid-2", "CPU", "cpu-1", tags=["linux"])
-        )
+        await registry.register(make_registration("uuid-1", "GPU", "gpu-1", tags=["gpu", "linux"]))
+        await registry.register(make_registration("uuid-2", "CPU", "cpu-1", tags=["linux"]))
 
         results = await registry.find_clients(tags=["gpu"])
         assert len(results) == 1
