@@ -20,8 +20,8 @@ Builds are published to the ET Phone Home update server for client auto-updates.
 
 ```
 /var/www/phonehome/
-├── latest -> v0.1.7/                    # Symlink to current version
-├── v0.1.7/
+├── latest -> v{VERSION}/                # Symlink to current version
+├── v{VERSION}/
 │   ├── version.json                     # Version metadata for clients
 │   ├── phonehome-linux-x86_64.tar.gz    # x86_64 build
 │   └── phonehome-linux-aarch64.tar.gz   # ARM64 build
@@ -34,7 +34,7 @@ Builds are published to the ET Phone Home update server for client auto-updates.
 
 ```json
 {
-  "version": "0.1.7",
+  "version": "{VERSION}",
   "release_date": "2026-01-05T12:00:00Z",
   "downloads": {
     "linux-x86_64": "phonehome-linux-x86_64.tar.gz",
