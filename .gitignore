@@ -1,3 +1,14 @@
+# =============================================================================
+# PRIVATE REPO .gitignore
+# =============================================================================
+# This is the private repository version. Secrets and credentials are TRACKED
+# here (encrypted via git-crypt) but excluded from the public repo via
+# .gitignore.public and the sync workflow.
+#
+# Files matching patterns in .gitattributes are encrypted with git-crypt.
+# See docs/private-repo-setup.md for setup instructions.
+# =============================================================================
+
 # Terraform
 *.tfstate
 *.tfstate.*
@@ -15,29 +26,12 @@ override.tf.json
 *.retry
 ansible/roles/geerlingguy.*/
 
-# For new environments, you can create custom inventories that are gitignored:
-# ansible/inventories/custom/hosts.yml (copy from hosts.yml.example)
-
-# Secrets and credentials
-ansible/secrets/*.yml
-!ansible/secrets/*.yml.example
-ansible/credentials/
-.vault_pass
-.vault_password
-*.pem
-*.key
-!*.key.example
-kubeconfig
-talosconfig
-.project_settings/
-.secrets/
-
 # OS
 .DS_Store
 Thumbs.db
 *~
 
-# IDE
+# IDE (optional - remove if you want to share IDE configs)
 .idea/
 .vscode/
 *.swp
@@ -50,9 +44,6 @@ __pycache__/
 venv/
 *.egg-info/
 
-# MCP config (may contain API keys)
-.mcp.json
-
 # Pre-commit
 .pre-commit-cache/
 
@@ -60,19 +51,30 @@ venv/
 *.log
 logs/
 
-# AI coding assistants
-CLAUDE.md
-AGENT.md
-AGENTS.md
-GEMINI.md
-CODEX.md
-.claude/
-.gemini/
-.codex/
-ansible/.ansible/
-
 # Firmware images (too large for git, use S3)
 *.img
 *.img.xz
 *.raw
 *.raw.xz
+
+# =============================================================================
+# TRACKED IN PRIVATE REPO (encrypted via git-crypt)
+# =============================================================================
+# The following are NOT ignored in the private repo. They are:
+# - Tracked and encrypted via git-crypt (see .gitattributes)
+# - Excluded from public sync (see .gitignore.public)
+#
+# Secrets and credentials:
+#   .secrets/
+#   .project_settings/
+#   ansible/secrets/*.yml
+#   ansible/credentials/
+#   .vault_pass, .vault_password
+#   *.pem, *.key
+#   kubeconfig, talosconfig
+#   .mcp.json
+#
+# AI coding assistant context:
+#   CLAUDE.md, AGENT.md, AGENTS.md, GEMINI.md, CODEX.md
+#   .claude/, .gemini/, .codex/
+# =============================================================================

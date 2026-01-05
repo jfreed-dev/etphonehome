@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__etphonehome__list_clients",
+      "Bash(journalctl:*)",
+      "Bash(ss:*)",
+      "Bash(cat:*)",
+      "Bash(python3:*)",
+      "Bash(sudo systemctl:*)",
+      "Bash(sudo systemctl status:*)",
+      "Bash(curl:*)",
+      "Bash(/opt/etphonehome/venv/bin/python3:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)"
+    ]
+  }
+}
