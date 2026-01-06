@@ -59,6 +59,47 @@ Planned features and improvements for ET Phone Home.
 
 ### Medium Term
 
+#### Interactive SSH Session Management
+
+Persistent SSH sessions through ET Phone Home clients for stateful remote access.
+
+**Problem**: Current `run_command` executes each command in a new SSH session - state (working directory, environment variables) isn't preserved between commands.
+
+**Solution**: New MCP tools for managing persistent SSH sessions on remote hosts accessed through ET Phone Home clients.
+
+**New Tools**:
+| Tool | Description |
+|------|-------------|
+| `ssh_session_open` | Open persistent SSH session to remote host → returns session_id |
+| `ssh_session_command` | Send command to existing session, return output |
+| `ssh_session_send` | Send input for interactive prompts (sudo, confirmations) |
+| `ssh_session_read` | Read pending output from session |
+| `ssh_session_list` | List active sessions with status |
+| `ssh_session_close` | Close session and free resources |
+
+**Implementation Phases**:
+
+- [ ] **Phase 1: Basic Sessions**
+  - Add `SSHSessionManager` class to client agent
+  - Implement `ssh_session_open`, `ssh_session_command`, `ssh_session_close`
+  - Use Paramiko `invoke_shell()` for persistent sessions
+  - Session timeout (30 min idle) and cleanup
+  - Keepalive to prevent SSH timeout
+
+- [ ] **Phase 2: Enhanced Features**
+  - `ssh_session_send` for interactive prompts
+  - Prompt detection for reliable output capture
+  - `ssh_session_list` for session management
+  - Session metadata (host, user, created_at, last_activity)
+
+- [ ] **Phase 3: Advanced**
+  - Jump host support via `paramiko-jump` or `jumpssh`
+  - Key-based authentication option
+  - Session persistence across client reconnects
+  - Consider AsyncSSH migration for better performance
+
+**Technical Details**: See [research-interactive-ssh-sessions.md](research-interactive-ssh-sessions.md)
+
 #### Web Management Interface
 ```
 ┌─────────────────────────────────────────────────────────────┐
