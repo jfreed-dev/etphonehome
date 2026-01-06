@@ -370,28 +370,186 @@ message = "Value: %s" % (value)  # NOT: f"Value: {value}"
 
 ## Troubleshooting
 
-### LOAD_FILE() Returns NULL
+### Debug Tools
+
+#### Log Files (on Data Collector)
+
+| Log File | Purpose |
+|----------|---------|
+| `/var/log/em7/silo.log` | DA execution logs by device |
+| `/var/log/em7/snippet_framework.log` | Framework messages |
+| `/var/log/em7/snippet_framework.steps.log` | Step-aligned messages |
+| `/var/log/sl1/snippets.log` | Debug messages (Skylar One 11.3.0+) |
+
+#### Dynamic Single Tool
+
+Test DA execution directly on collector without waiting for poll cycles:
+```bash
+# Run on the Data Collector where the DA executes
+sudo -u s-em7-core /opt/em7/backend/dynamic_single.py <did> <app_id>
+
+# Example: Test DA 1727 on device 3073
+sudo -u s-em7-core /opt/em7/backend/dynamic_single.py 3073 1727
+```
+
+#### UI Test Collection
+
+In SL1 UI: **System > Manage > Applications > Dynamic Applications** → Select DA → Click "Test Collection" to verify snippet execution and view step-by-step output.
+
+### Component Discovery Requirements
+
+For component devices to be created:
+
+| Requirement | Description |
+|-------------|-------------|
+| **Unique ID** | Collection object with `comp_mapping = 1` (Unique Identifier) |
+| **Device Name** | Collection object with `comp_mapping = 5` (Device Name) |
+| **Component Mapping** | Checkbox enabled in DA Properties |
+| **Discovery Object** | Class 108 object that triggers discovery |
+
+#### Verify Component Mapping
+
+```sql
+-- Check component mapping configuration
+mysql master -e "
+SELECT obj_id, name, oid, class, comp_mapping
+FROM dynamic_app_objects
+WHERE app_id = 1727;
+"
+```
+
+`comp_mapping` values:
+- `1` = Unique Identifier
+- `5` = Device Name
+- `0` = No mapping
+
+### Collection Data Debugging
+
+#### Check Collection Status
+
+```sql
+-- Last collection time for a DA
+mysql master -e "
+SELECT did, last_collect
+FROM dynamic_app_collection
+WHERE app_id = {AID}
+ORDER BY last_collect DESC
+LIMIT 5;
+"
+```
+
+#### View Collected Data
+
+```sql
+-- Check what data was collected (replace {AID} and {DID})
+mysql dynamic_app_data_{AID} -e "
+SELECT object, ind, data, collection_time
+FROM dev_config_{DID}
+ORDER BY collection_time DESC
+LIMIT 20;
+"
+```
+
+#### Check Discovery Object Data
+
+```sql
+-- Discovery objects (class 108) may not store data in dev_config
+-- but still trigger discovery - check if discovery object exists
+mysql master -e "
+SELECT obj_id, name, oid, class
+FROM dynamic_app_objects
+WHERE app_id = {AID} AND class = 108;
+"
+```
+
+### Component Device Verification
+
+```sql
+-- Check if component devices were discovered
+mysql master_dev -e "
+SELECT id, unique_id, component_did, parent_did, discovered_by_aid, last_seen
+FROM component_dev_map
+WHERE discovered_by_aid = {AID}
+ORDER BY last_seen DESC;
+"
+```
+
+### Cache Data Debugging
+
+```sql
+-- List cache entries for a DA
+mysql cache -e "
+SELECT \`key\`, LENGTH(value) as bytes
+FROM dynamic_app
+WHERE \`key\` LIKE 'MYPREFIX+%'
+LIMIT 10;
+"
+```
+
+#### Read Cache Data with Python
+
+```python
+#!/usr/bin/env python2.7
+import pickle
+import subprocess
+
+cache_key = "PRISMACLOUD+SITES+3062+1676388172873021096+DEVICES"
+cmd = 'mysql cache -N --raw -e "SELECT value FROM dynamic_app WHERE \\`key\\` = \'%s\';"' % cache_key
+result = subprocess.check_output(cmd, shell=True)
+if result:
+    data = pickle.loads(result.strip())
+    print "Type:", type(data)
+    print "Data:", data
+```
+
+### Common Issues
+
+#### LOAD_FILE() Returns NULL
 
 MySQL's `secure_file_priv` restricts file loading. Use bash script method instead.
 
-### MySQLdb Connection Fails
+#### MySQLdb Connection Fails
 
 Specify socket explicitly:
 ```python
 conn = MySQLdb.connect(db='master', unix_socket='/tmp/mysql.sock')
 ```
 
-### Permission Denied
+#### Permission Denied
 
 em7admin uses group-based MySQL auth. Use `mysql` CLI directly, not Python with credentials.
 
-### SSH Connection Issues
+#### SSH Connection Issues
 
 If direct SSH fails, use Windows client as jump host:
 ```
 # From Windows client via ET Phone Home
 ssh em7admin@108.174.225.156 "command"
 ```
+
+#### Discovery Not Working
+
+1. **Verify cache data exists** - Check upstream collector DA populated cache
+2. **Check component mapping** - Ensure Unique ID and Device Name objects have correct `comp_mapping`
+3. **Run dynamic_single** - Test DA directly to see execution output
+4. **Check discovery object** - Ensure class 108 object returns a value for each component
+5. **Verify poll frequency** - Collections run on schedule (check `poll` column in `dynamic_app`)
+
+#### Collection Returns None/Empty
+
+1. Check cache key format matches between collector and consumer DAs
+2. Verify `self.root_did` and `self.comp_unique_id` are correct
+3. Add debug logging: `logger_debug(7, 'Cache Key', CACHE_KEY)`
+4. Test with `dynamic_single.py` to see full output
+
+### Best Practices
+
+1. **Always backup before updating**: Export current snippet code before changes
+2. **Use dynamic_single for testing**: Faster than waiting for poll cycles
+3. **Enable debug logging**: Add `logger_debug()` calls during development
+4. **Verify with UI**: Use Test Collection in SL1 UI to see step-by-step output
+5. **Check logs on collector**: Not all errors appear in the database
+6. **Python 2.7 syntax**: Use `iteritems()`, `except Exception, e:`, `print` without parentheses
 
 ## Quick Reference
 
