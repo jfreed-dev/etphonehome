@@ -551,12 +551,108 @@ ssh em7admin@108.174.225.156 "command"
 5. **Check logs on collector**: Not all errors appear in the database
 6. **Python 2.7 syntax**: Use `iteritems()`, `except Exception, e:`, `print` without parentheses
 
+## Remote Access via Windows Client (ET Phone Home)
+
+When accessing SL1 through the Windows ET Phone Home client, SSH command output requires special handling.
+
+### SSH Output Capture Pattern
+
+**Issue**: SSH commands through Windows may return empty stdout when chaining with `&&`.
+
+**Solution**: Use two-step approach - write to temp file, then read:
+
+```bash
+# Step 1: Run SSH command, redirect to temp file
+ssh -o StrictHostKeyChecking=no em7admin@108.174.225.156 "mysql -N -e 'SELECT id,device FROM master_dev.legend_device LIMIT 5'" > C:\temp\query_result.txt 2>&1
+
+# Step 2: Read the file (separate command)
+type C:\temp\query_result.txt
+```
+
+**Important**: Use unique filenames to avoid "file in use" errors.
+
+### Working Query Examples
+
+#### List Devices
+```bash
+ssh em7admin@108.174.225.156 "mysql -N -e 'SELECT id,device,class_type FROM master_dev.legend_device WHERE device LIKE \"%%ION%%\"'" > C:\temp\ion_devs.txt 2>&1
+type C:\temp\ion_devs.txt
+```
+
+#### Check Device Class
+```bash
+ssh em7admin@108.174.225.156 "mysql -e 'SELECT id,class,descript,identifyer_1 FROM master.definitions_dev_classes WHERE id=6240'" > C:\temp\class_info.txt 2>&1
+type C:\temp\class_info.txt
+```
+
+#### List Dynamic Applications
+```bash
+ssh em7admin@108.174.225.156 "mysql -N -e 'SELECT aid,name FROM master.dynamic_app WHERE name LIKE \"%%Prisma%%\"'" > C:\temp\da_list.txt 2>&1
+type C:\temp\da_list.txt
+```
+
+### Key Table/Column Reference
+
+| Table | Primary Key | Key Columns |
+|-------|-------------|-------------|
+| `master.dynamic_app` | `aid` | `name`, `version`, `comp_dev` |
+| `master.dynamic_app_component` | `app_id`, `obj_id` | `map_type`, `dcmr_id` |
+| `master_dev.legend_device` | `id` | `device`, `ip`, `class_type`, `hostname` |
+| `master.definitions_dev_classes` | `id` | `class`, `descript`, `identifyer_1` |
+
+### Component Mapping Types (map_type)
+
+| Value | Mapping |
+|-------|---------|
+| 1 | Unique Identifier |
+| 3 | Class Identifier 1 |
+| 5 | Device Name |
+| 7 | UUID |
+
+## Device Class Configuration
+
+### ION Device Classes (Palo Alto Networks)
+
+| Class ID | Description | identifyer_1 |
+|----------|-------------|--------------|
+| 6240 | ION 3000 | `ion 3000` |
+| 6241 | ION 9000 | `ion 9000` |
+| 6246 | ION 3200 | `ion 3200` |
+| 6244 | ION 5000 | `ion 5000` |
+| 6245 | ION 7000 | `ion 7000` |
+| 6247 | ION 5200 | `ion 5200` |
+| 6248 | ION 9200 | `ion 9200` |
+
+### Device Class Mapping Rules (DCMR)
+
+If `dcmr_id` is NULL in `dynamic_app_component`, SL1 won't properly map `class_identifier_1` to device classes. This can result in components being assigned incorrect device classes.
+
+**Check DCMR configuration**:
+```sql
+SELECT app_id, obj_id, map_type, dcmr_id
+FROM master.dynamic_app_component
+WHERE app_id = {DA_AID};
+```
+
+### Verify Device Class Assignment
+
+```sql
+-- Check device class for discovered ION devices
+SELECT ld.id, ld.device, ld.class_type, dc.descript
+FROM master_dev.legend_device ld
+JOIN master.definitions_dev_classes dc ON ld.class_type = dc.id
+WHERE ld.device LIKE '%ION%';
+```
+
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
-| List DAs | `mysql master -e "SELECT did, app FROM dynamic_app WHERE app LIKE '%search%';"` |
-| Get snippet IDs | `mysql master -e "SELECT req_id, did FROM dynamic_app_requests WHERE did = {DID};"` |
+| List DAs | `mysql master -e "SELECT aid, name FROM dynamic_app WHERE name LIKE '%search%';"` |
+| Get snippet IDs | `mysql master -e "SELECT req_id, app_id FROM dynamic_app_requests WHERE app_id = {AID};"` |
 | Export snippet | `mysql master -N -e "SELECT request FROM dynamic_app_requests WHERE req_id = {ID};" > file.py` |
 | Update snippet | Use bash script with proper escaping |
 | Verify update | `mysql master -e "SELECT req_id, LENGTH(request) FROM dynamic_app_requests WHERE req_id = {ID};"` |
+| List devices | `mysql master_dev -e "SELECT id,device,class_type FROM legend_device WHERE device LIKE '%name%';"` |
+| Check device class | `mysql master -e "SELECT id,descript FROM definitions_dev_classes WHERE id={CLASS_ID};"` |
+| Component mapping | `mysql master -e "SELECT * FROM dynamic_app_component WHERE app_id={AID};"` |
