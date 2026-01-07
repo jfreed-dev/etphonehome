@@ -4,7 +4,7 @@ Planned features and improvements for ET Phone Home.
 
 ---
 
-## Current Version: 0.1.6
+## Current Version: 0.1.7
 
 ### Completed Features
 
@@ -40,6 +40,7 @@ Planned features and improvements for ET Phone Home.
 | Ansible playbooks | Done | 0.1.6 |
 | Docker containers | Done | 0.1.6 |
 | Terraform modules | Done | 0.1.6 |
+| SSH session management (Phase 1) | Done | 0.1.7 |
 
 ---
 
@@ -79,11 +80,11 @@ Persistent SSH sessions through ET Phone Home clients for stateful remote access
 
 **Implementation Phases**:
 
-- [ ] **Phase 1: Basic Sessions**
+- [x] **Phase 1: Basic Sessions** ✓ (v0.1.7)
   - Add `SSHSessionManager` class to client agent
-  - Implement `ssh_session_open`, `ssh_session_command`, `ssh_session_close`
+  - Implement `ssh_session_open`, `ssh_session_command`, `ssh_session_close`, `ssh_session_list`
   - Use Paramiko `invoke_shell()` for persistent sessions
-  - Session timeout (30 min idle) and cleanup
+  - Support password and key file authentication
   - Keepalive to prevent SSH timeout
 
 - [ ] **Phase 2: Enhanced Features**
@@ -146,6 +147,7 @@ Persistent SSH sessions through ET Phone Home clients for stateful remote access
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.1.7 | 2026-01-07 | SSH session management (Phase 1) - persistent sessions with `ssh_session_open/command/close/list` |
 | 0.1.6 | 2026-01-05 | Webhooks, rate limiting, metrics, deployment automation (Ansible/Docker/Terraform), comprehensive tests |
 | 0.1.5 | 2026-01-05 | Fixed auto-update loop for non-portable installs, installation detection |
 | 0.1.4 | 2026-01-05 | Automatic disconnect detection, `--list-clients` CLI, `allowed_paths` |
