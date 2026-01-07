@@ -5,7 +5,8 @@ import logging
 
 from shared.protocol import Request, Response, encode_message
 
-logger = logging.getLogger(__name__)
+# Use the etphonehome logger to ensure logs are captured
+logger = logging.getLogger("etphonehome.client_connection")
 
 
 class ClientConnection:
@@ -109,12 +110,16 @@ class ClientConnection:
         return response.result
 
     async def heartbeat(self) -> bool:
-        """Check if the client is responsive."""
-        try:
-            response = await self.send_request("heartbeat")
-            return response.result.get("status") == "alive"
-        except Exception:
-            return False
+        """Check if the client is responsive.
+
+        Raises:
+            ConnectionRefusedError: If the tunnel port is not listening
+            OSError: If there's a network error
+            asyncio.TimeoutError: If the request times out
+        """
+        # Let connection errors propagate for proper handling by health monitor
+        response = await self.send_request("heartbeat")
+        return response.result.get("status") == "alive"
 
     async def get_metrics(self, summary: bool = False) -> dict:
         """Get system health metrics from the client."""
