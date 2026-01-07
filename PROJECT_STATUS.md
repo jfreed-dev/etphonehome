@@ -6,6 +6,12 @@
 
 ## Recent Changes (v0.1.8)
 
+### SSH Session Documentation (2026-01-07)
+
+- **API.md updated**: Added SSH Session Management section with `ssh_session_open`, `ssh_session_command`, `ssh_session_close`, `ssh_session_list`
+- **management-guide.md updated**: Added SSH session workflow example and tool reference table
+- **Error codes added**: SSH-specific errors documented (SSH_AUTH_FAILED, SSH_SESSION_NOT_FOUND, etc.)
+
 ### Code Deduplication (2026-01-07)
 
 - **New `_execute_with_tracking()` helper**: Consolidates rate limiting and webhook dispatch logic
@@ -470,7 +476,7 @@ logger.info(
 | **High** | API documentation | Medium | High | ✅ Done |
 | **Medium** | Improved tool descriptions | Low | Medium | ✅ Done |
 | **Medium** | Code deduplication | Medium | Medium | ✅ Done |
-| **Medium** | Workflow documentation | Medium | Medium | Pending |
+| **Medium** | Workflow documentation | Medium | Medium | ✅ Done |
 | **Medium** | Interactive client selection | Low | Medium | Pending |
 | **Low** | Tool categorization | Low | Low | Pending |
 | **Low** | Command progress feedback | High | Low | Pending |

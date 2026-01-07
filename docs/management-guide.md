@@ -16,6 +16,8 @@ Manage connected clients using Claude CLI with MCP tools.
 "Set webhook URL for client"          → configure_client
 "Check rate limit stats"              → get_rate_limit_stats
 "Get system metrics"                  → get_client_metrics
+"SSH to db server through prod"       → ssh_session_open + ssh_session_command
+"List my open SSH sessions"           → ssh_session_list
 ```
 
 **Common Filters:**
@@ -112,6 +114,15 @@ claude
 | `upload_file` | Push file to client | `upload_file {"local_path": "...", "remote_path": "..."}` |
 | `download_file` | Pull file from client | `download_file {"remote_path": "...", "local_path": "..."}` |
 | `get_client_metrics` | Get system metrics | `get_client_metrics {"summary": true}` |
+
+### SSH Session Management
+
+| Tool | Description | Example |
+|------|-------------|---------|
+| `ssh_session_open` | Open SSH connection to remote host | `ssh_session_open {"host": "db.internal", "username": "admin"}` |
+| `ssh_session_command` | Run command in session | `ssh_session_command {"session_id": "...", "command": "ls"}` |
+| `ssh_session_close` | Close SSH session | `ssh_session_close {"session_id": "..."}` |
+| `ssh_session_list` | List active sessions | `ssh_session_list {}` |
 
 ---
 
@@ -258,6 +269,43 @@ claude
 │ - Uptime: 14 days, 3 hours                               │
 └──────────────────────────────────────────────────────────┘
 ```
+
+### 10. SSH Session to Remote Host
+
+Use SSH sessions to connect through an ET Phone Home client to other hosts on the network. Sessions maintain state (working directory, environment variables) between commands.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ You: "Connect to the database server through prod"       │
+│                                                          │
+│ Claude: [ssh_session_open]                               │
+│ ssh_session_open {                                       │
+│   "host": "db.internal",                                 │
+│   "username": "dbadmin",                                 │
+│   "password": "***"                                      │
+│ }                                                        │
+│                                                          │
+│ Opened SSH session: sess_abc123 to db.internal           │
+│                                                          │
+│ You: "Check the PostgreSQL status"                       │
+│                                                          │
+│ Claude: [ssh_session_command]                            │
+│ Output:                                                  │
+│ ● postgresql.service - PostgreSQL database server        │
+│   Active: active (running) since Mon 2026-01-06          │
+│                                                          │
+│ You: "Done with the database, close the session"         │
+│                                                          │
+│ Claude: [ssh_session_close]                              │
+│ Session sess_abc123 closed.                              │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Key Points:**
+- Sessions persist across commands - `cd` and `export` changes are remembered
+- Use `ssh_session_list` to see all open sessions
+- Always close sessions when done to free resources
+- The SSH connection goes through the ET Phone Home client, not directly
 
 ---
 
