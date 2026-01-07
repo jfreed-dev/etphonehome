@@ -16,6 +16,12 @@ METHOD_HEARTBEAT = "heartbeat"
 METHOD_REGISTER = "register"
 METHOD_GET_METRICS = "get_metrics"
 
+# SSH Session methods
+METHOD_SSH_SESSION_OPEN = "ssh_session_open"
+METHOD_SSH_SESSION_COMMAND = "ssh_session_command"
+METHOD_SSH_SESSION_CLOSE = "ssh_session_close"
+METHOD_SSH_SESSION_LIST = "ssh_session_list"
+
 
 @dataclass
 class Request:
@@ -325,6 +331,33 @@ class InvalidArgumentError(ToolError):
             message=f"Invalid argument '{argument}': {reason}",
             details={"argument": argument, "reason": reason},
             recovery_hint="Check the argument format and constraints. Paths must be absolute (start with /).",
+        )
+
+
+class SSHSessionNotFoundError(ToolError):
+    """Raised when an SSH session ID is not found."""
+
+    def __init__(self, session_id: str, available_sessions: list[str] | None = None):
+        details = {"session_id": session_id}
+        if available_sessions:
+            details["available_sessions"] = available_sessions[:5]
+        super().__init__(
+            code="SSH_SESSION_NOT_FOUND",
+            message=f"SSH session not found: {session_id}",
+            details=details,
+            recovery_hint="Use 'ssh_session_list' to see active sessions, or 'ssh_session_open' to create a new session.",
+        )
+
+
+class SSHConnectionError(ToolError):
+    """Raised when SSH connection fails."""
+
+    def __init__(self, host: str, reason: str):
+        super().__init__(
+            code="SSH_CONNECTION_ERROR",
+            message=f"Failed to connect to {host}: {reason}",
+            details={"host": host, "reason": reason},
+            recovery_hint="Verify host is reachable, credentials are correct, and SSH is enabled on the target.",
         )
 
 
