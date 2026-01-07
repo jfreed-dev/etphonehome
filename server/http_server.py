@@ -92,10 +92,18 @@ def create_http_app(api_key: str | None = None) -> Starlette:
 
     async def internal_register(request: Request) -> JSONResponse:
         """Internal endpoint for registering clients from SSH handler."""
+        # Import health monitor to reset health tracking on registration
+        from server.mcp_server import _health_monitor
+
         try:
             registration = await request.json()
-            await registry.register(registration)
             uuid = registration.get("identity", {}).get("uuid", "unknown")
+
+            # Reset health tracking BEFORE registration to ensure fresh grace period
+            if _health_monitor and uuid != "unknown":
+                _health_monitor.reset_health(uuid)
+
+            await registry.register(registration)
             display_name = registration.get("identity", {}).get("display_name", "unknown")
             logger.info(f"Registered client via internal API: {display_name} ({uuid[:8]}...)")
             return JSONResponse({"registered": uuid, "display_name": display_name})

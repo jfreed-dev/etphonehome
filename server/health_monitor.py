@@ -77,6 +77,15 @@ class HealthMonitor:
             self._task = None
         logger.info("Health monitor stopped")
 
+    def reset_health(self, uuid: str) -> None:
+        """
+        Reset health tracking for a client (e.g., on re-registration).
+
+        This clears any accumulated failure count and sets a new grace period.
+        """
+        self._client_health[uuid] = ClientHealth(registered_at=datetime.now(timezone.utc))
+        logger.debug(f"Reset health tracking for client {uuid[:8]}...")
+
     async def _monitor_loop(self) -> None:
         """Main monitoring loop."""
         while self._running:
