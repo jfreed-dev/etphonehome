@@ -10,6 +10,7 @@ import asyncio
 import json
 import os
 import sys
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
@@ -174,6 +175,64 @@ async def get_connection(client_id: str = None) -> ClientConnection:
         _connections[client_id] = ClientConnection("127.0.0.1", port)
 
     return _connections[client_id]
+
+
+async def _execute_with_tracking(
+    client_id: str | None,
+    method_name: str,
+    operation: Callable[[ClientConnection], Awaitable[Any]],
+    webhook_event: EventType | None = None,
+    webhook_data_fn: Callable[[dict, Any], dict] | None = None,
+    operation_args: dict | None = None,
+) -> Any:
+    """
+    Execute an operation with rate limiting and webhook dispatch.
+
+    This helper consolidates the common pattern used by run_command, read_file,
+    write_file, and list_files to reduce code duplication.
+
+    Args:
+        client_id: Target client ID/UUID (uses active client if not specified)
+        method_name: Name of the method for rate limiting tracking
+        operation: Async callable that takes a ClientConnection and returns a result
+        webhook_event: Event type to dispatch (None to skip webhook)
+        webhook_data_fn: Function(args, result) to generate webhook data
+        operation_args: Original operation arguments (passed to webhook_data_fn)
+
+    Returns:
+        Result from the operation
+    """
+    conn = await get_connection(client_id)
+
+    # Get client for rate limiting and webhooks
+    client = (
+        await registry.get_client(client_id) if client_id else await registry.get_active_client()
+    )
+    client_uuid = client.identity.uuid if client else None
+    client_display_name = client.identity.display_name if client else "Unknown"
+    client_webhook_url = client.identity.webhook_url if client else None
+
+    # Execute with rate limiting
+    limiter = get_rate_limiter()
+    if limiter and client_uuid:
+        async with RateLimitContext(limiter, client_uuid, method_name):
+            result = await operation(conn)
+    else:
+        result = await operation(conn)
+
+    # Dispatch webhook
+    dispatcher = get_dispatcher()
+    if dispatcher and client_uuid and webhook_event and webhook_data_fn:
+        webhook_data = webhook_data_fn(operation_args or {}, result)
+        dispatcher.dispatch(
+            event=webhook_event,
+            client_uuid=client_uuid,
+            client_display_name=client_display_name,
+            data=webhook_data,
+            client_webhook_url=client_webhook_url,
+        )
+
+    return result
 
 
 def create_server() -> Server:
@@ -739,160 +798,62 @@ async def _handle_tool(name: str, args: dict) -> Any:
             raise ClientNotFoundError(client_id, available_clients=available)
 
     elif name == "run_command":
-        client_id = args.get("client_id")
-        conn = await get_connection(client_id)
-
-        # Get client UUID for rate limiting and webhooks
-        client = (
-            await registry.get_client(client_id)
-            if client_id
-            else await registry.get_active_client()
-        )
-        client_uuid = client.identity.uuid if client else None
-        client_display_name = client.identity.display_name if client else "Unknown"
-        client_webhook_url = client.identity.webhook_url if client else None
-
-        limiter = get_rate_limiter()
-        if limiter and client_uuid:
-            async with RateLimitContext(limiter, client_uuid, "run_command"):
-                result = await conn.run_command(
-                    cmd=args["cmd"], cwd=args.get("cwd"), timeout=args.get("timeout")
-                )
-        else:
-            result = await conn.run_command(
+        return await _execute_with_tracking(
+            client_id=args.get("client_id"),
+            method_name="run_command",
+            operation=lambda conn: conn.run_command(
                 cmd=args["cmd"], cwd=args.get("cwd"), timeout=args.get("timeout")
-            )
-
-        # Dispatch command executed webhook
-        dispatcher = get_dispatcher()
-        if dispatcher and client_uuid:
-            dispatcher.dispatch(
-                event=EventType.COMMAND_EXECUTED,
-                client_uuid=client_uuid,
-                client_display_name=client_display_name,
-                data={
-                    "cmd": args["cmd"],
-                    "cwd": args.get("cwd"),
-                    "returncode": result.get("returncode"),
-                },
-                client_webhook_url=client_webhook_url,
-            )
-
-        return result
+            ),
+            webhook_event=EventType.COMMAND_EXECUTED,
+            webhook_data_fn=lambda a, r: {
+                "cmd": a["cmd"],
+                "cwd": a.get("cwd"),
+                "returncode": r.get("returncode"),
+            },
+            operation_args=args,
+        )
 
     elif name == "read_file":
-        client_id = args.get("client_id")
-        conn = await get_connection(client_id)
-
-        # Get client UUID for rate limiting and webhooks
-        client = (
-            await registry.get_client(client_id)
-            if client_id
-            else await registry.get_active_client()
+        return await _execute_with_tracking(
+            client_id=args.get("client_id"),
+            method_name="read_file",
+            operation=lambda conn: conn.read_file(args["path"]),
+            webhook_event=EventType.FILE_ACCESSED,
+            webhook_data_fn=lambda a, r: {
+                "operation": "read",
+                "path": a["path"],
+                "size": r.get("size"),
+            },
+            operation_args=args,
         )
-        client_uuid = client.identity.uuid if client else None
-        client_display_name = client.identity.display_name if client else "Unknown"
-        client_webhook_url = client.identity.webhook_url if client else None
-
-        limiter = get_rate_limiter()
-        if limiter and client_uuid:
-            async with RateLimitContext(limiter, client_uuid, "read_file"):
-                result = await conn.read_file(args["path"])
-        else:
-            result = await conn.read_file(args["path"])
-
-        # Dispatch file accessed webhook
-        dispatcher = get_dispatcher()
-        if dispatcher and client_uuid:
-            dispatcher.dispatch(
-                event=EventType.FILE_ACCESSED,
-                client_uuid=client_uuid,
-                client_display_name=client_display_name,
-                data={
-                    "operation": "read",
-                    "path": args["path"],
-                    "size": result.get("size"),
-                },
-                client_webhook_url=client_webhook_url,
-            )
-
-        return result
 
     elif name == "write_file":
-        client_id = args.get("client_id")
-        conn = await get_connection(client_id)
-
-        # Get client UUID for rate limiting and webhooks
-        client = (
-            await registry.get_client(client_id)
-            if client_id
-            else await registry.get_active_client()
+        return await _execute_with_tracking(
+            client_id=args.get("client_id"),
+            method_name="write_file",
+            operation=lambda conn: conn.write_file(args["path"], args["content"]),
+            webhook_event=EventType.FILE_ACCESSED,
+            webhook_data_fn=lambda a, r: {
+                "operation": "write",
+                "path": a["path"],
+                "size": r.get("size"),
+            },
+            operation_args=args,
         )
-        client_uuid = client.identity.uuid if client else None
-        client_display_name = client.identity.display_name if client else "Unknown"
-        client_webhook_url = client.identity.webhook_url if client else None
-
-        limiter = get_rate_limiter()
-        if limiter and client_uuid:
-            async with RateLimitContext(limiter, client_uuid, "write_file"):
-                result = await conn.write_file(args["path"], args["content"])
-        else:
-            result = await conn.write_file(args["path"], args["content"])
-
-        # Dispatch file accessed webhook
-        dispatcher = get_dispatcher()
-        if dispatcher and client_uuid:
-            dispatcher.dispatch(
-                event=EventType.FILE_ACCESSED,
-                client_uuid=client_uuid,
-                client_display_name=client_display_name,
-                data={
-                    "operation": "write",
-                    "path": args["path"],
-                    "size": result.get("size"),
-                },
-                client_webhook_url=client_webhook_url,
-            )
-
-        return result
 
     elif name == "list_files":
-        client_id = args.get("client_id")
-        conn = await get_connection(client_id)
-
-        # Get client UUID for rate limiting and webhooks
-        client = (
-            await registry.get_client(client_id)
-            if client_id
-            else await registry.get_active_client()
+        return await _execute_with_tracking(
+            client_id=args.get("client_id"),
+            method_name="list_files",
+            operation=lambda conn: conn.list_files(args["path"]),
+            webhook_event=EventType.FILE_ACCESSED,
+            webhook_data_fn=lambda a, r: {
+                "operation": "list",
+                "path": a["path"],
+                "count": len(r.get("files", [])),
+            },
+            operation_args=args,
         )
-        client_uuid = client.identity.uuid if client else None
-        client_display_name = client.identity.display_name if client else "Unknown"
-        client_webhook_url = client.identity.webhook_url if client else None
-
-        limiter = get_rate_limiter()
-        if limiter and client_uuid:
-            async with RateLimitContext(limiter, client_uuid, "list_files"):
-                result = await conn.list_files(args["path"])
-        else:
-            result = await conn.list_files(args["path"])
-
-        # Dispatch file accessed webhook
-        dispatcher = get_dispatcher()
-        if dispatcher and client_uuid:
-            dispatcher.dispatch(
-                event=EventType.FILE_ACCESSED,
-                client_uuid=client_uuid,
-                client_display_name=client_display_name,
-                data={
-                    "operation": "list",
-                    "path": args["path"],
-                    "count": len(result.get("files", [])),
-                },
-                client_webhook_url=client_webhook_url,
-            )
-
-        return result
 
     elif name == "upload_file":
         local_path = Path(args["local_path"])

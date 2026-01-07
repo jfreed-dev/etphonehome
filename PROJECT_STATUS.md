@@ -6,6 +6,12 @@
 
 ## Recent Changes (v0.1.8)
 
+### Code Deduplication (2026-01-07)
+
+- **New `_execute_with_tracking()` helper**: Consolidates rate limiting and webhook dispatch logic
+- **Refactored 4 tools**: `run_command`, `read_file`, `write_file`, `list_files` now use shared helper
+- **Reduced ~120 lines**: Eliminated duplicated boilerplate for client resolution, rate limiting context, and webhook dispatch
+
 ### Startup Recovery for Active Tunnels (2026-01-07)
 
 - **Automatic client recovery**: New `recover_active_clients()` function in MCP server
@@ -463,7 +469,7 @@ logger.info(
 | **High** | Create Claude Code skills | Low | High | ✅ Done |
 | **High** | API documentation | Medium | High | ✅ Done |
 | **Medium** | Improved tool descriptions | Low | Medium | ✅ Done |
-| **Medium** | Code deduplication | Medium | Medium | Pending |
+| **Medium** | Code deduplication | Medium | Medium | ✅ Done |
 | **Medium** | Workflow documentation | Medium | Medium | Pending |
 | **Medium** | Interactive client selection | Low | Medium | Pending |
 | **Low** | Tool categorization | Low | Low | Pending |
