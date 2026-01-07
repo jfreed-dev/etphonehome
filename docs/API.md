@@ -11,6 +11,7 @@ Complete reference for all MCP tools exposed by the ET Phone Home server.
 - [File Operations](#file-operations)
 - [Monitoring & Diagnostics](#monitoring--diagnostics)
 - [Configuration & Administration](#configuration--administration)
+- [SSH Session Management](#ssh-session-management)
 - [Error Codes](#error-codes)
 - [Webhook Events](#webhook-events)
 
@@ -484,6 +485,141 @@ Configure per-client operational settings.
 
 ---
 
+## SSH Session Management
+
+Persistent SSH sessions allow you to connect to remote hosts through ET Phone Home clients and maintain state (working directory, environment variables) across multiple commands.
+
+### ssh_session_open
+
+Open a persistent SSH session to a remote host through the ET Phone Home client.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `host` | string | Yes | Target hostname or IP address |
+| `username` | string | Yes | SSH username |
+| `password` | string | No | SSH password (use this OR key_file) |
+| `key_file` | string | No | Path to SSH private key on the client |
+| `port` | integer | No | SSH port (default: 22) |
+| `client_id` | string | No | ET Phone Home client to use |
+
+**Returns**:
+```json
+{
+  "session_id": "sess_abc123",
+  "host": "192.168.1.100",
+  "username": "admin",
+  "port": 22,
+  "message": "SSH session opened successfully"
+}
+```
+
+**Errors**:
+- `SSH_AUTH_FAILED` - Authentication failed (bad password/key)
+- `SSH_CONNECTION_FAILED` - Cannot connect to host
+- `SSH_KEY_NOT_FOUND` - Specified key file doesn't exist
+
+**Example**:
+```
+ssh_session_open with host="db-server.internal" username="admin" password="secret"  # pragma: allowlist secret
+```
+
+**Notes**:
+- Sessions persist until explicitly closed or client disconnects
+- Use password OR key_file, not both
+- Key file path is on the ET Phone Home client, not the MCP server
+
+---
+
+### ssh_session_command
+
+Execute a command in an existing SSH session. State is preserved between commands.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `session_id` | string | Yes | Session ID from ssh_session_open |
+| `command` | string | Yes | Command to execute |
+| `timeout` | integer | No | Timeout in seconds (default: 300, max: 3600) |
+| `client_id` | string | No | ET Phone Home client |
+
+**Returns**:
+```json
+{
+  "output": "command output here\n",
+  "session_id": "sess_abc123"
+}
+```
+
+**Errors**:
+- `SSH_SESSION_NOT_FOUND` - Invalid or expired session ID
+- `SSH_COMMAND_TIMEOUT` - Command exceeded timeout
+
+**Example**:
+```
+ssh_session_command with session_id="sess_abc123" command="cd /var/log && ls -la"
+```
+
+**State Preservation**:
+```
+# These commands maintain state:
+ssh_session_command command="cd /home/user"
+ssh_session_command command="pwd"  # Returns /home/user
+ssh_session_command command="export FOO=bar"
+ssh_session_command command="echo $FOO"  # Returns bar
+```
+
+---
+
+### ssh_session_close
+
+Close an SSH session and free resources.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `session_id` | string | Yes | Session ID to close |
+| `client_id` | string | No | ET Phone Home client |
+
+**Returns**:
+```json
+{
+  "closed": "sess_abc123",
+  "message": "SSH session closed"
+}
+```
+
+**Best Practice**: Always close sessions when done to release connections.
+
+---
+
+### ssh_session_list
+
+List all active SSH sessions on the client.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `client_id` | string | No | ET Phone Home client |
+
+**Returns**:
+```json
+{
+  "sessions": [
+    {
+      "session_id": "sess_abc123",
+      "host": "192.168.1.100",
+      "username": "admin",
+      "port": 22,
+      "created_at": "2026-01-07T12:34:56Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+---
+
 ## Error Codes
 
 All errors follow this structure:
@@ -514,6 +650,11 @@ All errors follow this structure:
 | `TIMEOUT` | Operation timed out | Retry with longer timeout |
 | `INVALID_ARGUMENT` | Bad parameter value | Check parameter constraints |
 | `INTERNAL_ERROR` | Unexpected error | Check server logs |
+| `SSH_AUTH_FAILED` | SSH authentication failed | Check credentials or key file |
+| `SSH_CONNECTION_FAILED` | Cannot connect to SSH host | Verify host is reachable |
+| `SSH_KEY_NOT_FOUND` | SSH key file not found | Check path on ET Phone Home client |
+| `SSH_SESSION_NOT_FOUND` | Invalid session ID | Use `ssh_session_list` to find valid sessions |
+| `SSH_COMMAND_TIMEOUT` | SSH command timed out | Increase timeout or check remote host |
 
 ---
 
@@ -582,6 +723,13 @@ read_file with path="/etc/app/config.json"
 **Check system health:**
 ```
 get_client_metrics with summary=true
+```
+
+**SSH to a remote host through client:**
+```
+1. ssh_session_open with host="target" username="user" password="pass"  # pragma: allowlist secret
+2. ssh_session_command with session_id="sess_xxx" command="your command"
+3. ssh_session_close with session_id="sess_xxx"
 ```
 
 ### Path Requirements
