@@ -1,10 +1,19 @@
 # ET Phone Home - Project Status
 
-**Last Updated**: 2026-01-06
-**Version**: 0.1.6
+**Last Updated**: 2026-01-07
+**Version**: 0.1.7
 **Status**: Production-ready
 
-## Recent Changes (v0.1.6)
+## Recent Changes (v0.1.7)
+
+### SSH Session Management (2026-01-07)
+
+- **Persistent SSH sessions**: New `SSHSessionManager` class enables stateful remote connections
+- **New MCP tools**: `ssh_session_open`, `ssh_session_command`, `ssh_session_close`, `ssh_session_list`
+- **State preservation**: Working directory, environment variables persist between commands
+- **Flexible authentication**: Support for both password and SSH key file authentication
+- **Paramiko invoke_shell()**: Uses interactive shell mode with 30-second keepalive
+- **18 new tests**: Comprehensive unit tests for SSH session functionality
 
 ### Code Quality & Claude Code Integration (2026-01-06)
 
@@ -56,11 +65,12 @@
 | Build system (PyInstaller + portable) | ✓ Complete | Linux (x64, ARM64) + Windows |
 | CI/CD (GitHub Actions) | ✓ Complete | Auto-releases on version tags |
 | Documentation | ✓ Excellent | README.md, CLAUDE.md, docs/API.md |
-| Tests | ✓ Comprehensive | 16 test files, 333 tests |
+| Tests | ✓ Comprehensive | 17 test files, 351 tests |
 | Systemd service | ✓ Complete | User and system service files |
 | Update server | ✓ Complete | http://72.60.125.7/latest/version.json |
 | Deployment automation | ✓ Complete | Ansible, Docker, Terraform |
 | Claude Code skills | ✓ Complete | 7 skills (remote-access, diagnostics, infrastructure, build, sl1-powerpack, windows-server, sl1-development) |
+| SSH session management | ✓ Phase 1 Complete | Persistent sessions via `ssh_session_*` tools |
 
 ## Next Steps (Priority Order)
 
@@ -141,8 +151,8 @@ ruff check --fix .
 
 | Client | Architecture | Version | Status |
 |--------|--------------|---------|--------|
-| lokipopcosmic (Jon Laptop) | x86_64 | 0.1.6 | Online |
-| spark-2f34 (DGX Spark) | aarch64 | 0.1.6 | Online |
+| lokipopcosmic (Jon Laptop) | x86_64 | 0.1.7 | Online |
+| spark-2f34 (DGX Spark) | aarch64 | 0.1.7 | Online |
 
 **Update Server**: http://72.60.125.7/latest/version.json
 
