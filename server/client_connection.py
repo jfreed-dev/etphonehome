@@ -122,3 +122,54 @@ class ClientConnection:
         if response.error:
             raise RuntimeError(f"Metrics failed: {response.error['message']}")
         return response.result
+
+    # SSH Session Management
+    async def ssh_session_open(
+        self,
+        host: str,
+        username: str,
+        password: str = None,
+        key_file: str = None,
+        port: int = 22,
+    ) -> dict:
+        """Open a persistent SSH session on the client."""
+        params = {
+            "host": host,
+            "username": username,
+            "port": port,
+        }
+        if password:
+            params["password"] = password
+        if key_file:
+            params["key_file"] = key_file
+
+        response = await self.send_request("ssh_session_open", params)
+        if response.error:
+            raise RuntimeError(f"SSH session open failed: {response.error['message']}")
+        return response.result
+
+    async def ssh_session_command(self, session_id: str, command: str, timeout: int = 300) -> dict:
+        """Send a command to an existing SSH session."""
+        params = {
+            "session_id": session_id,
+            "command": command,
+            "timeout": timeout,
+        }
+        response = await self.send_request("ssh_session_command", params)
+        if response.error:
+            raise RuntimeError(f"SSH session command failed: {response.error['message']}")
+        return response.result
+
+    async def ssh_session_close(self, session_id: str) -> dict:
+        """Close an SSH session."""
+        response = await self.send_request("ssh_session_close", {"session_id": session_id})
+        if response.error:
+            raise RuntimeError(f"SSH session close failed: {response.error['message']}")
+        return response.result
+
+    async def ssh_session_list(self) -> dict:
+        """List all active SSH sessions."""
+        response = await self.send_request("ssh_session_list", {})
+        if response.error:
+            raise RuntimeError(f"SSH session list failed: {response.error['message']}")
+        return response.result
