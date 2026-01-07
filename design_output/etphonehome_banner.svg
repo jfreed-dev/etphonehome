@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="800" viewBox="0 0 1400 800">
+  <defs>
+    <linearGradient id="space" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0B1020"/>
+      <stop offset="50%" stop-color="#111B2F"/>
+      <stop offset="100%" stop-color="#14263B"/>
+    </linearGradient>
+    <linearGradient id="pulse" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#2DE2E6"/>
+      <stop offset="100%" stop-color="#7CFF6B"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="800" fill="url(#space)"/>
+  <g opacity="0.6">
+    <circle cx="120" cy="140" r="2" fill="#E6F7FF"/>
+    <circle cx="260" cy="320" r="2" fill="#E6F7FF"/>
+    <circle cx="380" cy="110" r="1.6" fill="#E6F7FF"/>
+    <circle cx="1120" cy="180" r="2" fill="#E6F7FF"/>
+    <circle cx="1240" cy="520" r="2" fill="#E6F7FF"/>
+    <circle cx="980" cy="620" r="1.8" fill="#E6F7FF"/>
+  </g>
+  <g transform="translate(120 220)">
+    <rect x="0" y="0" width="320" height="220" rx="28" fill="#0F1930" stroke="#2DE2E6" stroke-width="6"/>
+    <rect x="24" y="28" width="272" height="120" rx="16" fill="#14263B" stroke="#7CFF6B" stroke-width="4"/>
+    <path d="M24 168 H296" stroke="#2DE2E6" stroke-width="6"/>
+    <circle cx="60" cy="184" r="6" fill="#FFB454"/>
+    <circle cx="96" cy="184" r="6" fill="#FFB454"/>
+    <circle cx="132" cy="184" r="6" fill="#FFB454"/>
+    <text x="28" y="210" font-family="'Fira Mono', monospace" font-size="18" fill="#7CFF6B">SERVER</text>
+  </g>
+  <g transform="translate(920 120)">
+    <rect x="0" y="0" width="260" height="180" rx="22" fill="#0F1930" stroke="#2DE2E6" stroke-width="6"/>
+    <rect x="20" y="24" width="220" height="96" rx="12" fill="#14263B" stroke="#7CFF6B" stroke-width="4"/>
+    <path d="M16 134 H244" stroke="#2DE2E6" stroke-width="6"/>
+    <text x="24" y="158" font-family="'Fira Mono', monospace" font-size="16" fill="#7CFF6B">CLIENT A</text>
+  </g>
+  <g transform="translate(920 430)">
+    <rect x="0" y="0" width="260" height="180" rx="22" fill="#0F1930" stroke="#2DE2E6" stroke-width="6"/>
+    <rect x="20" y="24" width="220" height="96" rx="12" fill="#14263B" stroke="#7CFF6B" stroke-width="4"/>
+    <path d="M16 134 H244" stroke="#2DE2E6" stroke-width="6"/>
+    <text x="24" y="158" font-family="'Fira Mono', monospace" font-size="16" fill="#7CFF6B">CLIENT B</text>
+  </g>
+  <path d="M440 320 C620 200 760 200 920 200" fill="none" stroke="url(#pulse)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M440 380 C620 520 760 520 920 520" fill="none" stroke="url(#pulse)" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="680" cy="260" r="6" fill="#FFB454"/>
+  <circle cx="680" cy="560" r="6" fill="#FFB454"/>
+  <text x="120" y="120" font-family="Space Grotesk, Futura, sans-serif" font-size="52" fill="#E6F7FF">ET Phone Home</text>
+  <text x="120" y="170" font-family="'Fira Mono', monospace" font-size="20" fill="#2DE2E6">Reverse SSH tunnels for Claude CLI remote support</text>
+</svg>
