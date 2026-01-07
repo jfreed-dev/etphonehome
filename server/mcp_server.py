@@ -497,6 +497,115 @@ def create_server() -> Server:
                     "additionalProperties": False,
                 },
             ),
+            # ===== SSH SESSION MANAGEMENT =====
+            Tool(
+                name="ssh_session_open",
+                description="Open a persistent SSH session to a remote host through the ET Phone Home client. The session maintains state (working directory, environment) across commands. Use password OR key_file for authentication.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "host": {
+                            "type": "string",
+                            "description": "Target hostname or IP address",
+                            "minLength": 1,
+                            "maxLength": 255,
+                        },
+                        "username": {
+                            "type": "string",
+                            "description": "SSH username",
+                            "minLength": 1,
+                            "maxLength": 64,
+                        },
+                        "password": {
+                            "type": "string",
+                            "description": "SSH password (optional if using key_file)",
+                        },
+                        "key_file": {
+                            "type": "string",
+                            "description": "Path to SSH private key file on the client (optional if using password)",
+                        },
+                        "port": {
+                            "type": "integer",
+                            "description": "SSH port (default: 22)",
+                            "default": 22,
+                            "minimum": 1,
+                            "maximum": 65535,
+                        },
+                        "client_id": {
+                            "type": "string",
+                            "description": "ET Phone Home client to use (uses active client if not specified)",
+                        },
+                    },
+                    "required": ["host", "username"],
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="ssh_session_command",
+                description="Execute a command in an existing SSH session. State is preserved between commands (cd, export, etc. persist). Returns stdout output.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "Session ID from ssh_session_open",
+                            "minLength": 1,
+                        },
+                        "command": {
+                            "type": "string",
+                            "description": "Command to execute in the SSH session",
+                            "minLength": 1,
+                        },
+                        "timeout": {
+                            "type": "integer",
+                            "description": "Command timeout in seconds (default: 300)",
+                            "default": 300,
+                            "minimum": 1,
+                            "maximum": 3600,
+                        },
+                        "client_id": {
+                            "type": "string",
+                            "description": "ET Phone Home client (uses active client if not specified)",
+                        },
+                    },
+                    "required": ["session_id", "command"],
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="ssh_session_close",
+                description="Close an SSH session and free resources. Always close sessions when done to release connections.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "Session ID to close",
+                            "minLength": 1,
+                        },
+                        "client_id": {
+                            "type": "string",
+                            "description": "ET Phone Home client (uses active client if not specified)",
+                        },
+                    },
+                    "required": ["session_id"],
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="ssh_session_list",
+                description="List all active SSH sessions on the client. Shows session IDs, target hosts, and creation times.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "client_id": {
+                            "type": "string",
+                            "description": "ET Phone Home client (uses active client if not specified)",
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+            ),
         ]
 
     @server.call_tool()
@@ -873,6 +982,41 @@ async def _handle_tool(name: str, args: dict) -> Any:
             )
         stats = limiter.get_stats(uuid)
         return {"uuid": uuid, "stats": stats}
+
+    # ===== SSH SESSION MANAGEMENT =====
+    elif name == "ssh_session_open":
+        client_id = args.get("client_id")
+        conn = await get_connection(client_id)
+        result = await conn.ssh_session_open(
+            host=args["host"],
+            username=args["username"],
+            password=args.get("password"),
+            key_file=args.get("key_file"),
+            port=args.get("port", 22),
+        )
+        return result
+
+    elif name == "ssh_session_command":
+        client_id = args.get("client_id")
+        conn = await get_connection(client_id)
+        result = await conn.ssh_session_command(
+            session_id=args["session_id"],
+            command=args["command"],
+            timeout=args.get("timeout", 300),
+        )
+        return result
+
+    elif name == "ssh_session_close":
+        client_id = args.get("client_id")
+        conn = await get_connection(client_id)
+        result = await conn.ssh_session_close(session_id=args["session_id"])
+        return result
+
+    elif name == "ssh_session_list":
+        client_id = args.get("client_id")
+        conn = await get_connection(client_id)
+        result = await conn.ssh_session_list()
+        return result
 
     else:
         raise ValueError(f"Unknown tool: {name}")
