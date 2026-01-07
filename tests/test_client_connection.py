@@ -324,7 +324,7 @@ class TestClientConnectionHeartbeat:
 
     @pytest.mark.asyncio
     async def test_heartbeat_failure(self):
-        """Should return False on error."""
+        """Should raise exception on connection error for health monitor to handle."""
         conn = ClientConnection("127.0.0.1", 12345)
 
         mock_reader = AsyncMock()
@@ -334,9 +334,9 @@ class TestClientConnectionHeartbeat:
         conn._reader = mock_reader
         conn._writer = mock_writer
 
-        result = await conn.heartbeat()
-
-        assert result is False
+        # heartbeat now propagates exceptions for proper health monitoring
+        with pytest.raises(Exception, match="Connection lost"):
+            await conn.heartbeat()
 
 
 class TestClientConnectionGetMetrics:
