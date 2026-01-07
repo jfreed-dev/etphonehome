@@ -6,6 +6,13 @@
 
 ## Recent Changes (v0.1.7)
 
+### Startup Recovery for Active Tunnels (2026-01-07)
+
+- **Automatic client recovery**: New `recover_active_clients()` function in MCP server
+- **Survives server restarts**: Detects and re-registers clients with active SSH tunnels on startup
+- **Heartbeat verification**: Tests each stored tunnel port before re-registering
+- **Module duplication fix**: Prevents `__main__` vs `server.mcp_server` module split when running with `python -m`
+
 ### Windows Client Testing & Bug Fixes (2026-01-07)
 
 - **Windows client verified**: Successfully tested ET Phone Home client on Windows Server 2019
