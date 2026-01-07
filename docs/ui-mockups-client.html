@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ET Phone Home UI Mockups - Client Detail</title>
+    <link rel="stylesheet" href="assets/etphonehome/ui/theme.css" />
+    <style>
+      body {
+        margin: 0;
+        background: radial-gradient(circle at 85% 10%, #14263B, #0B1020 60%);
+        color: var(--et-text-100);
+        font-family: "Space Grotesk", Futura, sans-serif;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100vh;
+      }
+      .sidebar {
+        padding: 28px 22px;
+        background: rgba(11, 16, 32, 0.9);
+        border-right: 2px solid rgba(45, 226, 230, 0.25);
+      }
+      .brand {
+        width: 200px;
+        margin-bottom: 24px;
+      }
+      .nav {
+        display: grid;
+        gap: 12px;
+        font-family: "Fira Mono", "SFMono-Regular", monospace;
+        font-size: 13px;
+        color: var(--et-text-300);
+      }
+      .nav a {
+        color: inherit;
+        text-decoration: none;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: rgba(20, 38, 59, 0.6);
+      }
+      .nav a.active {
+        color: var(--et-accent-cyan);
+        border: 1px solid rgba(45, 226, 230, 0.5);
+      }
+      .content {
+        padding: 36px 36px 80px;
+      }
+      h1 {
+        font-size: 32px;
+        margin: 0 0 6px;
+      }
+      h2 {
+        font-size: 16px;
+        color: var(--et-text-300);
+        margin: 0 0 16px;
+      }
+      .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .pill {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(124, 255, 107, 0.12);
+        color: var(--et-accent-green);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+      }
+      .grid {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 18px;
+      }
+      .card {
+        padding: 18px;
+        border-radius: 16px;
+        background: rgba(17, 27, 47, 0.75);
+        border: 2px solid rgba(45, 226, 230, 0.35);
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .icon {
+        width: 36px;
+        height: 36px;
+      }
+      .stat {
+        font-family: "Fira Mono", "SFMono-Regular", monospace;
+        font-size: 13px;
+        color: var(--et-text-300);
+      }
+      .cmd {
+        margin-top: 14px;
+        padding: 12px;
+        border-radius: 12px;
+        background: #0B1020;
+        border: 1px solid rgba(124, 255, 107, 0.4);
+        font-family: "Fira Mono", "SFMono-Regular", monospace;
+        font-size: 13px;
+        color: var(--et-accent-green);
+      }
+      .cta {
+        margin-top: 12px;
+        display: inline-block;
+        padding: 10px 16px;
+        border-radius: 10px;
+        background: linear-gradient(90deg, var(--et-accent-cyan), var(--et-accent-green));
+        color: #0B1020;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      .list {
+        display: grid;
+        gap: 12px;
+      }
+      .list-item {
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(20, 38, 59, 0.8);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          border-right: none;
+          border-bottom: 2px solid rgba(45, 226, 230, 0.25);
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <img class="brand" src="assets/etphonehome/logos/etphonehome_logo_horizontal.svg" alt="ET Phone Home" />
+        <nav class="nav">
+          <a href="ui-mockups.html">Dashboard</a>
+          <a class="active" href="#">Clients</a>
+          <a href="#">Webhooks</a>
+          <a href="#">Security</a>
+          <a href="#">Settings</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <div class="top">
+          <div>
+            <h1>Client: prod-app-02</h1>
+            <h2>Reverse tunnel on port 443 · Ubuntu 22.04 · gpu: none</h2>
+          </div>
+          <span class="pill">Online</span>
+        </div>
+
+        <section class="grid">
+          <div class="card">
+            <div class="row">
+              <img class="icon" src="assets/etphonehome/icons/icon_client.svg" alt="Client" />
+              <div>
+                <div>Metadata</div>
+                <div class="stat">Purpose: Production · Tags: prod, locked</div>
+              </div>
+            </div>
+            <div class="cmd">$ phonehome --describe --client prod-app-02</div>
+            <a class="cta" href="#">Open SSH session</a>
+          </div>
+          <div class="card">
+            <div class="row">
+              <img class="icon" src="assets/etphonehome/icons/icon_security.svg" alt="Security" />
+              <div>
+                <div>Access restrictions</div>
+                <div class="stat">Allowed paths: /var/log, /etc</div>
+              </div>
+            </div>
+            <div class="cmd">$ phonehome --read /var/log/syslog</div>
+          </div>
+        </section>
+
+        <section class="grid">
+          <div class="card">
+            <h3>Recent commands</h3>
+            <div class="list">
+              <div class="list-item">
+                <span class="stat">df -h</span>
+                <span class="pill">Success</span>
+              </div>
+              <div class="list-item">
+                <span class="stat">systemctl status etphonehome</span>
+                <span class="pill">Success</span>
+              </div>
+              <div class="list-item">
+                <span class="stat">tail -n 50 /var/log/syslog</span>
+                <span class="pill">Timeout</span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Webhook delivery</h3>
+            <div class="row">
+              <img class="icon" src="assets/etphonehome/icons/icon_webhook.svg" alt="Webhook" />
+              <div>
+                <div class="stat">Last: command_executed</div>
+                <div class="stat">Average: 120 ms</div>
+              </div>
+            </div>
+            <div class="cmd">https://hooks.example.com/et</div>
+            <a class="cta" href="#">Test webhook</a>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
