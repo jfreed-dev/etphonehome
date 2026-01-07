@@ -8,10 +8,13 @@ repos:
     rev: v4.5.0
     hooks:
       - id: trailing-whitespace
+        exclude: ^(\.secrets/|\.project_settings/|\.mcp\.json)
       - id: end-of-file-fixer
+        exclude: ^(\.secrets/|\.project_settings/|\.mcp\.json)
       - id: check-yaml
         args: [--unsafe]  # Allow custom tags
       - id: check-json
+        exclude: ^\.mcp\.json$  # Encrypted with git-crypt
       - id: check-toml
       - id: check-merge-conflict
       - id: check-added-large-files

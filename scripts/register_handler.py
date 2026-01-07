@@ -11,7 +11,7 @@ import urllib.request
 sys.path.insert(0, "/opt/etphonehome")
 os.chdir("/opt/etphonehome")
 
-from datetime import datetime  # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 MCP_SERVER_URL = "http://127.0.0.1:8765/internal/register"
@@ -61,7 +61,7 @@ def handle_register(registration):
         return {"error": "No UUID in registration"}
 
     store = load_store()
-    now = datetime.utcnow().isoformat() + "Z"
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
     existing = store["clients"].get(uuid)
     if existing:
