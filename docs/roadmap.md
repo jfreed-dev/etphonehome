@@ -4,7 +4,7 @@ Planned features and improvements for ET Phone Home.
 
 ---
 
-## Current Version: 0.1.7
+## Current Version: 0.1.8
 
 ### Completed Features
 
@@ -41,6 +41,7 @@ Planned features and improvements for ET Phone Home.
 | Docker containers | Done | 0.1.6 |
 | Terraform modules | Done | 0.1.6 |
 | SSH session management (Phase 1) | Done | 0.1.7 |
+| Startup recovery for active tunnels | Done | 0.1.8 |
 
 ---
 
@@ -147,6 +148,7 @@ Persistent SSH sessions through ET Phone Home clients for stateful remote access
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.1.8 | 2026-01-07 | Startup recovery for active tunnels, module duplication fix |
 | 0.1.7 | 2026-01-07 | SSH session management (Phase 1) - persistent sessions with `ssh_session_open/command/close/list` |
 | 0.1.6 | 2026-01-05 | Webhooks, rate limiting, metrics, deployment automation (Ansible/Docker/Terraform), comprehensive tests |
 | 0.1.5 | 2026-01-05 | Fixed auto-update loop for non-portable installs, installation detection |

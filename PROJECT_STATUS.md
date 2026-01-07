@@ -1,10 +1,10 @@
 # ET Phone Home - Project Status
 
 **Last Updated**: 2026-01-07
-**Version**: 0.1.7
+**Version**: 0.1.8
 **Status**: Production-ready
 
-## Recent Changes (v0.1.7)
+## Recent Changes (v0.1.8)
 
 ### Startup Recovery for Active Tunnels (2026-01-07)
 
