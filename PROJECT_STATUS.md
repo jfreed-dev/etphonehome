@@ -1,21 +1,25 @@
 # ET Phone Home - Project Status
 
-**Last Updated**: 2026-01-05
+**Last Updated**: 2026-01-06
 **Version**: 0.1.6
 **Status**: Production-ready
 
 ## Recent Changes (v0.1.6)
 
-### Code Quality & Claude Code Integration (2026-01-05)
+### Code Quality & Claude Code Integration (2026-01-06)
 
+- **Fixed Python 3.13 deprecation**: Replaced `datetime.utcnow()` with timezone-aware `datetime.now(timezone.utc)`
 - **Enhanced MCP tool schemas**: Added JSON Schema validation with patterns, constraints, and `additionalProperties: false`
 - **Structured error handling**: Custom exception classes (`ToolError`, `ClientNotFoundError`, etc.) with recovery hints
 - **API documentation**: Comprehensive `docs/API.md` with tool reference, error codes, and webhook events
-- **Claude Code skills**: Created 4 specialized skills:
+- **Claude Code skills**: Created 7 specialized skills:
   - `etphonehome-remote-access` - Safe remote access practices
   - `etphonehome-diagnostics` - Client health monitoring
   - `etphonehome-infrastructure` - Client management
   - `etphonehome-build` - Cross-architecture builds and publishing
+  - `etphonehome-sl1-powerpack` - SL1 PowerPack and Dynamic Application management
+  - `etphonehome-windows-server` - Windows Server and PowerShell administration
+  - `etphonehome-sl1-development` - SL1 development and monitoring solutions
 - **ARM64 support**: Native builds for DGX Spark and other ARM64 systems
 - **Update server**: Configured at `http://72.60.125.7/latest/version.json` with both x86_64 and aarch64 builds
 
@@ -52,11 +56,11 @@
 | Build system (PyInstaller + portable) | ✓ Complete | Linux (x64, ARM64) + Windows |
 | CI/CD (GitHub Actions) | ✓ Complete | Auto-releases on version tags |
 | Documentation | ✓ Excellent | README.md, CLAUDE.md, docs/API.md |
-| Tests | ✓ Comprehensive | 12 test files with broad coverage |
+| Tests | ✓ Comprehensive | 16 test files, 333 tests |
 | Systemd service | ✓ Complete | User and system service files |
 | Update server | ✓ Complete | http://72.60.125.7/latest/version.json |
 | Deployment automation | ✓ Complete | Ansible, Docker, Terraform |
-| Claude Code skills | ✓ Complete | 4 skills for remote access, diagnostics, infra, build |
+| Claude Code skills | ✓ Complete | 7 skills (remote-access, diagnostics, infrastructure, build, sl1-powerpack, windows-server, sl1-development) |
 
 ## Next Steps (Priority Order)
 

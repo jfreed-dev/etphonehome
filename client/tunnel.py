@@ -5,7 +5,7 @@ import logging
 import socket
 import threading
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -162,7 +162,7 @@ class ReverseTunnel:
         capabilities = detect_capabilities()
 
         # Build identity payload
-        now = datetime.utcnow().isoformat() + "Z"
+        now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
         identity = {
             "uuid": self.config.uuid or "",
             "display_name": self.config.display_name or socket.gethostname(),
