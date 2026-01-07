@@ -13,6 +13,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# CRITICAL: Prevent module duplication when running as `python -m server.mcp_server`
+# Without this, __main__ and server.mcp_server are separate modules with separate globals,
+# causing registry updates in __main__ to be invisible to code imported from server.mcp_server
+if __name__ == "__main__":
+    sys.modules["server.mcp_server"] = sys.modules[__name__]
+
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
@@ -67,6 +73,52 @@ _connections: dict[str, ClientConnection] = {}
 
 # Health monitor for automatic disconnect detection
 _health_monitor: HealthMonitor | None = None
+
+
+async def recover_active_clients():
+    """
+    Recover clients that have active tunnels after server restart.
+
+    On server restart, SSH tunnels may still be active but the in-memory
+    registry is empty. This function checks stored clients and re-registers
+    those with working tunnel connections.
+    """
+    from shared.protocol import METHOD_HEARTBEAT
+
+    stored_clients = store.list_all()
+    recovered = 0
+
+    for sc in stored_clients:
+        if not sc.last_client_info:
+            continue
+
+        port = sc.last_client_info.get("tunnel_port")
+        if not port:
+            continue
+
+        # Try to connect and send heartbeat
+        try:
+            conn = ClientConnection("127.0.0.1", port, timeout=3.0)
+            response = await conn.send_request(METHOD_HEARTBEAT)
+            await conn.disconnect()
+
+            if response.result and response.result.get("status") == "alive":
+                # Client is alive - re-register it
+                registration = {
+                    "identity": sc.identity.to_dict(),
+                    "client_info": sc.last_client_info,
+                }
+                await registry.register(registration)
+                logger.info(f"Recovered client: {sc.identity.display_name} " f"(port {port})")
+                recovered += 1
+        except Exception as e:
+            # Tunnel not responding - client likely disconnected
+            logger.debug(f"Client {sc.identity.display_name} tunnel not responding: {e}")
+
+    if recovered > 0:
+        logger.info(f"Startup recovery: {recovered} client(s) reconnected")
+    else:
+        logger.debug("Startup recovery: no active tunnels found")
 
 
 async def get_connection(client_id: str = None) -> ClientConnection:
@@ -1106,6 +1158,9 @@ async def run_http(host: str, port: int, api_key: str = None):
     # Start health monitor for automatic disconnect detection
     _health_monitor = HealthMonitor(registry, _connections)
     await _health_monitor.start()
+
+    # Recover any clients with active tunnels from before restart
+    await recover_active_clients()
 
     try:
         await run_http_server(host=host, port=port, api_key=api_key, registry=registry)
