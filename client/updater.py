@@ -64,6 +64,10 @@ def check_for_update(url: str = UPDATE_URL) -> dict | None:
 
     Returns update info dict if update available, None otherwise.
     """
+    if not url:
+        logger.debug("No update URL configured, skipping update check")
+        return None
+
     try:
         logger.debug(f"Checking for updates at {url}")
         req = urllib.request.Request(url, headers={"User-Agent": f"phonehome/{__version__}"})

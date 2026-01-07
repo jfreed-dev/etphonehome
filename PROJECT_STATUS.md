@@ -6,6 +6,13 @@
 
 ## Recent Changes (v0.1.7)
 
+### Windows Client Testing & Bug Fixes (2026-01-07)
+
+- **Windows client verified**: Successfully tested ET Phone Home client on Windows Server 2019
+- **SSH session proxy working**: Windows client can proxy SSH sessions to remote hosts (tested with SL1 All-in-One)
+- **Health monitor bug fixed**: Failure count now resets on client re-registration, preventing premature disconnection
+- **Update check fix**: Gracefully skips update check when `PHONEHOME_UPDATE_URL` is not configured (fixes "unknown url type: ''" error)
+
 ### SSH Session Management (2026-01-07)
 
 - **Persistent SSH sessions**: New `SSHSessionManager` class enables stateful remote connections
@@ -14,6 +21,7 @@
 - **Flexible authentication**: Support for both password and SSH key file authentication
 - **Paramiko invoke_shell()**: Uses interactive shell mode with 30-second keepalive
 - **18 new tests**: Comprehensive unit tests for SSH session functionality
+- **Cross-platform tested**: Verified working on Linux (x64, ARM64) and Windows Server 2019
 
 ### Code Quality & Claude Code Integration (2026-01-06)
 
@@ -149,10 +157,11 @@ ruff check --fix .
 
 ## Active Deployments
 
-| Client | Architecture | Version | Status |
-|--------|--------------|---------|--------|
-| lokipopcosmic (Jon Laptop) | x86_64 | 0.1.7 | Online |
-| spark-2f34 (DGX Spark) | aarch64 | 0.1.7 | Online |
+| Client | Architecture | Platform | Version | Status |
+|--------|--------------|----------|---------|--------|
+| lokipopcosmic (Jon Laptop) | x86_64 | Linux (Pop!_OS) | 0.1.7 | Online |
+| spark-2f34 (DGX Spark) | aarch64 | Linux (NVIDIA) | 0.1.7 | Online |
+| ep-dev-ts (iad-m-rdp06) | x86_64 | Windows Server 2019 | 0.1.7 | Online |
 
 **Update Server**: http://72.60.125.7/latest/version.json
 
