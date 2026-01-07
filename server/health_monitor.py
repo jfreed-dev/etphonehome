@@ -9,7 +9,8 @@ from server.client_connection import ClientConnection
 from server.client_registry import ClientRegistry
 from server.webhooks import EventType, get_dispatcher
 
-logger = logging.getLogger(__name__)
+# Use the etphonehome logger to ensure logs are captured
+logger = logging.getLogger("etphonehome.health_monitor")
 
 
 @dataclass
@@ -88,11 +89,20 @@ class HealthMonitor:
 
     async def _monitor_loop(self) -> None:
         """Main monitoring loop."""
+        check_count = 0
         while self._running:
             try:
                 await self._check_all_clients()
+                check_count += 1
+                # Log status every 10 checks (~5 minutes at default interval)
+                if check_count % 10 == 0:
+                    active_count = len(self._client_health)
+                    logger.debug(
+                        f"Health monitor: {check_count} checks completed, "
+                        f"tracking {active_count} clients"
+                    )
             except Exception as e:
-                logger.error(f"Error in health monitor loop: {e}")
+                logger.error(f"Error in health monitor loop: {e}", exc_info=True)
 
             await asyncio.sleep(self.config.check_interval)
 
@@ -154,7 +164,11 @@ class HealthMonitor:
             conn.timeout = original_timeout
 
             if is_alive:
-                # Client is healthy
+                # Client is healthy - reset failure count
+                if health.consecutive_failures > 0:
+                    logger.info(
+                        f"Client {uuid[:8]}... recovered after {health.consecutive_failures} failures"
+                    )
                 health.consecutive_failures = 0
                 health.last_check = datetime.now(timezone.utc)
                 await self.registry.update_heartbeat(uuid)
@@ -165,10 +179,13 @@ class HealthMonitor:
 
         except asyncio.TimeoutError:
             await self._handle_failure(uuid, client_id, health, "timeout")
-        except (ConnectionRefusedError, OSError) as e:
-            await self._handle_failure(uuid, client_id, health, f"connection error: {e}")
+        except ConnectionRefusedError:
+            # Tunnel port not listening - client definitely disconnected
+            await self._handle_failure(uuid, client_id, health, "connection refused (tunnel down)")
+        except OSError as e:
+            await self._handle_failure(uuid, client_id, health, f"network error: {e}")
         except Exception as e:
-            await self._handle_failure(uuid, client_id, health, f"error: {e}")
+            await self._handle_failure(uuid, client_id, health, f"unexpected error: {e}")
 
     async def _handle_failure(
         self,
@@ -181,10 +198,17 @@ class HealthMonitor:
         health.consecutive_failures += 1
         health.last_check = datetime.now(timezone.utc)
 
-        logger.warning(
-            f"Client {uuid[:8]}... health check failed ({reason}), "
-            f"failures={health.consecutive_failures}/{self.config.max_failures}"
-        )
+        # Log at INFO for connection refused (definite disconnect), WARNING otherwise
+        if "connection refused" in reason.lower():
+            logger.info(
+                f"Client {uuid[:8]}... disconnected ({reason}), "
+                f"failures={health.consecutive_failures}/{self.config.max_failures}"
+            )
+        else:
+            logger.warning(
+                f"Client {uuid[:8]}... health check failed ({reason}), "
+                f"failures={health.consecutive_failures}/{self.config.max_failures}"
+            )
 
         if health.consecutive_failures >= self.config.max_failures:
             logger.info(

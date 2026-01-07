@@ -1,5 +1,7 @@
 # ET Phone Home
 
+![ET Phone Home logo](docs/assets/etphonehome/logos/etphonehome_logo_horizontal.svg)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Build Status](https://github.com/jfreed-dev/etphonehome-public/actions/workflows/build.yml/badge.svg)](https://github.com/jfreed-dev/etphonehome-public/actions/workflows/build.yml)

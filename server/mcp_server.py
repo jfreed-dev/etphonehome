@@ -1108,7 +1108,7 @@ async def run_http(host: str, port: int, api_key: str = None):
     await _health_monitor.start()
 
     try:
-        await run_http_server(host=host, port=port, api_key=api_key)
+        await run_http_server(host=host, port=port, api_key=api_key, registry=registry)
     finally:
         if _health_monitor:
             await _health_monitor.stop()

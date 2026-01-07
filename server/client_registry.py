@@ -10,7 +10,8 @@ from server.rate_limiter import RateLimitConfig, get_rate_limiter
 from server.webhooks import EventType, get_dispatcher
 from shared.protocol import ClientIdentity, ClientInfo
 
-logger = logging.getLogger(__name__)
+# Use the etphonehome logger to ensure logs are captured
+logger = logging.getLogger("etphonehome.client_registry")
 
 
 @dataclass

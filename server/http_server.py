@@ -44,10 +44,15 @@ class AuthMiddleware:
         await self.app(scope, receive, send)
 
 
-def create_http_app(api_key: str | None = None) -> Starlette:
+def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
     """Create the Starlette ASGI application with MCP SSE transport."""
-    # Import here to avoid circular imports and ensure globals are initialized
-    from server.mcp_server import create_server, registry
+    # Import create_server - registry is now passed as parameter to avoid __main__ issue
+    from server.mcp_server import create_server
+
+    if registry is None:
+        # Fallback for backwards compatibility
+        from server.mcp_server import registry as imported_registry
+        registry = imported_registry
 
     # Create MCP server instance
     mcp_server = create_server()
@@ -146,11 +151,12 @@ async def run_http_server(
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
     api_key: str | None = None,
+    registry=None,
 ):
     """Run the HTTP/SSE server."""
     import uvicorn
 
-    app = create_http_app(api_key)
+    app = create_http_app(api_key, registry=registry)
 
     config = uvicorn.Config(
         app,
