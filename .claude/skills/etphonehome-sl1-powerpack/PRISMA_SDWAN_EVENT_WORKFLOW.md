@@ -1387,6 +1387,373 @@ if utilization_pct > 80:
 
 ---
 
+## Adding Circuit Information to SL1 Alerts
+
+### Current State
+
+**Event Processor (DA 1937 v3.1)** generates alerts with:
+- Site name ✓
+- Device name ✓
+- Event classification ✓
+- **Circuit/carrier details ✗ (missing)**
+
+Current alert example:
+```
+CARRIER TICKET REQUIRED: Internet circuit down at NYC-HQ-001
+```
+
+### The Goal
+
+Enhanced alert with circuit details:
+```
+CARRIER TICKET REQUIRED: Internet circuit down at NYC-HQ-001
+Circuit: Comcast Business (publicwan, 500/100 Mbps)
+Device: NYC-HQ-ION3000-01
+```
+
+### What's Missing
+
+**VPN Links Collection** is required but not yet implemented:
+- API Collector (DA 1932) does NOT fetch `/sdwan/v2.0/api/vpnlinks/query`
+- VPN links contain `source_wan_network_id` / `target_wan_network_id` which map to WAN interfaces
+- Without VPN links, there's no correlation path from event → circuit
+
+### Correlation Path
+
+```
+Event (DEVICEHW_INTERFACE_DOWN, NETWORK_DIRECT*_DOWN)
+  │
+  ├─ event.site_id ──────────────────────────────────► Site name (from SITES cache)
+  │
+  ├─ event.element_id ───────────────────────────────► Device name (from DEVICES cache)
+  │
+  └─ event.info.vpnlinks[] ──► vpnlink_id
+       │
+       └─ VPNLINKS cache ──► vpnlink.source_wan_network_id
+            │
+            └─ WANINTERFACES cache (lookup by network_id)
+                 │
+                 └─ Circuit details:
+                      • name: "Comcast Business"
+                      • type: "publicwan" or "privatewan"
+                      • link_bw_down: 500 (Mbps)
+                      • link_bw_up: 100 (Mbps)
+```
+
+### Implementation Requirements
+
+| Component | Change Required | Status |
+|-----------|----------------|--------|
+| **DA 1932** (API Collector) | Add VPN Links collection | ⚠️ Not Implemented |
+| **DA 1937** (Event Processor) | Add WAN + VPN link correlation | ⚠️ Not Implemented |
+
+### Code Changes: API Collector (DA 1932)
+
+Add VPN Links collection after the existing data fetches:
+
+```python
+# Add cache key at top of snippet
+CACHE_KEY_VPN = "PRISMACLOUD+VPNLINKS+%s" % (self.did)
+
+# Add VPN Links collection (after DEVICES section, before EVENTS)
+##VPN LINKS - Required for circuit correlation in Event Processor
+logger_debug(7, 'Fetching VPN links for circuit correlation')
+vpnlinks_payload = {
+    "query_params": {
+        "limit": 1000,
+        "sort_params": {"order_by": "target_site_id", "direction": "asc"}
+    }
+}
+ret_data = fetch_api_data('/sdwan/v2.0/api/vpnlinks/query', vpnlinks_payload)
+
+if isinstance(ret_data, dict) and 'items' in ret_data:
+    vpnlinks = ret_data['items']
+    logger_debug(7, 'VPN links fetched: %d items' % len(vpnlinks))
+
+    # Cache all VPN links
+    CACHE_PTR.cache_result(vpnlinks, ttl=CACHE_TTL, commit=True, key=CACHE_KEY_VPN)
+
+    # Cache individual VPN links for fast lookup by ID
+    for vpnlink in vpnlinks:
+        vpn_id = str(vpnlink.get('id', ''))
+        if vpn_id:
+            key = "%s+%s" % (CACHE_KEY_VPN, vpn_id)
+            CACHE_PTR.cache_result(vpnlink, ttl=CACHE_TTL, commit=True, key=key)
+            logger_debug(7, '  Cached VPN link: %s' % vpn_id)
+
+    RESULTS['vpnlinks'] = [(0, 'Okay')]
+else:
+    logger_debug(4, 'VPN links API returned unexpected response')
+```
+
+### Code Changes: Event Processor (DA 1937)
+
+**Step 1: Add cache keys at top of snippet:**
+
+```python
+CACHE_KEY_WAN = "PRISMACLOUD+WANINTERFACES+%s" % (self.did)
+CACHE_KEY_VPN = "PRISMACLOUD+VPNLINKS+%s" % (self.did)
+```
+
+**Step 2: Add circuit correlation function:**
+
+```python
+def get_wan_interface_map(cache_ptr):
+    """Build lookup map: network_id -> WAN interface details."""
+    wan_map = {}
+    try:
+        wan_data = cache_ptr.get(CACHE_KEY_WAN)
+        if wan_data and isinstance(wan_data, list):
+            for wan in wan_data:
+                network_id = str(wan.get('network_id', ''))
+                if network_id:
+                    wan_map[network_id] = {
+                        'name': wan.get('name', 'Unknown Circuit'),
+                        'type': wan.get('type', 'unknown'),
+                        'link_bw_down': wan.get('link_bw_down', 0),
+                        'link_bw_up': wan.get('link_bw_up', 0),
+                        'site_id': wan.get('_site_id', '')
+                    }
+    except Exception as e:
+        logger_debug(4, "Error building WAN interface map:", str(e))
+    return wan_map
+
+
+def get_vpnlink_map(cache_ptr):
+    """Build lookup map: vpnlink_id -> VPN link details."""
+    vpn_map = {}
+    try:
+        vpn_data = cache_ptr.get(CACHE_KEY_VPN)
+        if vpn_data and isinstance(vpn_data, list):
+            for vpn in vpn_data:
+                vpn_id = str(vpn.get('id', ''))
+                if vpn_id:
+                    vpn_map[vpn_id] = {
+                        'name': vpn.get('name', ''),
+                        'source_wan_network_id': str(vpn.get('source_wan_network_id', '')),
+                        'target_wan_network_id': str(vpn.get('target_wan_network_id', '')),
+                        'source_site_id': str(vpn.get('source_site_id', '')),
+                        'target_site_id': str(vpn.get('target_site_id', '')),
+                        'status': vpn.get('status', 'unknown')
+                    }
+    except Exception as e:
+        logger_debug(4, "Error building VPN link map:", str(e))
+    return vpn_map
+
+
+def get_circuit_info(event, vpn_map, wan_map):
+    """
+    Extract circuit details from event via VPN link correlation.
+
+    Returns dict with circuit details or None if not found.
+    """
+    info = event.get('info', {})
+
+    # Try to get vpnlink_ids from event
+    vpnlink_ids = info.get('vpnlinks', [])
+
+    # Also check vpn_reasons for vpnlink_id
+    if not vpnlink_ids:
+        vpn_reasons = info.get('vpn_reasons', [])
+        if vpn_reasons and isinstance(vpn_reasons, list):
+            for reason in vpn_reasons:
+                vpn_id = str(reason.get('vpnlink_id', ''))
+                if vpn_id:
+                    vpnlink_ids.append(vpn_id)
+
+    if not vpnlink_ids:
+        return None
+
+    # Get first VPN link
+    vpnlink_id = str(vpnlink_ids[0])
+    vpnlink = vpn_map.get(vpnlink_id, {})
+
+    if not vpnlink:
+        logger_debug(7, "  VPN link %s not found in cache" % vpnlink_id)
+        return None
+
+    # Get WAN interface from VPN link's source_wan_network_id
+    wan_network_id = vpnlink.get('source_wan_network_id', '')
+    wan = wan_map.get(wan_network_id, {})
+
+    if not wan:
+        # Try target_wan_network_id
+        wan_network_id = vpnlink.get('target_wan_network_id', '')
+        wan = wan_map.get(wan_network_id, {})
+
+    if not wan:
+        logger_debug(7, "  WAN interface not found for network_id %s" % wan_network_id)
+        return None
+
+    return {
+        'circuit_name': wan.get('name', 'Unknown Circuit'),
+        'circuit_type': wan.get('type', 'unknown'),
+        'bandwidth_down': wan.get('link_bw_down', 0),
+        'bandwidth_up': wan.get('link_bw_up', 0),
+        'vpnlink_name': vpnlink.get('name', '')
+    }
+```
+
+**Step 3: Update build_actionable_message() function:**
+
+```python
+def build_actionable_message(event, classification, site_map, device_map, vpn_map, wan_map):
+    """Build alert message with circuit information."""
+    event_code = event.get("code", "UNKNOWN")
+    severity = event.get("severity", "unknown")
+    site_id = str(event.get("site_id", ""))
+    site_name = site_map.get(site_id, "Unknown Site")
+
+    # Get circuit info
+    circuit = get_circuit_info(event, vpn_map, wan_map)
+    circuit_text = ""
+    if circuit:
+        circuit_text = " | Circuit: %s (%s, %d/%d Mbps)" % (
+            circuit['circuit_name'],
+            circuit['circuit_type'],
+            int(circuit['bandwidth_down']),
+            int(circuit['bandwidth_up'])
+        )
+
+    # Get root cause info
+    root_causes = extract_root_cause(event)
+    root_cause_text = ""
+    if root_causes:
+        rc = root_causes[0]
+        rc_device = device_map.get(rc["element_id"], rc["element_id"][:8] + "...")
+        rc_site = site_map.get(rc["site_id"], "Unknown")
+        root_cause_text = " | Device: %s at %s" % (rc_device, rc_site)
+
+    # Build message based on classification
+    if classification == "CARRIER_TICKET":
+        if event_code == "NETWORK_DIRECTINTERNET_DOWN":
+            msg = "CARRIER TICKET: Internet circuit down at %s%s%s" % (
+                site_name, circuit_text, root_cause_text)
+        elif event_code == "NETWORK_DIRECTPRIVATE_DOWN":
+            msg = "CARRIER TICKET: Private WAN circuit down at %s%s%s" % (
+                site_name, circuit_text, root_cause_text)
+        elif event_code == "DEVICEHW_INTERFACE_DOWN":
+            msg = "CARRIER TICKET: Physical interface down at %s%s%s" % (
+                site_name, circuit_text, root_cause_text)
+        elif event_code == "DEVICEHW_INTERFACE_ERRORS":
+            msg = "CARRIER TICKET: High error rate at %s%s%s" % (
+                site_name, circuit_text, root_cause_text)
+        else:
+            msg = "CARRIER TICKET: %s at %s%s%s" % (
+                event_code, site_name, circuit_text, root_cause_text)
+
+    elif classification == "BANDWIDTH_REVIEW":
+        msg = "BANDWIDTH REVIEW: %s at %s%s" % (event_code, site_name, circuit_text)
+
+    elif classification == "INVESTIGATE":
+        msg = "INVESTIGATE: %s at %s%s%s" % (
+            event_code, site_name, circuit_text, root_cause_text)
+
+    elif classification == "INFORMATIONAL":
+        msg = "INFO: %s at %s" % (event_code.replace("_", " ").title(), site_name)
+
+    else:
+        msg = "SD-WAN Alert: %s at %s (%s)%s" % (
+            event_code, site_name, severity, circuit_text)
+
+    return msg
+```
+
+**Step 4: Update main processing loop:**
+
+```python
+##main:
+logger_debug(7, SNIPPET_NAME)
+
+try:
+    cache_ptr = em7_snippets.cache_api(self)
+    cache_data = cache_ptr.get(CACHE_KEY_EVTS)
+
+    if cache_data is None:
+        logger_debug(7, "Cache key does not exist: %s" % CACHE_KEY_EVTS)
+        result_handler.update(RESULTS)
+    elif isinstance(cache_data, list):
+        if len(cache_data) > 0:
+            logger_debug(7, "Cache found with %d events" % len(cache_data))
+
+            # Build lookup maps
+            child_devices = get_child_devices()
+            site_map = get_site_name_map(cache_ptr)
+            device_map = get_device_name_map(cache_ptr)
+            vpn_map = get_vpnlink_map(cache_ptr)      # NEW
+            wan_map = get_wan_interface_map(cache_ptr) # NEW
+
+            logger_debug(7, "Lookup maps: %d sites, %d devices, %d vpnlinks, %d wan" % (
+                len(site_map), len(device_map), len(vpn_map), len(wan_map)))
+
+            # ... rest of processing loop ...
+
+            # Update message building call to include new maps
+            message = build_actionable_message(
+                event_dict, classification, site_map, device_map, vpn_map, wan_map)
+```
+
+### Enhanced Alert Examples
+
+**CARRIER_TICKET with circuit info:**
+```
+CARRIER TICKET: Internet circuit down at NYC-HQ-001 | Circuit: Comcast Business (publicwan, 500/100 Mbps) | Device: NYC-HQ-ION3000-01
+```
+
+**CARRIER_TICKET with private WAN:**
+```
+CARRIER TICKET: Private WAN circuit down at CHI-DC-002 | Circuit: AT&T MPLS (privatewan, 100/100 Mbps) | Device: CHI-DC-ION5000-01
+```
+
+**BANDWIDTH_REVIEW with circuit info:**
+```
+BANDWIDTH REVIEW: VION_BANDWIDTH_LIMIT_EXCEEDED at LAX-BRANCH-003 | Circuit: Spectrum Business (publicwan, 200/20 Mbps)
+```
+
+### Implementation Checklist
+
+#### Phase 1: API Collector Enhancement (DA 1932)
+- [ ] Add `CACHE_KEY_VPN` cache key definition
+- [ ] Add VPN Links collection code after DEVICES section
+- [ ] Add `vpnlinks` to RESULTS dictionary
+- [ ] Test VPN links API response
+- [ ] Verify cache population with correct keys
+
+#### Phase 2: Event Processor Enhancement (DA 1937)
+- [ ] Add `CACHE_KEY_WAN` and `CACHE_KEY_VPN` definitions
+- [ ] Add `get_wan_interface_map()` function
+- [ ] Add `get_vpnlink_map()` function
+- [ ] Add `get_circuit_info()` function
+- [ ] Update `build_actionable_message()` signature and logic
+- [ ] Update main processing loop to build new maps
+- [ ] Test with various event types
+
+#### Phase 3: Testing
+- [ ] Test with `DEVICEHW_INTERFACE_DOWN` events
+- [ ] Test with `NETWORK_DIRECTINTERNET_DOWN` events
+- [ ] Test with `NETWORK_DIRECTPRIVATE_DOWN` events
+- [ ] Test with events that have no VPN link correlation
+- [ ] Verify alert messages in SL1 UI
+- [ ] Verify alert messages in ticketing system integration
+
+### Fallback Behavior
+
+If circuit information cannot be determined (missing cache data, no VPN link correlation):
+- Alert is still generated with site/device info
+- Circuit text is omitted (empty string)
+- Log message indicates correlation failure for debugging
+
+```python
+# Example fallback
+if circuit:
+    circuit_text = " | Circuit: %s (%s, %d/%d Mbps)" % (...)
+else:
+    circuit_text = ""  # Graceful fallback
+    logger_debug(6, "  Circuit info not available for correlation")
+```
+
+---
+
 ## References
 
 - [Prisma SD-WAN Unified APIs](https://pan.dev/sdwan/api/)
@@ -1397,8 +1764,9 @@ if utilization_pct > 80:
 
 ---
 
-*Document Version: 1.5*
+*Document Version: 1.6*
 *Last Updated: 2026-01-08*
 *API Collector Version: 2.6 (WAN interfaces cached by site_id, not element_id)*
 *WAN Interface Stats Version: 1.3 (Two-step lookup: element → site → WAN interfaces)*
 *Added: Hybrid API + SNMP monitoring strategy for real-time interface stats*
+*Added: Circuit information enhancement for SL1 alerts (VPN Links correlation)*
