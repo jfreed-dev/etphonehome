@@ -59,7 +59,7 @@ This document maps how Palo Alto Prisma SD-WAN events flow through the API, get 
 │  • PRISMACLOUD+DEVICES+{did}              → All elements/devices            │
 │  • PRISMACLOUD+DEVICES+{did}+{elem_id}    → Individual device               │
 │  • PRISMACLOUD+WANINTERFACES+{did}        → All WAN interfaces              │
-│  • PRISMACLOUD+WANINTERFACES+{did}+{elem_id} → Per-element WAN interfaces   │
+│  • PRISMACLOUD+WANINTERFACES+{did}+{site_id} → Per-site WAN interfaces      │
 │                                                                             │
 │  Topology Cache Keys:                                                       │
 │  • PRISMACLOUD+VPNLINKS+{did}             → All VPN links                   │
@@ -419,7 +419,7 @@ for event in events:
 | All Devices | `PRISMACLOUD+DEVICES+{did}` | N/A |
 | Single Device | `PRISMACLOUD+DEVICES+{did}+{element_id}` | `element_id` from vpn_reasons |
 | All WAN Interfaces | `PRISMACLOUD+WANINTERFACES+{did}` | N/A |
-| Per-Element WAN | `PRISMACLOUD+WANINTERFACES+{did}+{element_id}` | `element_id` |
+| Per-Site WAN | `PRISMACLOUD+WANINTERFACES+{did}+{site_id}` | `site_id` (WAN interfaces are site-level) |
 | All VPN Links | `PRISMACLOUD+VPNLINKS+{did}` | N/A |
 | Single VPN Link | `PRISMACLOUD+VPNLINKS+{did}+{vpnlink_id}` | `vpnlink_id` from event |
 | All Anynet Links | `PRISMACLOUD+ANYNETLINKS+{did}` | N/A |
@@ -655,7 +655,7 @@ POST https://api.sase.paloaltonetworks.com/sdwan/monitor/v2.0/api/monitor/lqm_po
 
 ## Current Implementation vs. Recommended
 
-### Currently Implemented (API Collector DA 1932 v2.3.0)
+### Currently Implemented (API Collector DA 1932 v2.6.0)
 
 The API Collector currently fetches and caches:
 
@@ -997,6 +997,396 @@ Event Time: {event_time}
 
 ---
 
+## API Bridging Strategy: WAN Interfaces are Site-Level Resources
+
+### The Problem
+
+The per-element WAN interface endpoint (`/sdwan/v2.10/api/sites/{site_id}/elements/{element_id}/waninterfaces`) returns 502 errors in recent API versions. Testing revealed that **WAN interfaces are site-level circuit definitions** (e.g., "Centurylink", "Comcast") that are shared by all ION devices at a site - there is no `element_id` field in the API response.
+
+### The Solution (Implemented in DA 1932 v2.6)
+
+WAN interfaces are fetched and cached at the **site level**, since they represent physical circuits shared by all elements at a site:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  STEP 1: Get all ION devices (Elements)                                     │
+│                                                                             │
+│  Endpoint: GET /sdwan/v3.0/api/elements                                     │
+│                                                                             │
+│  Returns:                                                                   │
+│  {                                                                          │
+│    "items": [                                                               │
+│      {                                                                      │
+│        "id": "1695999744602013196",        <- element_id                   │
+│        "site_id": "1709588006013009196",   <- links device to site         │
+│        "name": "NYC-HQ-ION3000-01",                                        │
+│        "model_name": "ion 3000"                                            │
+│      }                                                                      │
+│    ]                                                                        │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  STEP 2: Get WAN interfaces at site level                                   │
+│                                                                             │
+│  Endpoint: GET /sdwan/v2.5/api/sites/{site_id}/waninterfaces                │
+│                                                                             │
+│  Returns: (NOTE: No element_id - these are SITE-LEVEL circuits!)            │
+│  {                                                                          │
+│    "items": [                                                               │
+│      {                                                                      │
+│        "id": "1682642046078021496",                                        │
+│        "name": "AT&T MPLS - Circuit A1234",    <- Circuit/carrier name     │
+│        "network_id": "1678895421110024096",                                │
+│        "type": "privatewan",                   <- privatewan or publicwan  │
+│        "link_bw_up": 100.0,                    <- Provisioned bandwidth    │
+│        "link_bw_down": 100.0                                               │
+│      }                                                                      │
+│    ]                                                                        │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  STEP 3: Cache WAN interfaces by SITE_ID (DA 1932 v2.6)                     │
+│                                                                             │
+│  # For each site, fetch and cache WAN interfaces                            │
+│  for site_dict in sites['items']:                                           │
+│      site_id = str(site_dict['id'])                                        │
+│      wan_path = '/sdwan/v%s/api/sites/%s/waninterfaces' % (ver, site_id)   │
+│      wan_data = fetch_api_data(wan_path)                                    │
+│                                                                             │
+│      if wan_data and 'items' in wan_data:                                   │
+│          site_interfaces = wan_data['items']                                │
+│          # Add site_id reference to each interface                          │
+│          for intf in site_interfaces:                                       │
+│              intf['_site_id'] = site_id                                    │
+│                                                                             │
+│          # Cache per-site (NOT per-element!)                                │
+│          wan_site_cache_key = 'PRISMACLOUD+WANINTERFACES+{did}+%s' % site_id│
+│          CACHE_PTR.cache_result(site_interfaces, key=wan_site_cache_key)    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Insight: WAN Interfaces Have No element_id
+
+**CRITICAL**: The site-level waninterfaces API does **NOT** return `element_id`. WAN interfaces represent physical circuits (like "Centurylink" or "Comcast") that are shared by ALL ION devices at a site.
+
+**Data Model:**
+```
+Site (site_id)
+  ├── ION Device 1 (element_id) ─┐
+  ├── ION Device 2 (element_id) ─┼── Share same WAN interfaces
+  └── WAN Interfaces             ─┘
+       ├── Circuit: "Centurylink" (type: privatewan)
+       └── Circuit: "Comcast"     (type: publicwan)
+```
+
+### Cache Key Reference (Updated for v2.6)
+
+| Cache Key Pattern | Data | Source |
+|-------------------|------|--------|
+| `PRISMACLOUD+DEVICES+{did}` | All ION devices | `/sdwan/v3.0/api/elements` |
+| `PRISMACLOUD+DEVICES+{did}+{element_id}` | Single device (includes site_id) | Cached per-device |
+| `PRISMACLOUD+WANINTERFACES+{did}` | All WAN interfaces (aggregate) | All sites combined |
+| `PRISMACLOUD+WANINTERFACES+{did}+{site_id}` | Per-site WAN interfaces | Cached per-site |
+
+### Downstream DA Usage (WAN Interface Stats DA 2456 v1.3)
+
+**Two-step lookup**: Element → Site → WAN Interfaces
+
+```python
+# Step 1: Get element's site_id from DEVICES cache
+element_id = str(self.comp_unique_id)
+device_cache_key = "PRISMACLOUD+DEVICES+%s+%s" % (self.root_did, element_id)
+element_data = CACHE_PTR.get(device_cache_key)
+
+site_id = None
+if isinstance(element_data, dict):
+    site_id = str(element_data.get("site_id", ""))
+
+# Step 2: Get WAN interfaces by site_id (NOT element_id!)
+if site_id:
+    wan_cache_key = "PRISMACLOUD+WANINTERFACES+%s+%s" % (self.root_did, site_id)
+    wan_interfaces = CACHE_PTR.get(wan_cache_key)
+
+# All elements at a site share the same WAN interface pool
+for intf in wan_interfaces:
+    name = intf.get('name')              # Circuit name (e.g., "AT&T MPLS")
+    link_bw_up = intf.get('link_bw_up', 0)
+    link_bw_down = intf.get('link_bw_down', 0)
+    intf_type = intf.get('type')         # privatewan or publicwan
+```
+
+---
+
+## Hybrid Monitoring: API + SNMP Device Merge for Real-Time Stats
+
+### The Limitation
+
+The Prisma SASE API provides **configuration data** for WAN interfaces (name, type, provisioned bandwidth) but does **not** provide real-time performance metrics like:
+- Bytes in/out (utilization)
+- Packets in/out
+- Error counts
+- Discard counts
+
+### The Solution: Merge API + SNMP Discovered Devices
+
+ION devices support SNMP and expose standard MIB-II interface statistics. By merging API-discovered component devices with SNMP-discovered devices in SL1, you get:
+
+| Data Source | Provides |
+|-------------|----------|
+| **Prisma SASE API** | Configuration, topology, events, site relationships, WAN interface definitions |
+| **SNMP (direct to ION)** | Real-time interface stats (IF-MIB), CPU, memory, hardware health |
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         SL1 MERGED DEVICE VIEW                              │
+│                                                                             │
+│  ┌─────────────────────────┐    ┌─────────────────────────────────────────┐ │
+│  │   API Discovery         │    │   SNMP Discovery                        │ │
+│  │   (Prisma PowerPack)    │    │   (Standard SL1 SNMP)                   │ │
+│  │                         │    │                                         │ │
+│  │  • Site membership      │    │  • IF-MIB interface stats               │ │
+│  │  • WAN interface config │    │  • Real-time utilization                │ │
+│  │  • Events/alerts        │    │  • Error/discard counters               │ │
+│  │  • Device model/serial  │    │  • CPU/memory metrics                   │ │
+│  │  • Software version     │    │  • Hardware health                      │ │
+│  └───────────┬─────────────┘    └───────────────┬─────────────────────────┘ │
+│              │                                  │                           │
+│              └──────────────┬───────────────────┘                           │
+│                             ▼                                               │
+│              ┌─────────────────────────────┐                                │
+│              │   MERGED ION DEVICE         │                                │
+│              │   (Combined data sources)   │                                │
+│              └─────────────────────────────┘                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Configuration Steps
+
+#### Step 1: Enable SNMP on ION Devices
+
+In Prisma SD-WAN Controller (Strata Cloud Manager):
+
+1. Navigate to **Configuration > ION Devices > [Device] > Services**
+2. Enable **SNMP Agent**
+3. Configure SNMP settings:
+   - **Version**: SNMPv2c or SNMPv3 (recommended)
+   - **Community String**: (for v2c) or credentials (for v3)
+   - **Allowed Hosts**: SL1 Data Collector IP(s)
+
+```
+# Example ION SNMP configuration (via API or UI)
+snmp:
+  enabled: true
+  version: "v2c"
+  community: "sl1monitoring"
+  allowed_hosts:
+    - "10.0.0.50"    # SL1 Data Collector
+    - "10.0.0.51"    # SL1 Data Collector (backup)
+```
+
+#### Step 2: Create SNMP Credential in SL1
+
+1. Navigate to **System > Manage > Credentials**
+2. Create new **SNMP Credential**:
+   - **Type**: SNMPv2c or SNMPv3
+   - **Community/Auth**: Match ION configuration
+   - **Timeout**: 10000ms (ION devices may be remote)
+
+#### Step 3: Discover ION Devices via SNMP
+
+**Option A: Discovery Session (Recommended for initial setup)**
+
+1. Navigate to **System > Manage > Classic Discovery / Discovery Sessions**
+2. Create discovery session targeting ION device IP ranges
+3. Assign SNMP credential
+4. Run discovery
+
+**Option B: Manual Device Creation**
+
+1. Navigate to **Devices > Device Manager**
+2. Create device with ION management IP
+3. Assign SNMP credential
+4. Run initial collection
+
+#### Step 4: Merge API and SNMP Devices
+
+In SL1, merge the API-discovered component device with the SNMP-discovered device:
+
+1. Navigate to **Devices > Device Manager**
+2. Find both devices:
+   - API device: Named like "NYC-HQ-ION3000-01" (from Prisma)
+   - SNMP device: Named by IP or SNMP sysName
+3. Select both devices
+4. Click **Actions > Merge Devices**
+5. Choose primary device (typically the API-discovered one for naming consistency)
+
+**Merge Criteria Options:**
+- **IP Address Match**: Automatic if same management IP
+- **Hostname Match**: If SNMP sysName matches Prisma device name
+- **Manual Merge**: Select and merge explicitly
+
+#### Step 5: Apply Interface Monitoring DAs
+
+After merge, apply interface monitoring Dynamic Applications:
+
+| DA Name | Purpose | Source |
+|---------|---------|--------|
+| **Cisco: SNMP Interface Rates** | Real-time bandwidth utilization | Built-in SL1 |
+| **Net: SNMP Interface Errors** | Error/discard counters | Built-in SL1 |
+| **Net: SNMP Interface Status** | Oper/admin status | Built-in SL1 |
+
+Or create custom DA using IF-MIB OIDs:
+
+```
+# Key IF-MIB OIDs for interface monitoring
+IF-MIB::ifDescr           # Interface description
+IF-MIB::ifSpeed           # Interface speed (bits/sec)
+IF-MIB::ifOperStatus      # Operational status (1=up, 2=down)
+IF-MIB::ifInOctets        # Bytes received (counter)
+IF-MIB::ifOutOctets       # Bytes transmitted (counter)
+IF-MIB::ifInErrors        # Input errors (counter)
+IF-MIB::ifOutErrors       # Output errors (counter)
+IF-MIB::ifInDiscards      # Input discards (counter)
+IF-MIB::ifOutDiscards     # Output discards (counter)
+
+# For 64-bit counters (high-speed interfaces)
+IF-MIB::ifHCInOctets      # High-capacity bytes in
+IF-MIB::ifHCOutOctets     # High-capacity bytes out
+```
+
+### Interface Name Correlation
+
+**Challenge**: API WAN interface names (e.g., "AT&T MPLS") don't match SNMP interface names (e.g., "eth0", "GigabitEthernet1").
+
+**Solution**: Create a correlation table or use interface descriptions:
+
+```sql
+-- Example: Store interface correlation in SL1 custom table or device extended data
+-- API Name: "AT&T MPLS - Circuit A1234"
+-- SNMP ifDescr: "GigabitEthernet0/0/1"
+-- SNMP ifAlias: "WAN-MPLS-ATT" (if configured on ION)
+```
+
+**Best Practice**: Configure descriptive `ifAlias` on ION interfaces that match or reference the Prisma WAN interface names.
+
+### Network Accessibility Considerations
+
+| Scenario | SNMP Reachable? | Solution |
+|----------|-----------------|----------|
+| ION on corporate network | Yes | Direct SNMP polling |
+| ION behind NAT | No | Use Prisma metrics API (future) or deploy SL1 collector at site |
+| ION at remote site (VPN) | Maybe | Ensure SL1 collector can reach via SD-WAN fabric |
+| Cloud-hosted ION (vION) | Depends | Check cloud security groups |
+
+### Recommended Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              SL1 ARCHITECTURE                               │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    SL1 DATABASE / ALL-IN-ONE                        │   │
+│  │                                                                     │   │
+│  │  Stores:                                                            │   │
+│  │  • Merged device records                                            │   │
+│  │  • API cache data (Prisma)                                          │   │
+│  │  • SNMP performance data                                            │   │
+│  │  • Correlated alerts                                                │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                              │                                              │
+│              ┌───────────────┴───────────────┐                              │
+│              │                               │                              │
+│              ▼                               ▼                              │
+│  ┌─────────────────────────┐   ┌─────────────────────────────────────────┐ │
+│  │  DATA COLLECTOR (HQ)    │   │  DATA COLLECTOR (Remote/Branch)        │ │
+│  │                         │   │                                         │ │
+│  │  • Prisma API polling   │   │  • SNMP polling to local IONs          │ │
+│  │    (centralized)        │   │  • Reduces WAN traffic                 │ │
+│  │  • SNMP to HQ IONs      │   │  • Lower latency for SNMP              │ │
+│  └───────────┬─────────────┘   └───────────────┬─────────────────────────┘ │
+│              │                                 │                            │
+└──────────────┼─────────────────────────────────┼────────────────────────────┘
+               │                                 │
+               ▼                                 ▼
+┌──────────────────────────┐       ┌──────────────────────────┐
+│  HQ Site                 │       │  Remote Site             │
+│  ┌────────────────────┐  │       │  ┌────────────────────┐  │
+│  │ ION 3000           │  │       │  │ ION 1200           │  │
+│  │ • SNMP enabled     │  │       │  │ • SNMP enabled     │  │
+│  │ • API managed      │  │       │  │ • API managed      │  │
+│  └────────────────────┘  │       │  └────────────────────┘  │
+└──────────────────────────┘       └──────────────────────────┘
+```
+
+### Utilization Alerting with Merged Data
+
+With SNMP data available, create utilization-based alerts:
+
+```python
+# Example: Calculate utilization from SNMP counters
+# In custom DA or using built-in interface DA
+
+# Get current and previous counter values
+current_in_octets = snmp_get('IF-MIB::ifHCInOctets.{ifIndex}')
+previous_in_octets = cached_value('in_octets')
+poll_interval = 300  # seconds
+
+# Calculate rate (bytes/sec)
+delta_bytes = current_in_octets - previous_in_octets
+rate_bps = (delta_bytes * 8) / poll_interval  # bits per second
+
+# Get provisioned bandwidth from API cache (WAN interface)
+wan_interface = cache.get('PRISMACLOUD+WANINTERFACES+{did}+{site_id}')
+provisioned_bw_bps = wan_interface['link_bw_down'] * 1000000  # Mbps to bps
+
+# Calculate utilization percentage
+utilization_pct = (rate_bps / provisioned_bw_bps) * 100
+
+# Alert if > 80%
+if utilization_pct > 80:
+    generate_alert("Circuit %s at %d%% utilization" % (wan_interface['name'], utilization_pct))
+```
+
+### Implementation Checklist
+
+#### Phase 1: SNMP Enablement
+- [ ] Identify ION devices accessible via SNMP from SL1
+- [ ] Enable SNMP on ION devices via Prisma SD-WAN controller
+- [ ] Configure SNMP community/credentials
+- [ ] Verify SNMP connectivity (snmpwalk test)
+
+#### Phase 2: SL1 Configuration
+- [ ] Create SNMP credential in SL1
+- [ ] Discover ION devices via SNMP
+- [ ] Merge API and SNMP devices
+- [ ] Verify merged device shows both data sources
+
+#### Phase 3: Interface Monitoring
+- [ ] Apply interface monitoring DAs to merged devices
+- [ ] Correlate SNMP interface names with API WAN interface names
+- [ ] Configure interface descriptions on IONs for easier correlation
+
+#### Phase 4: Alerting
+- [ ] Create utilization threshold alerts (>80%, >95%)
+- [ ] Create error rate alerts
+- [ ] Test alerts with simulated load
+- [ ] Integrate with Event Processor classifications
+
+### Limitations and Alternatives
+
+| Limitation | Alternative |
+|------------|-------------|
+| ION not SNMP-reachable | Use Prisma Metrics API when available |
+| Too many IONs to poll | Deploy distributed SL1 collectors |
+| SNMP disabled by policy | Request exception or use API-only monitoring |
+| Interface name mismatch | Configure ifAlias on ION to match API names |
+
+---
+
 ## References
 
 - [Prisma SD-WAN Unified APIs](https://pan.dev/sdwan/api/)
@@ -1007,6 +1397,8 @@ Event Time: {event_time}
 
 ---
 
-*Document Version: 1.2*
+*Document Version: 1.5*
 *Last Updated: 2026-01-08*
-*API Collector Version: 2.3.0 (Topology/Metrics collection pending)*
+*API Collector Version: 2.6 (WAN interfaces cached by site_id, not element_id)*
+*WAN Interface Stats Version: 1.3 (Two-step lookup: element → site → WAN interfaces)*
+*Added: Hybrid API + SNMP monitoring strategy for real-time interface stats*
