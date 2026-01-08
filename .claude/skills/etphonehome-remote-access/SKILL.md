@@ -200,3 +200,221 @@ run_command:
 - [ ] Appropriate timeout set?
 - [ ] Checked for key mismatch warnings?
 - [ ] Reviewed error output?
+
+## Windows Client Specifics
+
+Windows clients have different command syntax and path requirements.
+
+### Path Differences
+
+| Linux | Windows |
+|-------|---------|
+| `/home/user/file.txt` | `C:\Users\user\file.txt` |
+| Forward slashes | Backslashes (or forward in some contexts) |
+| Case-sensitive | Case-insensitive |
+
+### Important: write_file Path Validation
+
+The `write_file` tool validates paths must start with `/`. This fails for Windows paths like `C:\temp\file.txt`.
+
+**Workaround**: Use `run_command` with PowerShell instead:
+
+```
+# Instead of write_file (which fails on Windows paths)
+run_command:
+  cmd: 'powershell -Command "Set-Content -Path ''C:\temp\file.txt'' -Value ''content here''"'
+```
+
+### Windows Command Execution
+
+```
+# PowerShell commands
+run_command:
+  cmd: "powershell -Command \"Get-Process | Select-Object -First 5\""
+
+# CMD commands
+run_command:
+  cmd: "cmd /c dir C:\\temp"
+
+# Check if file exists (Windows)
+run_command:
+  cmd: "powershell -Command \"Test-Path 'C:\\temp\\file.txt'\""
+```
+
+## Multi-Hop SSH (Windows → Linux)
+
+When using a Windows client to reach a Linux server via SSH:
+
+### Connection Pattern
+
+```
+# From Windows client, SSH to Linux server
+run_command:
+  cmd: "ssh -o StrictHostKeyChecking=no user@linux-server \"command here\""
+  timeout: 60
+```
+
+### Known Issues and Solutions
+
+#### Issue 1: Heredocs Don't Work Through SSH
+**Problem**: `cat << 'EOF'` syntax fails with "unexpected EOF" errors.
+
+**Solution**: Use base64 encoding instead:
+```
+# Encode script content as base64, decode on remote
+run_command:
+  cmd: "ssh user@server \"echo 'BASE64_CONTENT' | base64 -d > /tmp/script.py && python /tmp/script.py\""
+```
+
+#### Issue 2: Complex Quote Escaping
+**Problem**: Multi-layer escaping (Windows → SSH → Shell → Command) breaks.
+
+**Solution**: Use base64 for complex content, or write to temp file first:
+```
+# Write simple command results to temp file, then read
+run_command:
+  cmd: "ssh user@server \"mysql -e 'SELECT 1'\" > C:\\temp\\result.txt"
+
+# Then read the file separately
+run_command:
+  cmd: "type C:\\temp\\result.txt"
+```
+
+#### Issue 3: SSH Session Expiration
+**Problem**: `ssh_session_open` sessions can expire, returning "Socket is closed".
+
+**Solution**: Use direct SSH commands via `run_command` instead of persistent sessions for reliability:
+```
+# More reliable than ssh_session_command
+run_command:
+  cmd: "ssh user@server \"command\""
+```
+
+#### Issue 4: Empty stdout from SSH
+**Problem**: SSH commands through Windows sometimes return empty stdout.
+
+**Solution**: Redirect output to temp file, then read:
+```
+# Step 1: Run SSH command, save to file
+run_command:
+  cmd: "ssh user@server \"mysql -e 'query'\" > C:\\temp\\out.txt 2>&1"
+
+# Step 2: Read the file
+run_command:
+  cmd: "type C:\\temp\\out.txt"
+```
+
+## Base64 Encoding for Code Transfer
+
+For transferring scripts or complex content through multiple SSH hops:
+
+### Pattern: Encode → Transfer → Decode → Execute
+
+```python
+# 1. Encode your script content as base64 (do this locally or calculate)
+# Example: "print('hello')" → "cHJpbnQoJ2hlbGxvJyk="
+
+# 2. Transfer and execute via SSH
+run_command:
+  cmd: "ssh user@server \"echo 'cHJpbnQoJ2hlbGxvJyk=' | base64 -d > /tmp/script.py && python /tmp/script.py\""
+```
+
+### Large File Chunking
+
+For files larger than ~4KB (command line limits):
+
+```
+# Split base64 into chunks and append
+run_command:
+  cmd: "ssh user@server \"echo 'CHUNK1' | base64 -d > /tmp/file.py\""
+
+run_command:
+  cmd: "ssh user@server \"echo 'CHUNK2' | base64 -d >> /tmp/file.py\""
+
+# Continue for each chunk...
+```
+
+### Quick Base64 Reference
+
+```bash
+# Encode on Linux
+cat script.py | base64 -w 0
+
+# Decode on Linux
+echo "BASE64" | base64 -d > script.py
+
+# Encode on Windows PowerShell
+[Convert]::ToBase64String([System.IO.File]::ReadAllBytes("script.py"))
+
+# Decode on Windows PowerShell
+[System.IO.File]::WriteAllBytes("script.py", [Convert]::FromBase64String("BASE64"))
+```
+
+## Database Operations Through SSH
+
+When running MySQL/MariaDB queries through SSH from Windows:
+
+### Simple Queries Work
+
+```
+run_command:
+  cmd: "ssh user@server \"mysql -e 'SELECT 1'\""
+```
+
+### Complex Queries Need Escaping Care
+
+```
+# Use double-escaping for quotes
+run_command:
+  cmd: "ssh user@server \"mysql -e \\\"SELECT * FROM table WHERE col = 'value';\\\"\""
+```
+
+### Reserved Column Names (like `key`)
+
+```
+# Use table.column notation instead of backticks
+run_command:
+  cmd: "ssh user@server \"mysql cache -e \\\"SELECT dynamic_app.key FROM dynamic_app;\\\"\""
+```
+
+### Python Script for Complex Queries
+
+For complex database operations, create a Python script via base64:
+
+```python
+# Script to run on remote server
+#!/usr/bin/env python2.7
+import subprocess
+result = subprocess.check_output("mysql -e 'complex query'", shell=True)
+print result
+```
+
+## Troubleshooting Checklist
+
+### Command Returns Empty
+
+1. Check if command works directly on the target system
+2. Try redirecting to temp file and reading separately
+3. Check stderr for error messages
+4. Verify the command path exists on target OS
+
+### SSH Connection Issues
+
+1. Verify client is online: `list_clients`
+2. Check SSH key is accepted: `ssh -o StrictHostKeyChecking=no`
+3. Test simple command first: `echo test`
+4. Increase timeout for slow connections
+
+### File Transfer Failures
+
+1. Use `run_command` with shell redirection instead of `write_file` for Windows
+2. For large files, use base64 chunking
+3. Verify target directory exists before writing
+4. Check disk space on target
+
+### Escaping Problems
+
+1. Start with single quotes around entire command
+2. Use base64 encoding for complex content
+3. Write to temp file and execute, instead of inline
+4. Test incrementally - simple command first, then add complexity

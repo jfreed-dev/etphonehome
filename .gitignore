@@ -83,3 +83,6 @@ logs/
 #   CLAUDE.md, AGENT.md, AGENTS.md, GEMINI.md, CODEX.md
 #   .claude/, .gemini/, .codex/
 # =============================================================================
+
+# Temporary working files
+tmp_*
