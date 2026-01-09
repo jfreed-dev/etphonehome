@@ -78,13 +78,28 @@ class HealthMonitor:
             self._task = None
         logger.info("Health monitor stopped")
 
-    def reset_health(self, uuid: str) -> None:
+    def reset_health(self, uuid: str, client_id: str = None) -> None:
         """
         Reset health tracking for a client (e.g., on re-registration).
 
-        This clears any accumulated failure count and sets a new grace period.
+        This clears any accumulated failure count, sets a new grace period,
+        and clears any cached connection (since tunnel port may have changed).
+
+        Args:
+            uuid: Client UUID
+            client_id: Client ID to clear from connection cache (if known)
         """
         self._client_health[uuid] = ClientHealth(registered_at=datetime.now(timezone.utc))
+
+        # Clear cached connection - tunnel port may have changed on reconnect
+        if client_id and client_id in self.connections:
+            try:
+                self.connections[client_id].close()
+            except Exception:
+                pass  # Ignore errors closing old connection
+            del self.connections[client_id]
+            logger.debug(f"Cleared stale connection for client {uuid[:8]}...")
+
         logger.debug(f"Reset health tracking for client {uuid[:8]}...")
 
     async def _monitor_loop(self) -> None:
