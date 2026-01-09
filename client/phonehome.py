@@ -291,6 +291,7 @@ def main():
         config=config,
         client_id=config.client_id,
         request_handler=agent.handle_request,
+        allowed_paths=config.allowed_paths if config.allowed_paths else None,
     )
 
     # Setup signal handlers

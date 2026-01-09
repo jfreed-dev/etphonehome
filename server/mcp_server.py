@@ -990,23 +990,54 @@ async def _handle_tool(name: str, args: dict) -> Any:
         if not local_path.exists():
             raise FileNotFoundError(f"Local file not found: {local_path}")
 
-        # Read local file
+        conn = await get_connection(args.get("client_id"))
+        remote_path = args["remote_path"]
+
+        # Try SFTP first for better performance
+        try:
+            if await conn.has_sftp_support():
+                sftp_conn = await conn.get_sftp_connection()
+                result = await sftp_conn.upload(
+                    local_path,
+                    remote_path,
+                    callback=lambda x, y: logger.debug(f"Upload progress: {x}/{y}"),
+                )
+                logger.info(f"Uploaded {local_path} via SFTP ({result['size']} bytes)")
+                return {"uploaded": remote_path, "size": result["size"], "method": "sftp"}
+        except Exception as e:
+            logger.warning(f"SFTP upload failed, falling back to JSON-RPC: {e}")
+
+        # Fallback to JSON-RPC with base64 encoding
         content = local_path.read_bytes()
         import base64
 
         encoded = base64.b64encode(content).decode("ascii")
-
-        # Write to remote
-        conn = await get_connection(args.get("client_id"))
-        result = await conn.write_file(args["remote_path"], encoded, binary=True)
-        return {"uploaded": args["remote_path"], "size": result["size"]}
+        result = await conn.write_file(remote_path, encoded, binary=True)
+        logger.info(f"Uploaded {local_path} via JSON-RPC ({result['size']} bytes)")
+        return {"uploaded": remote_path, "size": result["size"], "method": "json-rpc"}
 
     elif name == "download_file":
         conn = await get_connection(args.get("client_id"))
-        result = await conn.read_file(args["remote_path"])
-
+        remote_path = args["remote_path"]
         local_path = Path(args["local_path"])
         local_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Try SFTP first for better performance
+        try:
+            if await conn.has_sftp_support():
+                sftp_conn = await conn.get_sftp_connection()
+                result = await sftp_conn.download(
+                    remote_path,
+                    local_path,
+                    callback=lambda x, y: logger.debug(f"Download progress: {x}/{y}"),
+                )
+                logger.info(f"Downloaded {remote_path} via SFTP ({result['size']} bytes)")
+                return {"downloaded": str(local_path), "size": result["size"], "method": "sftp"}
+        except Exception as e:
+            logger.warning(f"SFTP download failed, falling back to JSON-RPC: {e}")
+
+        # Fallback to JSON-RPC with base64 encoding
+        result = await conn.read_file(remote_path)
 
         if result.get("binary"):
             import base64
@@ -1016,7 +1047,8 @@ async def _handle_tool(name: str, args: dict) -> Any:
         else:
             local_path.write_text(result["content"])
 
-        return {"downloaded": str(local_path), "size": result["size"]}
+        logger.info(f"Downloaded {remote_path} via JSON-RPC ({result['size']} bytes)")
+        return {"downloaded": str(local_path), "size": result["size"], "method": "json-rpc"}
 
     elif name == "find_client":
         results = await registry.find_clients(
