@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ET Phone Home - Dashboard</title>
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(circle at 15% 10%, #14263B, #0B1020 60%);
+        color: var(--et-text-100);
+        font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        min-height: 100vh;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100vh;
+      }
+      .sidebar {
+        padding: 28px 22px;
+        background: rgba(11, 16, 32, 0.9);
+        border-right: 2px solid rgba(45, 226, 230, 0.25);
+      }
+      .brand {
+        width: 200px;
+        margin-bottom: 24px;
+      }
+      .nav {
+        display: grid;
+        gap: 12px;
+        font-family: "Fira Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 13px;
+        color: var(--et-text-300);
+      }
+      .nav a {
+        color: inherit;
+        text-decoration: none;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: rgba(20, 38, 59, 0.6);
+        transition: all 0.2s;
+      }
+      .nav a:hover {
+        background: rgba(20, 38, 59, 0.9);
+      }
+      .nav a.active {
+        color: var(--et-accent-cyan);
+        border: 1px solid rgba(45, 226, 230, 0.5);
+      }
+      .content {
+        padding: 36px 36px 80px;
+        overflow-y: auto;
+      }
+      .hero {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      h1 {
+        font-size: 36px;
+        margin: 0 0 8px;
+      }
+      h2 {
+        font-size: 18px;
+        color: var(--et-text-300);
+        margin: 0;
+        font-weight: normal;
+      }
+      h3 {
+        font-size: 16px;
+        margin: 0 0 14px;
+        color: var(--et-text-100);
+      }
+      .grid {
+        margin-top: 28px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 18px;
+      }
+      .card {
+        padding: 18px;
+        border-radius: 16px;
+        background: rgba(17, 27, 47, 0.75);
+        border: 2px solid rgba(45, 226, 230, 0.35);
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .icon {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+      }
+      .stat {
+        font-family: "Fira Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 13px;
+        color: var(--et-text-300);
+      }
+      .pill {
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        font-weight: 600;
+      }
+      .pill-online {
+        background: rgba(124, 255, 107, 0.12);
+        color: var(--et-accent-green);
+      }
+      .pill-offline {
+        background: rgba(255, 180, 84, 0.12);
+        color: var(--et-accent-amber);
+      }
+      .pill-count {
+        background: rgba(45, 226, 230, 0.12);
+        color: var(--et-accent-cyan);
+      }
+      .split {
+        margin-top: 26px;
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 18px;
+      }
+      .list {
+        display: grid;
+        gap: 12px;
+      }
+      .list-item {
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: rgba(20, 38, 59, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .list-item:hover {
+        background: rgba(20, 38, 59, 1);
+        border-left: 3px solid var(--et-accent-cyan);
+      }
+      .client-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .client-name {
+        font-weight: 600;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .timeline {
+        display: grid;
+        gap: 12px;
+        font-family: "Fira Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .timeline-item {
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(15, 25, 48, 0.8);
+        border-left: 3px solid var(--et-accent-amber);
+      }
+      .timeline-item.connected {
+        border-left-color: var(--et-accent-green);
+      }
+      .timeline-item.disconnected {
+        border-left-color: var(--et-accent-amber);
+      }
+      .timeline-item.command {
+        border-left-color: var(--et-accent-cyan);
+      }
+      .cta {
+        margin-top: 16px;
+      }
+      .cta a, .cta button {
+        display: inline-block;
+        padding: 10px 16px;
+        border-radius: 10px;
+        background: linear-gradient(90deg, var(--et-accent-cyan), var(--et-accent-green));
+        color: #0B1020;
+        text-decoration: none;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .cta a:hover, .cta button:hover {
+        opacity: 0.9;
+      }
+      .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--et-text-300);
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--et-accent-amber);
+      }
+      .status-dot.connected {
+        background: var(--et-accent-green);
+      }
+      .auth-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(11, 16, 32, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      .auth-modal.hidden {
+        display: none;
+      }
+      .auth-box {
+        background: var(--et-bg-700);
+        border: 2px solid var(--et-accent-cyan);
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+      }
+      .auth-box h2 {
+        color: var(--et-text-100);
+        margin-bottom: 24px;
+      }
+      .auth-box input {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 10px;
+        border: 1px solid rgba(45, 226, 230, 0.3);
+        background: var(--et-bg-900);
+        color: var(--et-text-100);
+        font-size: 14px;
+        margin-bottom: 16px;
+        font-family: "Fira Mono", monospace;
+      }
+      .auth-box input:focus {
+        outline: none;
+        border-color: var(--et-accent-cyan);
+      }
+      .auth-error {
+        color: #ff6b6b;
+        font-size: 13px;
+        margin-bottom: 12px;
+        min-height: 20px;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--et-text-300);
+      }
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          border-right: none;
+          border-bottom: 2px solid rgba(45, 226, 230, 0.25);
+        }
+        .split {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Auth Modal -->
+    <div id="authModal" class="auth-modal">
+      <div class="auth-box">
+        <img src="/static/logos/etphonehome_logo_horizontal.svg" alt="ET Phone Home" style="width: 180px; margin-bottom: 24px;" />
+        <h2>Enter API Key</h2>
+        <input type="password" id="apiKeyInput" placeholder="API Key" autocomplete="off" />
+        <div id="authError" class="auth-error"></div>
+        <div class="cta">
+          <button onclick="authenticate()">Connect</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <img class="brand" src="/static/logos/etphonehome_logo_horizontal.svg" alt="ET Phone Home" />
+        <nav class="nav">
+          <a class="active" href="/">Dashboard</a>
+          <a href="#" onclick="alert('Coming soon')">Webhooks</a>
+          <a href="#" onclick="alert('Coming soon')">Security</a>
+          <a href="#" onclick="alert('Coming soon')">Settings</a>
+        </nav>
+        <div style="margin-top: auto; padding-top: 24px;">
+          <div class="connection-status">
+            <div id="wsStatus" class="status-dot"></div>
+            <span id="wsStatusText">Connecting...</span>
+          </div>
+        </div>
+      </aside>
+      <main class="content">
+        <section class="hero">
+          <div>
+            <h1>Mission Control</h1>
+            <h2>Monitor tunnels, clients, and health across every environment.</h2>
+          </div>
+          <span id="onlineCount" class="pill pill-count">-- online</span>
+        </section>
+
+        <section class="grid">
+          <div class="card">
+            <div class="row">
+              <img class="icon" src="/static/icons/icon_server.svg" alt="Server" />
+              <div>
+                <div>Server status</div>
+                <div id="serverStatus" class="stat">Loading...</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <img class="icon" src="/static/icons/icon_tunnel.svg" alt="Tunnel" />
+              <div>
+                <div>Active tunnels</div>
+                <div id="tunnelStatus" class="stat">Loading...</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <img class="icon" src="/static/icons/icon_client.svg" alt="Client" />
+              <div>
+                <div>Total clients</div>
+                <div id="clientStatus" class="stat">Loading...</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="split">
+          <div class="card">
+            <h3>Client inventory</h3>
+            <div id="clientList" class="list">
+              <div class="empty-state">Loading clients...</div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Activity stream</h3>
+            <div id="activityStream" class="timeline">
+              <div class="empty-state">No recent activity</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+      // Initialize the app
+      document.addEventListener('DOMContentLoaded', () => {
+        initApp();
+      });
+    </script>
+  </body>
+</html>

@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -10,6 +11,9 @@ from enum import Enum
 import httpx
 
 logger = logging.getLogger(__name__)
+
+# Type alias for broadcast callback
+BroadcastCallback = Callable[[dict], asyncio.Task]
 
 # Environment variable configuration
 GLOBAL_WEBHOOK_URL = os.environ.get("ETPHONEHOME_WEBHOOK_URL", "")
@@ -56,6 +60,7 @@ class WebhookDispatcher:
         global_url: str | None = None,
         timeout: float | None = None,
         max_retries: int | None = None,
+        broadcast_callback: BroadcastCallback | None = None,
     ):
         """
         Initialize webhook dispatcher.
@@ -64,12 +69,18 @@ class WebhookDispatcher:
             global_url: Default webhook URL (falls back to env var)
             timeout: HTTP request timeout in seconds
             max_retries: Maximum retry attempts for failed webhooks
+            broadcast_callback: Optional callback to broadcast events to WebSocket clients
         """
         self.global_url = global_url if global_url is not None else GLOBAL_WEBHOOK_URL
         self.timeout = timeout if timeout is not None else WEBHOOK_TIMEOUT
         self.max_retries = max_retries if max_retries is not None else WEBHOOK_MAX_RETRIES
+        self._broadcast_callback = broadcast_callback
         self._client: httpx.AsyncClient | None = None
         self._pending_tasks: set[asyncio.Task] = set()
+
+    def set_broadcast_callback(self, callback: BroadcastCallback | None) -> None:
+        """Set the broadcast callback for WebSocket notifications."""
+        self._broadcast_callback = callback
 
     async def start(self) -> None:
         """Initialize the HTTP client."""
@@ -105,7 +116,7 @@ class WebhookDispatcher:
         Fire-and-forget webhook dispatch.
 
         Uses per-client webhook URL if provided, otherwise falls back to global.
-        Does not block the caller.
+        Does not block the caller. Also broadcasts to WebSocket clients if callback set.
 
         Args:
             event: The event type to dispatch
@@ -114,20 +125,39 @@ class WebhookDispatcher:
             data: Additional event-specific data
             client_webhook_url: Per-client webhook URL override
         """
-        url = client_webhook_url or self.global_url
-        if not url:
-            logger.debug(f"No webhook URL configured for event {event.value}")
-            return
+        timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
         payload = WebhookPayload(
             event=event.value,
-            timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            timestamp=timestamp,
             client_uuid=client_uuid,
             client_display_name=client_display_name,
             data=data or {},
         )
 
-        # Create fire-and-forget task
+        # Broadcast to WebSocket clients (always, regardless of webhook URL)
+        if self._broadcast_callback:
+            try:
+                ws_message = {
+                    "type": event.value,
+                    "timestamp": timestamp,
+                    "data": {
+                        "uuid": client_uuid,
+                        "display_name": client_display_name,
+                        **(data or {}),
+                    },
+                }
+                asyncio.create_task(self._broadcast_callback(ws_message))
+            except Exception as e:
+                logger.warning(f"Failed to broadcast event to WebSocket: {e}")
+
+        # Send webhook if URL configured
+        url = client_webhook_url or self.global_url
+        if not url:
+            logger.debug(f"No webhook URL configured for event {event.value}")
+            return
+
+        # Create fire-and-forget task for webhook
         task = asyncio.create_task(self._send_webhook(url, payload))
         self._pending_tasks.add(task)
         task.add_done_callback(self._pending_tasks.discard)

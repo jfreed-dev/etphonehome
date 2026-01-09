@@ -1,0 +1,40 @@
+:root {
+  --et-bg-900: #0B1020;
+  --et-bg-800: #111B2F;
+  --et-bg-700: #14263B;
+  --et-accent-cyan: #2DE2E6;
+  --et-accent-green: #7CFF6B;
+  --et-accent-amber: #FFB454;
+  --et-text-100: #E6F7FF;
+  --et-text-300: #B8D9E6;
+}
+
+.et-panel {
+  background: var(--et-bg-700);
+  border: 2px solid var(--et-accent-cyan);
+  border-radius: 16px;
+  color: var(--et-text-100);
+}
+
+.et-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(45, 226, 230, 0.12);
+  color: var(--et-accent-cyan);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.et-cta {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--et-accent-cyan), var(--et-accent-green));
+  color: #0B1020;
+  font-weight: 700;
+  text-decoration: none;
+}
