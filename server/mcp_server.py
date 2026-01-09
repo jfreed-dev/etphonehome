@@ -177,6 +177,22 @@ async def get_connection(client_id: str = None) -> ClientConnection:
     return _connections[client_id]
 
 
+def clear_stale_connection(client_id: str) -> None:
+    """
+    Clear any cached connection for a client.
+
+    Called when a client reconnects to ensure we don't reuse a connection
+    pointing to an old tunnel port.
+    """
+    if client_id in _connections:
+        try:
+            _connections[client_id].close()
+        except Exception:
+            pass  # Ignore errors closing old connection
+        del _connections[client_id]
+        logger.debug(f"Cleared stale MCP connection for client_id={client_id}")
+
+
 async def _execute_with_tracking(
     client_id: str | None,
     method_name: str,
@@ -235,8 +251,15 @@ async def _execute_with_tracking(
     return result
 
 
-def create_server() -> Server:
-    """Create and configure the MCP server."""
+def create_server(registry_override=None) -> Server:
+    """Create and configure the MCP server.
+
+    Args:
+        registry_override: Optional registry to use instead of the module-level global.
+                          This helps avoid issues with __main__ vs module imports.
+    """
+    # Use provided registry or fall back to module global
+    _registry = registry_override if registry_override is not None else registry
     server = Server("etphonehome")
 
     @server.list_tools()
@@ -956,7 +979,10 @@ def create_server() -> Server:
     async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         """Handle tool calls with structured error responses."""
         try:
-            result = await _handle_tool(name, arguments)
+            logger.info(
+                f"call_tool: _registry id={id(_registry)}, online_count={_registry.online_count}"
+            )
+            result = await _handle_tool(name, arguments, _registry)
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
         except ToolError as e:
             # Structured error with recovery hints
@@ -1006,27 +1032,27 @@ def create_server() -> Server:
     return server
 
 
-async def _handle_tool(name: str, args: dict) -> Any:
+async def _handle_tool(name: str, args: dict, _registry) -> Any:
     """Route tool calls to their implementations."""
 
     if name == "list_clients":
-        clients = await registry.list_clients()
+        clients = await _registry.list_clients()
         return {
             "clients": clients,
-            "active_client": registry.active_client_uuid,
-            "online_count": registry.online_count,
-            "total_count": registry.total_count,
+            "active_client": _registry.active_client_uuid,
+            "online_count": _registry.online_count,
+            "total_count": _registry.total_count,
             "message": "No clients connected" if not clients else None,
         }
 
     elif name == "select_client":
         client_id = args["client_id"]
-        success = await registry.select_client(client_id)
+        success = await _registry.select_client(client_id)
         if success:
             return {"selected": client_id, "message": f"Selected client: {client_id}"}
         else:
             # Get available clients for helpful error
-            clients = await registry.list_clients()
+            clients = await _registry.list_clients()
             available = [c["display_name"] for c in clients if c.get("online")]
             raise ClientNotFoundError(client_id, available_clients=available)
 
@@ -1154,7 +1180,7 @@ async def _handle_tool(name: str, args: dict) -> Any:
         return {"downloaded": str(local_path), "size": result["size"], "method": "json-rpc"}
 
     elif name == "find_client":
-        results = await registry.find_clients(
+        results = await _registry.find_clients(
             query=args.get("query"),
             purpose=args.get("purpose"),
             tags=args.get("tags"),
@@ -1175,14 +1201,14 @@ async def _handle_tool(name: str, args: dict) -> Any:
                 "Must provide either 'uuid' or 'client_id' parameter",
             )
 
-        result = await registry.describe_client(identifier)
+        result = await _registry.describe_client(identifier)
         if not result:
             raise ClientNotFoundError(identifier)
         return result
 
     elif name == "update_client":
         uuid = args["uuid"]
-        result = await registry.update_client(
+        result = await _registry.update_client(
             uuid=uuid,
             display_name=args.get("display_name"),
             purpose=args.get("purpose"),
@@ -1195,7 +1221,7 @@ async def _handle_tool(name: str, args: dict) -> Any:
 
     elif name == "accept_key":
         uuid = args["uuid"]
-        result = await registry.accept_key(uuid)
+        result = await _registry.accept_key(uuid)
         if not result:
             raise ClientNotFoundError(uuid)
         if result.get("no_mismatch"):
@@ -1215,7 +1241,7 @@ async def _handle_tool(name: str, args: dict) -> Any:
         rate_limit_concurrent = args.get("rate_limit_concurrent")
 
         # Update client store
-        result = await registry.update_client(
+        result = await _registry.update_client(
             uuid=uuid,
             webhook_url=webhook_url,
             rate_limit_rpm=rate_limit_rpm,
@@ -1337,7 +1363,7 @@ async def _handle_tool(name: str, args: dict) -> Any:
 
         # Get source client info (for metadata)
         try:
-            client = await registry.get_active_client()
+            client = await _registry.get_active_client()
             source_client = client.identity.uuid if client else "server"
         except NoActiveClientError:
             source_client = "server"
@@ -1579,6 +1605,9 @@ async def run_stdio():
     # Start health monitor for automatic disconnect detection
     _health_monitor = HealthMonitor(registry, _connections)
     await _health_monitor.start()
+
+    # Recover any clients with active tunnels from before restart
+    await recover_active_clients()
 
     try:
         async with stdio_server() as (read_stream, write_stream):
