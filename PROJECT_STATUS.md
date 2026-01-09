@@ -6,6 +6,18 @@
 
 ## Recent Changes (v0.1.9)
 
+### Web Management Interface Phase 2 - Svelte Frontend (2026-01-09)
+
+- **SvelteKit 2 project**: Modern frontend stack with static adapter for deployment
+- **TypeScript throughout**: Type-safe API client, stores, and component props
+- **SCSS design system**: Variables, mixins, and component styles matching existing theme
+- **Svelte stores**: Reactive state management for auth, clients, connection, dashboard, events
+- **5 components**: Header, ClientCard, ActivityStream, StatsCard, LoginForm
+- **2 routes**: Dashboard (/) and client detail (/client?uuid=...)
+- **WebSocket integration**: Real-time updates via Svelte stores
+- **Vite dev server**: Hot reload with API proxy to Python backend
+- **PyCharm run configs**: Full Stack Dev, Svelte Dev Server, Svelte Build, Type Check
+
 ### Web Management Interface Phase 1 (2026-01-09)
 
 - **Real-time dashboard**: Browser-based Mission Control showing client status, server health, and activity stream
@@ -137,11 +149,11 @@
 | SFTP file transfers | ✓ Complete | Streaming transfers via `upload_file`/`download_file` |
 | R2 file exchange | ✓ Complete | Async transfers via `exchange_*` tools |
 | R2 key rotation | ✓ Complete | `r2_rotate_keys`, `r2_list_tokens`, `r2_check_rotation_status` |
-| Web management interface | ✓ Phase 1 | Dashboard, client list, REST API, WebSocket real-time updates |
+| Web management interface | ✓ Phase 1-2 | Dashboard, REST API, WebSocket + Svelte/TypeScript/SCSS frontend |
 
 ## Next Steps (Priority Order)
 
-### 1. Web Management Interface Phase 2
+### 1. Web Management Interface Phase 3
 - Browser-based terminal (WebSocket + xterm.js)
 - File browser with drag-and-drop upload
 - Command history and output viewer
@@ -151,7 +163,7 @@
 - Windows ARM64 support
 - Windows service wrapper (NSSM alternative)
 
-### 3. Web Management Interface Phase 3
+### 3. Web Management Interface Phase 4
 - User authentication and RBAC
 - Multi-user session management
 - Audit logging with retention
@@ -174,7 +186,12 @@ Messages: [4-byte length][JSON-RPC payload]
 - **Entry points**: `client/phonehome.py`, `server/mcp_server.py`
 - **Core logic**: `client/tunnel.py`, `client/agent.py`, `server/client_connection.py`
 - **HTTP server**: `server/http_server.py` (REST API, WebSocket, static files)
-- **Web UI**: `server/static/` (dashboard, client detail, JS, CSS, icons)
+- **Web UI (vanilla)**: `server/static/` (dashboard, client detail, JS, CSS, icons)
+- **Web UI (Svelte)**: `web/` (SvelteKit + TypeScript + SCSS frontend)
+  - Components: `web/src/lib/components/`
+  - Stores: `web/src/lib/stores/`
+  - Styles: `web/src/styles/`
+  - Routes: `web/src/routes/`
 - **Protocol**: `shared/protocol.py` (includes custom exception classes)
 - **Webhooks**: `server/webhooks.py`
 - **Rate limiting**: `server/rate_limiter.py`
@@ -201,6 +218,12 @@ python -m server.mcp_server
 python -m server.mcp_server --transport http --port 8765 --api-key YOUR_KEY
 # Then open http://localhost:8765/ in browser
 
+# Svelte Frontend Development
+cd web && npm install           # Install dependencies
+npm run dev                     # Start dev server (http://localhost:5173)
+npm run build                   # Build for production
+npm run check                   # TypeScript type check
+
 # Build
 ./build/portable/package_linux.sh
 ./build/pyinstaller/build_linux.sh
@@ -223,6 +246,7 @@ ruff check --fix .
 2. **No Windows Server docs** - Setup guide is Linux-focused
 3. **No browser terminal** - Web dashboard shows status only, no command execution yet
 4. **No multi-user auth** - Single API key authentication, no user accounts or RBAC
+5. **Two UI codebases** - Vanilla JS (`server/static/`) and Svelte (`web/`) coexist during transition
 
 ## Active Deployments
 
