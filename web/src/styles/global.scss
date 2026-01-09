@@ -1,0 +1,240 @@
+// =============================================================================
+// ET Phone Home - Global Styles
+// =============================================================================
+
+@use 'variables' as *;
+@use 'mixins' as *;
+@use 'components';
+
+// -----------------------------------------------------------------------------
+// CSS Reset & Base Styles
+// -----------------------------------------------------------------------------
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html {
+	font-size: 16px;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+body {
+	font-family: $font-family-base;
+	font-size: $font-size-base;
+	line-height: $line-height-base;
+	color: $text-200;
+	background: $bg-900;
+	min-height: 100vh;
+}
+
+// -----------------------------------------------------------------------------
+// Typography
+// -----------------------------------------------------------------------------
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	color: $text-100;
+	font-weight: $font-weight-semibold;
+	line-height: $line-height-tight;
+	margin-bottom: $spacing-md;
+}
+
+h1 {
+	font-size: $font-size-3xl;
+}
+
+h2 {
+	font-size: $font-size-2xl;
+}
+
+h3 {
+	font-size: $font-size-xl;
+}
+
+h4 {
+	font-size: $font-size-lg;
+}
+
+p {
+	margin-bottom: $spacing-md;
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+a {
+	color: $accent-cyan;
+	text-decoration: none;
+	transition: color $transition-fast;
+
+	&:hover {
+		color: lighten($accent-cyan, 10%);
+	}
+}
+
+code,
+pre {
+	font-family: $font-family-mono;
+	font-size: $font-size-sm;
+}
+
+code {
+	padding: 2px 6px;
+	background: $bg-700;
+	border-radius: $radius-sm;
+	color: $accent-cyan;
+}
+
+pre {
+	padding: $spacing-md;
+	background: $bg-800;
+	border-radius: $radius-md;
+	overflow-x: auto;
+	@include custom-scrollbar;
+
+	code {
+		padding: 0;
+		background: none;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Focus Styles
+// -----------------------------------------------------------------------------
+:focus-visible {
+	outline: 2px solid $accent-cyan;
+	outline-offset: 2px;
+}
+
+// -----------------------------------------------------------------------------
+// Selection Styles
+// -----------------------------------------------------------------------------
+::selection {
+	background: rgba($accent-cyan, 0.3);
+	color: $text-100;
+}
+
+// -----------------------------------------------------------------------------
+// Scrollbar Styles (Global)
+// -----------------------------------------------------------------------------
+html {
+	@include custom-scrollbar;
+}
+
+// -----------------------------------------------------------------------------
+// Utility Classes
+// -----------------------------------------------------------------------------
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.text-center {
+	text-align: center;
+}
+
+.text-right {
+	text-align: right;
+}
+
+.text-muted {
+	color: $text-400;
+}
+
+.text-cyan {
+	color: $accent-cyan;
+}
+
+.text-green {
+	color: $accent-green;
+}
+
+.text-amber {
+	color: $accent-amber;
+}
+
+.text-red {
+	color: $accent-red;
+}
+
+.mt-sm {
+	margin-top: $spacing-sm;
+}
+.mt-md {
+	margin-top: $spacing-md;
+}
+.mt-lg {
+	margin-top: $spacing-lg;
+}
+
+.mb-sm {
+	margin-bottom: $spacing-sm;
+}
+.mb-md {
+	margin-bottom: $spacing-md;
+}
+.mb-lg {
+	margin-bottom: $spacing-lg;
+}
+
+.flex {
+	display: flex;
+}
+.flex-center {
+	@include flex-center;
+}
+.flex-between {
+	@include flex-between;
+}
+.gap-sm {
+	gap: $spacing-sm;
+}
+.gap-md {
+	gap: $spacing-md;
+}
+
+// -----------------------------------------------------------------------------
+// Page Layout
+// -----------------------------------------------------------------------------
+.page {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+.page__header {
+	position: sticky;
+	top: 0;
+	z-index: $z-sticky;
+	background: $bg-900;
+	border-bottom: 1px solid $border-color;
+}
+
+.page__main {
+	flex: 1;
+	padding: $spacing-lg 0;
+}
+
+.page__footer {
+	padding: $spacing-md 0;
+	border-top: 1px solid $border-color;
+	font-size: $font-size-sm;
+	color: $text-400;
+	text-align: center;
+}

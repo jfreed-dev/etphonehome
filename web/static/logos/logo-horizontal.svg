@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0B1020"/>
+      <stop offset="100%" stop-color="#152238"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#2DE2E6"/>
+      <stop offset="100%" stop-color="#7CFF6B"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="360" rx="48" fill="url(#bg)"/>
+  <g transform="translate(70 60)">
+    <circle cx="120" cy="120" r="108" fill="none" stroke="url(#ring)" stroke-width="10"/>
+    <path d="M56 122 L120 74 L184 122 V202 H56 Z" fill="#122036" stroke="#2DE2E6" stroke-width="6"/>
+    <rect x="106" y="150" width="28" height="44" rx="6" fill="#0B1020" stroke="#7CFF6B" stroke-width="4"/>
+    <path d="M120 66 V40" stroke="#FFB454" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="120" cy="30" r="7" fill="#FFB454"/>
+    <path d="M90 52 C104 34 136 34 150 52" fill="none" stroke="#2DE2E6" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="320" y="150" font-family="Space Grotesk, Futura, 'Avenir Next', sans-serif" font-size="72" fill="#E6F7FF" letter-spacing="1">ET Phone Home</text>
+  <text x="320" y="210" font-family="'Fira Mono', 'SFMono-Regular', monospace" font-size="26" fill="#7CFF6B">Reverse SSH + MCP Remote Access</text>
+  <path d="M320 240 H1040" stroke="#2DE2E6" stroke-width="4" opacity="0.6"/>
+</svg>
