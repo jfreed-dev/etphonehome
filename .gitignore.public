@@ -36,6 +36,7 @@ CODEX.md
 
 # Private infrastructure documentation (contains server IPs)
 docs/hostinger-server-setup.md
+docs/plans/
 PROJECT_STATUS.md
 
 # Private repo specific files
