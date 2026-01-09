@@ -94,6 +94,9 @@ def detect_capabilities() -> list[str]:
     if shutil.which("systemctl"):
         caps.append("systemd")
 
+    # SFTP subsystem support (always available with Phase 2 implementation)
+    caps.append("sftp-subsystem")
+
     return sorted(caps)
 
 
