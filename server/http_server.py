@@ -52,6 +52,7 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
     if registry is None:
         # Fallback for backwards compatibility
         from server.mcp_server import registry as imported_registry
+
         registry = imported_registry
 
     # Create MCP server instance
