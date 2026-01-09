@@ -143,10 +143,12 @@ class TestGetDefaultLogDir:
         assert "etphonehome" in str(log_dir).lower()
         assert "logs" in str(log_dir)
 
+    @patch("pathlib.Path.exists")
     @patch("os.geteuid")
-    def test_server_log_dir_non_root(self, mock_geteuid):
+    def test_server_log_dir_non_root(self, mock_geteuid, mock_exists):
         """Should return user directory for non-root server."""
         mock_geteuid.return_value = 1000  # Non-root
+        mock_exists.return_value = False  # /var/log/etphonehome doesn't exist
 
         log_dir = get_default_log_dir("server")
 
