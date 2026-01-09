@@ -18,6 +18,8 @@ Manage connected clients using Claude CLI with MCP tools.
 "Get system metrics"                  → get_client_metrics
 "SSH to db server through prod"       → ssh_session_open + ssh_session_command
 "List my open SSH sessions"           → ssh_session_list
+"Upload file to R2 for transfer"      → exchange_upload
+"List pending R2 transfers"           → exchange_list
 ```
 
 **Common Filters:**
@@ -121,8 +123,20 @@ claude
 |------|-------------|---------|
 | `ssh_session_open` | Open SSH connection to remote host | `ssh_session_open {"host": "db.internal", "username": "admin"}` |
 | `ssh_session_command` | Run command in session | `ssh_session_command {"session_id": "...", "command": "ls"}` |
+| `ssh_session_send` | Send input for prompts | `ssh_session_send {"session_id": "...", "text": "password"}` |
+| `ssh_session_read` | Read output from session | `ssh_session_read {"session_id": "..."}` |
 | `ssh_session_close` | Close SSH session | `ssh_session_close {"session_id": "..."}` |
 | `ssh_session_list` | List active sessions | `ssh_session_list {}` |
+| `ssh_session_restore` | Restore sessions after reconnect | `ssh_session_restore {}` |
+
+### File Exchange (R2 Storage)
+
+| Tool | Description | Example |
+|------|-------------|---------|
+| `exchange_upload` | Upload file to R2 | `exchange_upload {"local_path": "/tmp/file.tar.gz", "dest_client": "uuid"}` |
+| `exchange_download` | Download from R2 | `exchange_download {"download_url": "...", "local_path": "/tmp/file"}` |
+| `exchange_list` | List pending transfers | `exchange_list {"client_id": "uuid"}` |
+| `exchange_delete` | Delete transfer | `exchange_delete {"transfer_id": "...", "source_client": "uuid"}` |
 
 ---
 
@@ -307,6 +321,73 @@ Use SSH sessions to connect through an ET Phone Home client to other hosts on th
 - Always close sessions when done to free resources
 - The SSH connection goes through the ET Phone Home client, not directly
 
+### 11. R2 File Exchange (Large/Async Transfers)
+
+Use R2 exchange for large files (> 100MB), async transfers, or when direct connection is complex.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ You: "Transfer the 500MB backup to the prod server"          │
+│                                                              │
+│ Claude: [exchange_upload]                                    │
+│ exchange_upload {                                            │
+│   "local_path": "/tmp/backup.tar.gz",                        │
+│   "dest_client": "prod-server-uuid",                         │
+│   "expires_hours": 12                                        │
+│ }                                                            │
+│                                                              │
+│ Uploaded to R2:                                              │
+│ - Transfer ID: prod-server_20260109_backup.tar.gz            │
+│ - Size: 524,288,000 bytes                                    │
+│ - Download URL: https://...r2.cloudflarestorage.com/...      │
+│ - Expires: 2026-01-10T00:00:00Z                              │
+│                                                              │
+│ You: "Download it on the prod server"                        │
+│                                                              │
+│ Claude: [run_command on prod server]                         │
+│ curl -o /tmp/backup.tar.gz "https://...download_url..."      │
+│                                                              │
+│ Downloaded 524MB to /tmp/backup.tar.gz                       │
+│                                                              │
+│ You: "Clean up the R2 transfer"                              │
+│                                                              │
+│ Claude: [exchange_delete]                                    │
+│ Deleted transfer from R2.                                    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**When to use R2 vs direct transfer:**
+- **Direct (`upload_file`/`download_file`)**: Client online, files < 100MB
+- **R2 exchange**: Large files, async transfers, multiple recipients, audit trail
+
+### 12. Interactive SSH Session (sudo/prompts)
+
+Handle interactive prompts like sudo passwords or y/n confirmations.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ You: "Run apt upgrade with sudo on the dev server"           │
+│                                                              │
+│ Claude: [ssh_session_open + ssh_session_command]             │
+│ ssh_session_command {                                        │
+│   "session_id": "sess_abc123",                               │
+│   "command": "sudo apt upgrade -y"                           │
+│ }                                                            │
+│                                                              │
+│ Output: "[sudo] password for admin:"                         │
+│                                                              │
+│ Claude: [ssh_session_send]                                   │
+│ ssh_session_send {                                           │
+│   "session_id": "sess_abc123",                               │
+│   "text": "the-password"                                     │
+│ }                                                            │
+│                                                              │
+│ Claude: [ssh_session_read]                                   │
+│ Output: Reading package lists... Done                        │
+│         15 upgraded, 0 newly installed, 0 to remove...       │
+└──────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## Client Filtering
@@ -348,8 +429,9 @@ find_client {"tags": ["linux"], "capabilities": ["docker"]}
 | **Client ID vs UUID** | Both work; UUID persists across reconnects |
 | **Path restrictions** | Clients can configure `allowed_paths` to limit access |
 | **Timeouts** | Default 300s; override with `timeout` parameter |
-| **Large files** | Transfers limited to 10MB; use scp/rsync for larger |
+| **File transfers** | `upload_file`/`download_file` use SFTP (no size limit); R2 for async/very large |
 | **Parallel commands** | Ask Claude to run on "all clients" for bulk ops |
+| **SSH sessions** | Use for stateful commands; `cd`, `export` persist between commands |
 
 ---
 
@@ -402,7 +484,9 @@ run_command {"cmd": "nohup ./script.sh &"}
 
 ## See Also
 
+- [API Reference](API.md) - Complete tool documentation
 - [SSH + Claude Code Guide](ssh-claude-code-guide.md) - Remote access setup
 - [MCP Server Setup](mcp-server-setup-guide.md) - Server configuration
 - [Webhooks Guide](webhooks-guide.md) - Webhook integration examples
+- [R2 Setup Guide](R2_SETUP_GUIDE.md) - Cloudflare R2 storage configuration
 - [Roadmap](roadmap.md) - Planned features including web dashboard
