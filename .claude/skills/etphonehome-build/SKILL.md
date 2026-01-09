@@ -105,7 +105,7 @@ When you need to build for a different architecture than the build machine:
    ./build/portable/package_linux.sh aarch64
 
 2. Transfer to target machine
-   - Use upload_file if client is already connected
+   - Use `upload_file` if client is already connected (uses SFTP, no size limit)
    - Or scp/rsync for initial deployment
 
 3. Extract and install on target
@@ -218,7 +218,7 @@ If client is already connected:
 1. Build new version
    ./build/portable/package_linux.sh aarch64
 
-2. Upload to client
+2. Upload to client (SFTP - no size limit)
    upload_file:
      local_path: "dist/phonehome-linux-aarch64.tar.gz"
      remote_path: "/tmp/phonehome-update.tar.gz"

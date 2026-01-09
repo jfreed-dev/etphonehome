@@ -2,11 +2,23 @@
 
 This skill manages file transfers between the MCP server and ET Phone Home clients using Cloudflare R2 as an intermediary storage layer.
 
+## When to Use Which Tool
+
+| Scenario | Tool | Why |
+|----------|------|-----|
+| Direct transfer, client online | `upload_file` / `download_file` | SFTP streaming, no size limit |
+| Very large files (> 100MB) | R2 exchange (this skill) | Resumable, reliable |
+| Client offline | R2 exchange (this skill) | Async transfer |
+| Multiple recipients | R2 exchange (this skill) | Share URL |
+| Audit trail needed | R2 exchange (this skill) | Lifecycle management |
+
+**For most transfers, use `upload_file` / `download_file`** - they use SFTP with automatic JSON-RPC fallback.
+
 ## When to Use This Skill
 
 Use this skill when you need to:
 - Transfer files from the server to a client (especially when direct connection is complex)
-- Transfer large files (> 100MB) that exceed direct transfer limits
+- Transfer very large files (> 100MB) that benefit from resumable downloads
 - Transfer files asynchronously (client doesn't need to be online immediately)
 - Share files with multiple clients
 - Transfer files with audit trail and lifecycle management

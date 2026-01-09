@@ -281,7 +281,9 @@ update_client:
 ### Path Restriction Behavior
 - When set: Only paths under these prefixes are accessible
 - When empty/null: All paths accessible
-- Affects: `read_file`, `write_file`, `list_files`, `cwd` in `run_command`
+- Affects: `read_file`, `write_file`, `upload_file`, `download_file`, `list_files`, `cwd` in `run_command`
+
+**Note**: `upload_file` and `download_file` use SFTP for streaming transfers with no size limits. Prefer these for file transfers.
 
 ### Use Cases
 

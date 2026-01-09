@@ -80,6 +80,17 @@ run_command:
 
 ## File Operation Rules
 
+### Choosing the Right Tool
+
+| Tool | Use Case | Size Limit | Method |
+|------|----------|------------|--------|
+| `upload_file` | Server → Client transfers | **No limit** | SFTP (streaming) |
+| `download_file` | Client → Server transfers | **No limit** | SFTP (streaming) |
+| `read_file` | Quick content inspection | 10MB | JSON-RPC |
+| `write_file` | Small file writes | ~10MB | JSON-RPC |
+
+**Prefer `upload_file` and `download_file`** - they use SFTP for streaming transfers with no size limits. Falls back to JSON-RPC automatically if SFTP unavailable.
+
 ### Path Requirements
 - **ALWAYS** use absolute paths: `/home/user/file.txt`
 - **NEVER** use relative paths: `./file.txt`, `../config`
@@ -88,7 +99,7 @@ run_command:
 ### Before Reading Files
 1. Verify the file exists: `run_command: "test -f /path/to/file && echo exists"`
 2. Check file size if potentially large: `run_command: "ls -lh /path/to/file"`
-3. Files over 10MB will be rejected
+3. For files over 10MB, use `download_file` instead of `read_file`
 
 ### Before Writing Files
 1. Check available disk space: `run_command: "df -h /path"`
@@ -98,7 +109,16 @@ run_command:
 ### Example: Safe File Operations
 
 ```
-# Good - absolute path
+# RECOMMENDED - SFTP-based transfers (no size limits)
+upload_file:
+  local_path: "/path/on/server/config.yaml"
+  remote_path: "/home/user/config/config.yaml"
+
+download_file:
+  remote_path: "/var/log/app.log"
+  local_path: "/tmp/downloaded_app.log"
+
+# For quick reads of small files (< 10MB)
 read_file:
   path: "/etc/hostname"
 
@@ -156,7 +176,7 @@ When a client reconnects with a different SSH key, the server flags it with `key
 | "Client not found" | Client offline or wrong ID | Check `list_clients` for online clients |
 | "Path not in allowed list" | Client has path restrictions | Check `allowed_paths` in `describe_client` |
 | "Command timed out" | Timeout too short | Retry with longer `timeout` value |
-| "File too large" | File exceeds 10MB limit | Use `download_file` for large files |
+| "File too large" | File exceeds 10MB limit | Use `download_file` (SFTP, no limit) |
 
 ### When Commands Fail
 
@@ -191,7 +211,8 @@ run_command:
 - `select_client` - Choose active client
 - `describe_client` - Get detailed client info
 - `run_command` - Execute commands
-- `read_file` / `write_file` - File operations
+- `upload_file` / `download_file` - File transfers (SFTP, no size limit)
+- `read_file` / `write_file` - Quick file ops (< 10MB only)
 - `get_client_metrics` - System health check
 
 ### Safety Checklist
@@ -407,10 +428,11 @@ print result
 
 ### File Transfer Failures
 
-1. Use `run_command` with shell redirection instead of `write_file` for Windows
-2. For large files, use base64 chunking
-3. Verify target directory exists before writing
-4. Check disk space on target
+1. Use `upload_file` / `download_file` for reliable SFTP transfers
+2. Use `run_command` with shell redirection instead of `write_file` for Windows
+3. For very large files (> 100MB), consider R2 file exchange (see file-exchange skill)
+4. Verify target directory exists before writing
+5. Check disk space on target
 
 ### Escaping Problems
 
