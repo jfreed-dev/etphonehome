@@ -1,0 +1,44 @@
+[Unit]
+Description=ET Phone Home Webhook Test Receiver
+Documentation=https://github.com/jfreed-dev/etphonehome
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=etphonehome
+Group=etphonehome
+
+# Working directory
+WorkingDirectory=/opt/etphonehome
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+
+# Start command
+ExecStart=/opt/etphonehome/venv/bin/python /opt/etphonehome/webhook_test.py
+
+# Restart policy
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/log/etphonehome
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=etphonehome-webhook
+
+[Install]
+WantedBy=multi-user.target
