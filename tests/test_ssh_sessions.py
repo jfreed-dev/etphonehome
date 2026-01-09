@@ -248,12 +248,8 @@ class TestSSHSessionManagerListSessions:
         manager = SSHSessionManager()
 
         # Open two sessions
-        result1 = manager.open_session(
-            host="host1", username="user1", password="pass1"
-        )
-        result2 = manager.open_session(
-            host="host2", username="user2", password="pass2"
-        )
+        _result1 = manager.open_session(host="host1", username="user1", password="pass1")
+        _result2 = manager.open_session(host="host2", username="user2", password="pass2")
 
         # List sessions
         list_result = manager.list_sessions()

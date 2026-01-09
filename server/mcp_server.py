@@ -1381,7 +1381,11 @@ async def _handle_tool(name: str, args: dict) -> Any:
         return result
 
     else:
-        raise ValueError(f"Unknown tool: {name}")
+        raise ToolError(
+            code="UNKNOWN_TOOL",
+            message=f"Unknown tool: {name}",
+            recovery_hint="Use list_tools to see available tools.",
+        )
 
 
 async def register_client_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
