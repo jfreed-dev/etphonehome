@@ -102,15 +102,30 @@ Response: `{"id": "1", "result": {"stdout": "...", "returncode": 0}}`
 ## MCP Tools
 
 The server exposes these tools to Claude CLI:
-- `list_clients` / `select_client` - Client management
-- `find_client` / `describe_client` / `update_client` - Client search and metadata
+
+**Client Management:**
+- `list_clients` / `select_client` - List and select clients
+- `find_client` / `describe_client` / `update_client` - Search and metadata
 - `accept_key` - Clear SSH key mismatch flag after legitimate key change
 - `configure_client` - Set per-client webhook URL and rate limits
 - `get_rate_limit_stats` - Get rate limit statistics for a client
+
+**Remote Operations:**
 - `run_command` - Execute shell commands
 - `read_file` / `write_file` / `list_files` - File operations
-- `upload_file` / `download_file` - File transfer
+- `upload_file` / `download_file` - File transfer (SFTP, no size limit)
 - `get_client_metrics` - Get system health metrics (CPU, memory, disk)
+
+**SSH Sessions:**
+- `ssh_session_open` / `ssh_session_close` - Open/close persistent SSH sessions
+- `ssh_session_command` - Execute commands in session (state preserved)
+- `ssh_session_send` / `ssh_session_read` - Handle interactive prompts
+- `ssh_session_list` / `ssh_session_restore` - Manage and recover sessions
+
+**File Exchange (R2):**
+- `exchange_upload` / `exchange_download` - Async transfers via Cloudflare R2
+- `exchange_list` / `exchange_delete` - Manage pending transfers
+- `r2_rotate_keys` / `r2_list_tokens` / `r2_check_rotation_status` - Key management
 
 ## Key Dependencies
 
