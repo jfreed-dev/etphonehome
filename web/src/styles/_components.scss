@@ -1,0 +1,415 @@
+// =============================================================================
+// ET Phone Home - Component Styles
+// =============================================================================
+
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// -----------------------------------------------------------------------------
+// Layout Components
+// -----------------------------------------------------------------------------
+.et-container {
+	max-width: $breakpoint-xl;
+	margin: 0 auto;
+	padding: 0 $spacing-md;
+
+	@include lg {
+		padding: 0 $spacing-xl;
+	}
+}
+
+.et-grid {
+	display: grid;
+	gap: $spacing-lg;
+
+	&--2-col {
+		@include md {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+
+	&--3-col {
+		@include lg {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	&--sidebar {
+		@include lg {
+			grid-template-columns: $sidebar-width 1fr;
+		}
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Panel Component
+// -----------------------------------------------------------------------------
+.et-panel {
+	@include panel;
+
+	&--interactive {
+		@include panel-hover;
+		cursor: pointer;
+	}
+
+	&__header {
+		@include flex-between;
+		margin-bottom: $spacing-md;
+		padding-bottom: $spacing-md;
+		border-bottom: 1px solid $border-color;
+	}
+
+	&__title {
+		font-size: $font-size-lg;
+		font-weight: $font-weight-semibold;
+		color: $text-100;
+		margin: 0;
+	}
+
+	&__content {
+		color: $text-200;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Card Component
+// -----------------------------------------------------------------------------
+.et-card {
+	@include panel;
+	@include panel-hover;
+
+	&__header {
+		@include flex-start;
+		gap: $spacing-md;
+		margin-bottom: $spacing-md;
+	}
+
+	&__icon {
+		@include flex-center;
+		width: 40px;
+		height: 40px;
+		border-radius: $radius-md;
+		background: rgba($accent-cyan, 0.1);
+
+		svg {
+			width: 24px;
+			height: 24px;
+			color: $accent-cyan;
+		}
+	}
+
+	&__title {
+		font-size: $font-size-base;
+		font-weight: $font-weight-semibold;
+		color: $text-100;
+		margin: 0;
+	}
+
+	&__subtitle {
+		font-size: $font-size-sm;
+		color: $text-300;
+		margin: 0;
+	}
+
+	&__body {
+		color: $text-200;
+	}
+
+	&__footer {
+		@include flex-between;
+		margin-top: $spacing-md;
+		padding-top: $spacing-md;
+		border-top: 1px solid $border-color;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Button Components
+// -----------------------------------------------------------------------------
+.et-btn {
+	@include button-base;
+
+	&--primary {
+		@include button-primary;
+	}
+
+	&--secondary {
+		@include button-secondary;
+	}
+
+	&--ghost {
+		@include button-ghost;
+	}
+
+	&--sm {
+		padding: $spacing-xs $spacing-sm;
+		font-size: $font-size-xs;
+	}
+
+	&--lg {
+		padding: $spacing-md $spacing-lg;
+		font-size: $font-size-base;
+	}
+
+	&--icon {
+		width: 36px;
+		height: 36px;
+		padding: 0;
+		border-radius: $radius-md;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Chip/Badge Components
+// -----------------------------------------------------------------------------
+.et-chip {
+	@include chip-cyan;
+
+	&--green {
+		@include chip-green;
+	}
+
+	&--amber {
+		@include chip-amber;
+	}
+
+	&--red {
+		@include chip-red;
+	}
+}
+
+.et-status {
+	@include flex-start;
+	gap: $spacing-xs;
+	font-size: $font-size-sm;
+
+	&__dot {
+		@include status-dot($text-400);
+	}
+
+	&--online &__dot {
+		@include status-online;
+	}
+
+	&--offline &__dot {
+		@include status-offline;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Form Components
+// -----------------------------------------------------------------------------
+.et-input {
+	@include input-base;
+}
+
+.et-form-group {
+	margin-bottom: $spacing-md;
+
+	&__label {
+		display: block;
+		margin-bottom: $spacing-xs;
+		font-size: $font-size-sm;
+		font-weight: $font-weight-medium;
+		color: $text-300;
+	}
+
+	&__hint {
+		margin-top: $spacing-xs;
+		font-size: $font-size-xs;
+		color: $text-400;
+	}
+
+	&__error {
+		margin-top: $spacing-xs;
+		font-size: $font-size-xs;
+		color: $accent-red;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// List Components
+// -----------------------------------------------------------------------------
+.et-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+
+	&__item {
+		@include flex-between;
+		padding: $spacing-md;
+		border-bottom: 1px solid $border-color;
+		transition: background $transition-fast;
+
+		&:last-child {
+			border-bottom: none;
+		}
+
+		&:hover {
+			background: rgba($accent-cyan, 0.05);
+		}
+
+		&--clickable {
+			cursor: pointer;
+		}
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Table Components
+// -----------------------------------------------------------------------------
+.et-table {
+	width: 100%;
+	border-collapse: collapse;
+
+	th,
+	td {
+		padding: $spacing-sm $spacing-md;
+		text-align: left;
+		border-bottom: 1px solid $border-color;
+	}
+
+	th {
+		font-size: $font-size-xs;
+		font-weight: $font-weight-semibold;
+		color: $text-300;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	td {
+		font-size: $font-size-sm;
+		color: $text-200;
+	}
+
+	tbody tr {
+		transition: background $transition-fast;
+
+		&:hover {
+			background: rgba($accent-cyan, 0.05);
+		}
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Stat/Metric Components
+// -----------------------------------------------------------------------------
+.et-stat {
+	text-align: center;
+
+	&__value {
+		font-size: $font-size-3xl;
+		font-weight: $font-weight-bold;
+		color: $accent-cyan;
+		line-height: $line-height-tight;
+	}
+
+	&__label {
+		font-size: $font-size-sm;
+		color: $text-300;
+		margin-top: $spacing-xs;
+	}
+
+	&--green &__value {
+		color: $accent-green;
+	}
+
+	&--amber &__value {
+		color: $accent-amber;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Skeleton/Loading Components
+// -----------------------------------------------------------------------------
+.et-skeleton {
+	background: linear-gradient(90deg, $bg-700 0%, $bg-600 50%, $bg-700 100%);
+	background-size: 200% 100%;
+	animation: skeleton-shimmer 1.5s infinite;
+	border-radius: $radius-md;
+
+	@keyframes skeleton-shimmer {
+		0% {
+			background-position: 200% 0;
+		}
+		100% {
+			background-position: -200% 0;
+		}
+	}
+
+	&--text {
+		height: 1em;
+		margin: $spacing-xs 0;
+	}
+
+	&--title {
+		height: 1.5em;
+		width: 60%;
+	}
+
+	&--avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Empty State Components
+// -----------------------------------------------------------------------------
+.et-empty {
+	@include flex-column;
+	align-items: center;
+	padding: $spacing-2xl;
+	text-align: center;
+
+	&__icon {
+		width: 64px;
+		height: 64px;
+		margin-bottom: $spacing-md;
+		opacity: 0.5;
+	}
+
+	&__title {
+		font-size: $font-size-lg;
+		font-weight: $font-weight-semibold;
+		color: $text-200;
+		margin: 0 0 $spacing-sm;
+	}
+
+	&__description {
+		font-size: $font-size-sm;
+		color: $text-400;
+		margin: 0;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Tooltip Component
+// -----------------------------------------------------------------------------
+.et-tooltip {
+	position: relative;
+
+	&__content {
+		position: absolute;
+		bottom: 100%;
+		left: 50%;
+		transform: translateX(-50%);
+		padding: $spacing-xs $spacing-sm;
+		background: $bg-600;
+		border: 1px solid $border-color;
+		border-radius: $radius-sm;
+		font-size: $font-size-xs;
+		color: $text-100;
+		white-space: nowrap;
+		opacity: 0;
+		visibility: hidden;
+		transition: opacity $transition-fast, visibility $transition-fast;
+		z-index: $z-tooltip;
+	}
+
+	&:hover &__content {
+		opacity: 1;
+		visibility: visible;
+	}
+}
