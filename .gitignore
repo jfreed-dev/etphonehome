@@ -47,6 +47,9 @@ venv/
 
 # Build artifacts
 build/phonehome/
+build/portable/work/
+build/pyinstaller/dist/
+build/pyinstaller/build/
 dist/
 
 # Pre-commit
