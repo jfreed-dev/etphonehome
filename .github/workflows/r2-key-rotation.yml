@@ -1,0 +1,128 @@
+name: R2 Key Rotation
+
+on:
+  # Run every 90 days at 3 AM UTC
+  schedule:
+    - cron: '0 3 */90 * *'
+
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      force_rotation:
+        description: 'Force rotation even if not due'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  rotate-keys:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[server]"
+
+      - name: Configure GitHub token
+        run: |
+          # Store GitHub token for secrets management
+          echo "${{ secrets.ETPHONEHOME_GITHUB_TOKEN }}" | python3 -m shared.secrets_manager store-token
+        env:
+          GITHUB_TOKEN: ${{ secrets.ETPHONEHOME_GITHUB_TOKEN }}
+
+      - name: Check rotation status
+        id: check
+        run: |
+          # Check if rotation is due
+          python3 -m shared.r2_rotation check --days 90 > rotation_check.txt
+          cat rotation_check.txt
+
+          if grep -q "Rotation is DUE" rotation_check.txt; then
+            echo "rotation_due=true" >> $GITHUB_OUTPUT
+          else
+            echo "rotation_due=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          ETPHONEHOME_CLOUDFLARE_API_TOKEN: ${{ secrets.ETPHONEHOME_CLOUDFLARE_API_TOKEN }}
+          ETPHONEHOME_R2_ACCOUNT_ID: ${{ secrets.ETPHONEHOME_R2_ACCOUNT_ID }}
+          ETPHONEHOME_GITHUB_REPO: ${{ github.repository }}
+
+      - name: Get current access key
+        id: current_key
+        if: steps.check.outputs.rotation_due == 'true' || github.event.inputs.force_rotation == 'true'
+        run: |
+          # Get current R2 access key to delete after rotation
+          echo "access_key=${{ secrets.ETPHONEHOME_R2_ACCESS_KEY }}" >> $GITHUB_OUTPUT
+
+      - name: Rotate R2 keys
+        if: steps.check.outputs.rotation_due == 'true' || github.event.inputs.force_rotation == 'true'
+        run: |
+          echo "🔄 Starting R2 key rotation..."
+          python3 -m shared.r2_rotation rotate --old-key "${{ steps.current_key.outputs.access_key }}"
+          echo "✅ Rotation completed successfully"
+        env:
+          ETPHONEHOME_CLOUDFLARE_API_TOKEN: ${{ secrets.ETPHONEHOME_CLOUDFLARE_API_TOKEN }}
+          ETPHONEHOME_R2_ACCOUNT_ID: ${{ secrets.ETPHONEHOME_R2_ACCOUNT_ID }}
+          ETPHONEHOME_GITHUB_REPO: ${{ github.repository }}
+
+      - name: Verify new credentials
+        if: steps.check.outputs.rotation_due == 'true' || github.event.inputs.force_rotation == 'true'
+        run: |
+          echo "🔍 Verifying new R2 credentials..."
+          # Wait a moment for GitHub Secrets to propagate
+          sleep 10
+
+          # Note: We can't directly test the new credentials here because GitHub Actions
+          # won't see the updated secrets until the next workflow run. The rotation
+          # script verifies credentials during rotation.
+          echo "✅ Credentials rotated and stored in GitHub Secrets"
+          echo "⚠️  Note: Server restart required to use new credentials"
+
+      - name: Cleanup old tokens
+        if: steps.check.outputs.rotation_due == 'true' || github.event.inputs.force_rotation == 'true'
+        run: |
+          echo "🧹 Cleaning up old R2 tokens (keeping latest 2)..."
+          python3 -m shared.r2_rotation cleanup --keep 2
+        env:
+          ETPHONEHOME_CLOUDFLARE_API_TOKEN: ${{ secrets.ETPHONEHOME_CLOUDFLARE_API_TOKEN }}
+          ETPHONEHOME_R2_ACCOUNT_ID: ${{ secrets.ETPHONEHOME_R2_ACCOUNT_ID }}
+          ETPHONEHOME_GITHUB_REPO: ${{ github.repository }}
+
+      - name: Post rotation summary
+        if: steps.check.outputs.rotation_due == 'true' || github.event.inputs.force_rotation == 'true'
+        run: |
+          echo "## R2 Key Rotation Summary 🔐" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ R2 API keys rotated successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "**Old key deleted:** ${{ steps.current_key.outputs.access_key }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Restart ET Phone Home server to use new credentials" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify R2 file transfers work correctly" >> $GITHUB_STEP_SUMMARY
+          echo "3. Next rotation due in 90 days" >> $GITHUB_STEP_SUMMARY
+
+      - name: Skip rotation notice
+        if: steps.check.outputs.rotation_due != 'true' && github.event.inputs.force_rotation != 'true'
+        run: |
+          echo "## R2 Key Rotation 🔐" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⏭️ Rotation not due - skipped" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Use workflow_dispatch with 'force_rotation: true' to force rotation." >> $GITHUB_STEP_SUMMARY
