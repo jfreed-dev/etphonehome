@@ -28,6 +28,7 @@ class ReverseTunnel:
         config: "Config",
         client_id: str,
         request_handler: Callable[[Request], Response],
+        allowed_paths: list[str] | None = None,
     ):
         self.config = config
         self.server_host = config.server_host
@@ -36,6 +37,7 @@ class ReverseTunnel:
         self.key_file = Path(config.key_file)
         self.client_id = client_id
         self.request_handler = request_handler
+        self.allowed_paths = allowed_paths
 
         self.ssh_client: paramiko.SSHClient | None = None
         self.transport: paramiko.Transport | None = None
@@ -77,6 +79,31 @@ class ReverseTunnel:
         self.transport = self.ssh_client.get_transport()
         if not self.transport:
             raise RuntimeError("Failed to get SSH transport")
+
+        # Register SFTP subsystem for streaming file transfers
+        try:
+            from paramiko import SFTPServer
+
+            from client.sftp_server import ClientSFTPInterface
+
+            # Create a custom SFTP server class that passes allowed_paths
+            class CustomSFTPServer(SFTPServer):
+                """SFTP server with allowed_paths enforcement."""
+
+                def __init__(self, channel, *args, **kwargs):
+                    super().__init__(channel, *args, **kwargs)
+
+                def start_subsystem(self, name, transport, channel):
+                    self.server = ClientSFTPInterface(self, self.allowed_paths)
+                    super().start_subsystem(name, transport, channel)
+
+            # Store allowed_paths on the class for access in __init__
+            CustomSFTPServer.allowed_paths = self.allowed_paths
+
+            self.transport.set_subsystem_handler("sftp", CustomSFTPServer)
+            logger.info("SFTP subsystem registered")
+        except Exception as e:
+            logger.warning(f"Failed to register SFTP subsystem: {e}")
 
         # Start local agent server
         self._start_agent_server()

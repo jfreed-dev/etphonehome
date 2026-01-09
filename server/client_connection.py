@@ -178,3 +178,65 @@ class ClientConnection:
         if response.error:
             raise RuntimeError(f"SSH session list failed: {response.error['message']}")
         return response.result
+
+    # SFTP Support
+    async def has_sftp_support(self) -> bool:
+        """
+        Check if client supports SFTP subsystem.
+
+        Returns:
+            True if client supports SFTP, False otherwise
+        """
+        if hasattr(self, "_sftp_support_cached"):
+            return self._sftp_support_cached
+
+        try:
+            # Try to connect to SFTP subsystem
+            from server.sftp_connection import SFTPConnection
+
+            async with SFTPConnection(self.host, self.port, timeout=5):
+                # If connection succeeds, client supports SFTP
+                self._sftp_support_cached = True
+                logger.debug(f"Client at {self.host}:{self.port} supports SFTP")
+                return True
+
+        except Exception as e:
+            logger.debug(f"Client at {self.host}:{self.port} does not support SFTP: {e}")
+            self._sftp_support_cached = False
+            return False
+
+    async def get_sftp_connection(self):
+        """
+        Get or create SFTP connection through tunnel.
+
+        Returns:
+            SFTPConnection instance
+
+        Raises:
+            RuntimeError: If SFTP not supported or connection fails
+        """
+        from server.sftp_connection import SFTPConnection
+
+        # Check if we already have a connection
+        if hasattr(self, "_sftp_conn") and self._sftp_conn and self._sftp_conn.is_connected:
+            return self._sftp_conn
+
+        # Check if client supports SFTP
+        if not await self.has_sftp_support():
+            raise RuntimeError("Client does not support SFTP subsystem")
+
+        # Create new connection
+        self._sftp_conn = SFTPConnection(self.host, self.port)
+        await self._sftp_conn.connect()
+
+        return self._sftp_conn
+
+    async def close_sftp_connection(self) -> None:
+        """Close SFTP connection if open."""
+        if hasattr(self, "_sftp_conn") and self._sftp_conn:
+            try:
+                await self._sftp_conn.close()
+            except Exception as e:
+                logger.warning(f"Error closing SFTP connection: {e}")
+            finally:
+                self._sftp_conn = None
