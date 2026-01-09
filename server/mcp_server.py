@@ -1628,7 +1628,7 @@ async def run_http(host: str, port: int, api_key: str = None):
     """Run the MCP server with HTTP/SSE transport."""
     global _health_monitor
 
-    from server.http_server import run_http_server
+    from server.http_server import get_ws_manager, run_http_server
 
     # Initialize secret sync (if enabled)
     from shared.secret_sync import initialize_secret_sync
@@ -1643,11 +1643,12 @@ async def run_http(host: str, port: int, api_key: str = None):
     if secret_sync:
         logger.info(f"Secret sync enabled (interval: {secret_sync_interval}s)")
 
-    # Initialize and start webhook dispatcher
-    dispatcher = WebhookDispatcher()
+    # Initialize and start webhook dispatcher with WebSocket broadcast callback
+    ws_manager = get_ws_manager()
+    dispatcher = WebhookDispatcher(broadcast_callback=ws_manager.broadcast)
     set_dispatcher(dispatcher)
     await dispatcher.start()
-    logger.info("Webhook dispatcher started")
+    logger.info("Webhook dispatcher started (WebSocket broadcast enabled)")
 
     # Initialize rate limiter
     limiter = RateLimiter()
