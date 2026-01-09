@@ -35,6 +35,9 @@ server = [
     "uvicorn>=0.27.0",
     "sse-starlette>=2.0.0",
     "httpx>=0.27.0",
+    "boto3>=1.28.0",
+    "PyGithub>=2.1.0",
+    "cryptography>=41.0.0",
 ]
 dev = [
     "pytest>=7.0.0",

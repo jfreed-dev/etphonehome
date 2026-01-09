@@ -717,6 +717,136 @@ def create_server() -> Server:
                     "additionalProperties": False,
                 },
             ),
+            # ===== FILE EXCHANGE (R2 STORAGE) =====
+            Tool(
+                name="exchange_upload",
+                description="Upload a file to Cloudflare R2 for transfer to a client. Generates a presigned download URL valid for specified hours. Use for server→client transfers, large files, or async transfers.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "local_path": {
+                            "type": "string",
+                            "description": "Path to file on the MCP server",
+                            "minLength": 1,
+                        },
+                        "dest_client": {
+                            "type": "string",
+                            "description": "Destination client UUID (optional, for tracking)",
+                        },
+                        "expires_hours": {
+                            "type": "integer",
+                            "description": "URL expiration time in hours (default: 12, max: 12)",
+                            "minimum": 1,
+                            "maximum": 12,
+                            "default": 12,
+                        },
+                    },
+                    "required": ["local_path"],
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="exchange_download",
+                description="Download a file from a presigned URL to the MCP server. Use to receive files uploaded by clients or from exchange_upload.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "download_url": {
+                            "type": "string",
+                            "description": "Presigned URL from exchange_upload or R2",
+                            "minLength": 1,
+                        },
+                        "local_path": {
+                            "type": "string",
+                            "description": "Destination path on MCP server",
+                            "minLength": 1,
+                        },
+                    },
+                    "required": ["download_url", "local_path"],
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="exchange_list",
+                description="List pending file transfers in R2 storage. Returns transfer metadata including source/dest clients, file sizes, and upload timestamps.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "client_id": {
+                            "type": "string",
+                            "description": "Filter by source client UUID (optional)",
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="exchange_delete",
+                description="Manually delete a transfer from R2 before automatic expiration (48 hours). Use after successful download to clean up.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "transfer_id": {
+                            "type": "string",
+                            "description": "Transfer ID from exchange_upload",
+                            "minLength": 1,
+                        },
+                        "source_client": {
+                            "type": "string",
+                            "description": "Source client UUID",
+                            "minLength": 1,
+                        },
+                    },
+                    "required": ["transfer_id", "source_client"],
+                    "additionalProperties": False,
+                },
+            ),
+            # ===== R2 KEY ROTATION & SECRETS MANAGEMENT =====
+            Tool(
+                name="r2_rotate_keys",
+                description="Rotate Cloudflare R2 API keys. Creates new token, updates GitHub Secrets, and optionally deletes old token. Use for manual rotation or when keys are compromised.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "old_access_key_id": {
+                            "type": "string",
+                            "description": "Old R2 access key ID to delete (optional)",
+                        },
+                        "keep_old": {
+                            "type": "boolean",
+                            "description": "Keep old token instead of deleting (default: false)",
+                            "default": False,
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="r2_list_tokens",
+                description="List all active R2 API tokens for the Cloudflare account. Shows token IDs, creation dates, and names.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="r2_check_rotation_status",
+                description="Check if R2 key rotation is due based on configured schedule. Returns last rotation date and days until next rotation.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "rotation_days": {
+                            "type": "integer",
+                            "description": "Days between rotations (default: 90)",
+                            "minimum": 1,
+                            "maximum": 365,
+                            "default": 90,
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+            ),
         ]
 
     @server.call_tool()
@@ -1031,6 +1161,193 @@ async def _handle_tool(name: str, args: dict) -> Any:
         result = await conn.ssh_session_list()
         return result
 
+    # ===== FILE EXCHANGE (R2 STORAGE) =====
+    elif name == "exchange_upload":
+        from shared.r2_client import TransferManager, create_r2_client
+
+        # Check if R2 is configured
+        r2_client = create_r2_client()
+        if r2_client is None:
+            raise ToolError(
+                code="R2_NOT_CONFIGURED",
+                message="Cloudflare R2 storage is not configured. Set environment variables: ETPHONEHOME_R2_ACCOUNT_ID, ETPHONEHOME_R2_ACCESS_KEY, ETPHONEHOME_R2_SECRET_KEY, ETPHONEHOME_R2_BUCKET",
+                recovery_hint="Configure R2 credentials in your server.env file or environment variables. See FILE_TRANSFER_IMPROVEMENT_RESEARCH.md for setup instructions.",
+            )
+
+        # Get source client info (for metadata)
+        try:
+            client = await registry.get_active_client()
+            source_client = client.identity.uuid if client else "server"
+        except NoActiveClientError:
+            source_client = "server"
+
+        # Upload file
+        local_path = Path(args["local_path"])
+        dest_client = args.get("dest_client")
+        expires_hours = args.get("expires_hours", 12)
+
+        manager = TransferManager(r2_client)
+        result = manager.upload_for_transfer(
+            local_path=local_path,
+            source_client=source_client,
+            dest_client=dest_client,
+            expires_hours=expires_hours,
+        )
+
+        logger.info(
+            f"File exchange upload: {local_path} -> {result['transfer_id']} (expires: {result['expires_at']})"
+        )
+        return result
+
+    elif name == "exchange_download":
+        from shared.r2_client import TransferManager, create_r2_client
+
+        r2_client = create_r2_client()
+        if r2_client is None:
+            raise ToolError(
+                code="R2_NOT_CONFIGURED",
+                message="Cloudflare R2 storage is not configured",
+                recovery_hint="Configure R2 credentials in your server.env file",
+            )
+
+        download_url = args["download_url"]
+        local_path = Path(args["local_path"])
+
+        manager = TransferManager(r2_client)
+        result = manager.download_from_url(
+            download_url=download_url,
+            local_path=local_path,
+        )
+
+        logger.info(f"File exchange download: {download_url} -> {local_path}")
+        return result
+
+    elif name == "exchange_list":
+        from shared.r2_client import TransferManager, create_r2_client
+
+        r2_client = create_r2_client()
+        if r2_client is None:
+            raise ToolError(
+                code="R2_NOT_CONFIGURED",
+                message="Cloudflare R2 storage is not configured",
+                recovery_hint="Configure R2 credentials in your server.env file",
+            )
+
+        client_id = args.get("client_id")
+
+        manager = TransferManager(r2_client)
+        transfers = manager.list_pending_transfers(client_id=client_id)
+
+        return {
+            "transfers": transfers,
+            "count": len(transfers),
+            "message": (
+                f"Found {len(transfers)} pending transfer(s)"
+                if client_id
+                else f"Found {len(transfers)} total pending transfer(s)"
+            ),
+        }
+
+    elif name == "exchange_delete":
+        from shared.r2_client import TransferManager, create_r2_client
+
+        r2_client = create_r2_client()
+        if r2_client is None:
+            raise ToolError(
+                code="R2_NOT_CONFIGURED",
+                message="Cloudflare R2 storage is not configured",
+                recovery_hint="Configure R2 credentials in your server.env file",
+            )
+
+        transfer_id = args["transfer_id"]
+        source_client = args["source_client"]
+
+        manager = TransferManager(r2_client)
+        result = manager.delete_transfer(
+            transfer_id=transfer_id,
+            source_client=source_client,
+        )
+
+        logger.info(f"File exchange delete: {transfer_id}")
+        return result
+
+    # ===== R2 KEY ROTATION & SECRETS MANAGEMENT =====
+    elif name == "r2_rotate_keys":
+        from shared.r2_rotation import R2KeyRotationManager
+
+        rotation_manager = R2KeyRotationManager.from_env()
+        if rotation_manager is None:
+            raise ToolError(
+                code="ROTATION_NOT_CONFIGURED",
+                message="R2 rotation is not configured. Required environment variables: ETPHONEHOME_CLOUDFLARE_API_TOKEN, ETPHONEHOME_R2_ACCOUNT_ID, ETPHONEHOME_GITHUB_REPO",
+                recovery_hint="Set up Cloudflare API token and GitHub repository configuration. See docs/SECRETS_MANAGEMENT.md for setup instructions.",
+            )
+
+        old_access_key_id = args.get("old_access_key_id")
+        keep_old = args.get("keep_old", False)
+
+        result = rotation_manager.rotate_r2_keys(
+            old_access_key_id=old_access_key_id,
+            delete_old=not keep_old,
+        )
+
+        logger.info(f"R2 keys rotated: new key {result['new_access_key_id']}")
+        return result
+
+    elif name == "r2_list_tokens":
+        from shared.r2_rotation import R2KeyRotationManager
+
+        rotation_manager = R2KeyRotationManager.from_env()
+        if rotation_manager is None:
+            raise ToolError(
+                code="ROTATION_NOT_CONFIGURED",
+                message="R2 rotation is not configured",
+                recovery_hint="Set required environment variables for rotation manager",
+            )
+
+        tokens = rotation_manager.list_active_tokens()
+        return {
+            "tokens": tokens,
+            "count": len(tokens),
+        }
+
+    elif name == "r2_check_rotation_status":
+        from shared.r2_rotation import R2KeyRotationManager, RotationScheduler
+
+        rotation_manager = R2KeyRotationManager.from_env()
+        if rotation_manager is None:
+            raise ToolError(
+                code="ROTATION_NOT_CONFIGURED",
+                message="R2 rotation is not configured",
+                recovery_hint="Set required environment variables for rotation manager",
+            )
+
+        rotation_days = args.get("rotation_days", 90)
+        scheduler = RotationScheduler(rotation_manager, rotation_days=rotation_days)
+
+        last_rotation = scheduler.get_last_rotation_date()
+        should_rotate = scheduler.should_rotate()
+
+        result = {
+            "rotation_due": should_rotate,
+            "rotation_interval_days": rotation_days,
+        }
+
+        if last_rotation:
+            from datetime import datetime, timezone
+
+            days_since = (datetime.now(timezone.utc) - last_rotation).days
+            result["last_rotation"] = last_rotation.isoformat()
+            result["days_since_rotation"] = days_since
+            result["days_until_next"] = max(0, rotation_days - days_since)
+        else:
+            result["last_rotation"] = None
+            result["days_since_rotation"] = None
+            result["days_until_next"] = 0
+            result["message"] = "No previous rotation found - rotation recommended"
+
+        return result
+
     else:
         raise ValueError(f"Unknown tool: {name}")
 
@@ -1066,6 +1383,19 @@ async def run_stdio():
 
     logger.info("Starting ET Phone Home MCP server (stdio)")
 
+    # Initialize secret sync (if enabled)
+    from shared.secret_sync import initialize_secret_sync
+
+    secret_sync_enabled = os.getenv("ETPHONEHOME_SECRET_SYNC_ENABLED", "false").lower() == "true"
+    secret_sync_interval = int(os.getenv("ETPHONEHOME_SECRET_SYNC_INTERVAL", "3600"))
+
+    secret_sync = await initialize_secret_sync(
+        enabled=secret_sync_enabled,
+        sync_interval=secret_sync_interval,
+    )
+    if secret_sync:
+        logger.info(f"Secret sync enabled (interval: {secret_sync_interval}s)")
+
     server = create_server()
 
     # Initialize and start webhook dispatcher
@@ -1092,6 +1422,9 @@ async def run_stdio():
     finally:
         if _health_monitor:
             await _health_monitor.stop()
+        if secret_sync:
+            await secret_sync.stop()
+            logger.info("Secret sync stopped")
         if dispatcher:
             await dispatcher.stop()
             logger.info("Webhook dispatcher stopped")
@@ -1102,6 +1435,19 @@ async def run_http(host: str, port: int, api_key: str = None):
     global _health_monitor
 
     from server.http_server import run_http_server
+
+    # Initialize secret sync (if enabled)
+    from shared.secret_sync import initialize_secret_sync
+
+    secret_sync_enabled = os.getenv("ETPHONEHOME_SECRET_SYNC_ENABLED", "false").lower() == "true"
+    secret_sync_interval = int(os.getenv("ETPHONEHOME_SECRET_SYNC_INTERVAL", "3600"))
+
+    secret_sync = await initialize_secret_sync(
+        enabled=secret_sync_enabled,
+        sync_interval=secret_sync_interval,
+    )
+    if secret_sync:
+        logger.info(f"Secret sync enabled (interval: {secret_sync_interval}s)")
 
     # Initialize and start webhook dispatcher
     dispatcher = WebhookDispatcher()
@@ -1128,6 +1474,9 @@ async def run_http(host: str, port: int, api_key: str = None):
     finally:
         if _health_monitor:
             await _health_monitor.stop()
+        if secret_sync:
+            await secret_sync.stop()
+            logger.info("Secret sync stopped")
         if dispatcher:
             await dispatcher.stop()
             logger.info("Webhook dispatcher stopped")

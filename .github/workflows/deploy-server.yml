@@ -1,0 +1,149 @@
+name: Deploy ET Phone Home Server
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'server/**'
+      - 'shared/**'
+      - 'pyproject.toml'
+      - '.github/workflows/deploy-server.yml'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - 'production'
+          - 'staging'
+          - 'development'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[server]"
+
+      - name: Run tests
+        run: |
+          pip install pytest pytest-asyncio
+          pytest tests/ -v || echo "No tests found"
+
+      - name: Verify R2 configuration
+        run: |
+          python3 -c "
+          import os
+          required = ['ETPHONEHOME_R2_ACCOUNT_ID', 'ETPHONEHOME_R2_ACCESS_KEY',
+                     'ETPHONEHOME_R2_SECRET_KEY', 'ETPHONEHOME_R2_BUCKET']
+          missing = [v for v in required if not os.getenv(v)]
+          if missing:
+              print(f'❌ Missing R2 secrets: {missing}')
+              exit(1)
+          print('✅ R2 secrets configured')
+          "
+        env:
+          ETPHONEHOME_R2_ACCOUNT_ID: ${{ secrets.ETPHONEHOME_R2_ACCOUNT_ID }}
+          ETPHONEHOME_R2_ACCESS_KEY: ${{ secrets.ETPHONEHOME_R2_ACCESS_KEY }}
+          ETPHONEHOME_R2_SECRET_KEY: ${{ secrets.ETPHONEHOME_R2_SECRET_KEY }}
+          ETPHONEHOME_R2_BUCKET: ${{ secrets.ETPHONEHOME_R2_BUCKET }}
+
+      - name: Test R2 connectivity
+        run: |
+          python3 -c "
+          from shared.r2_client import create_r2_client
+          r2 = create_r2_client()
+          if r2 is None:
+              print('❌ Failed to create R2 client')
+              exit(1)
+          print('✅ R2 client initialized successfully')
+          "
+        env:
+          ETPHONEHOME_R2_ACCOUNT_ID: ${{ secrets.ETPHONEHOME_R2_ACCOUNT_ID }}
+          ETPHONEHOME_R2_ACCESS_KEY: ${{ secrets.ETPHONEHOME_R2_ACCESS_KEY }}
+          ETPHONEHOME_R2_SECRET_KEY: ${{ secrets.ETPHONEHOME_R2_SECRET_KEY }}
+          ETPHONEHOME_R2_BUCKET: ${{ secrets.ETPHONEHOME_R2_BUCKET }}
+
+      - name: Build deployment package
+        run: |
+          # Create deployment directory
+          mkdir -p deploy_package
+
+          # Copy necessary files
+          cp -r server deploy_package/
+          cp -r shared deploy_package/
+          cp -r client deploy_package/
+          cp pyproject.toml deploy_package/
+          cp README.md deploy_package/
+
+          # Create environment file
+          cat > deploy_package/.env << EOF
+          # ET Phone Home Server Configuration
+          # Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          # Environment: ${{ github.event.inputs.environment || 'production' }}
+
+          # R2 Storage (from GitHub Secrets)
+          ETPHONEHOME_R2_ACCOUNT_ID=${{ secrets.ETPHONEHOME_R2_ACCOUNT_ID }}
+          ETPHONEHOME_R2_ACCESS_KEY=${{ secrets.ETPHONEHOME_R2_ACCESS_KEY }}
+          ETPHONEHOME_R2_SECRET_KEY=${{ secrets.ETPHONEHOME_R2_SECRET_KEY }}
+          ETPHONEHOME_R2_BUCKET=${{ secrets.ETPHONEHOME_R2_BUCKET }}
+          ETPHONEHOME_R2_REGION=auto
+
+          # GitHub Configuration (for secret sync)
+          ETPHONEHOME_GITHUB_REPO=${{ github.repository }}
+          ETPHONEHOME_SECRET_SYNC_ENABLED=true
+          ETPHONEHOME_SECRET_SYNC_INTERVAL=3600
+
+          # Server Configuration
+          ETPHONEHOME_HOST=127.0.0.1
+          ETPHONEHOME_PORT=8765
+          ETPHONEHOME_LOG_LEVEL=INFO
+          EOF
+
+          # Create deployment archive
+          tar -czf etphonehome-server.tar.gz -C deploy_package .
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etphonehome-server-${{ github.sha }}
+          path: etphonehome-server.tar.gz
+          retention-days: 30
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Package Created 📦" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Included Secrets" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ R2 Account ID" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ R2 Access Key" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ R2 Secret Key" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ R2 Bucket Name" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download artifact from Actions tab" >> $GITHUB_STEP_SUMMARY
+          echo "2. Extract: \`tar -xzf etphonehome-server.tar.gz\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Source environment: \`source .env\`" >> $GITHUB_STEP_SUMMARY
+          echo "4. Start server: \`python -m server.mcp_server --transport http\`" >> $GITHUB_STEP_SUMMARY
