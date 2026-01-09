@@ -1,0 +1,315 @@
+// =============================================================================
+// ET Phone Home - SCSS Mixins
+// =============================================================================
+
+@use 'variables' as *;
+
+// -----------------------------------------------------------------------------
+// Responsive Breakpoints
+// -----------------------------------------------------------------------------
+@mixin sm {
+	@media (min-width: $breakpoint-sm) {
+		@content;
+	}
+}
+
+@mixin md {
+	@media (min-width: $breakpoint-md) {
+		@content;
+	}
+}
+
+@mixin lg {
+	@media (min-width: $breakpoint-lg) {
+		@content;
+	}
+}
+
+@mixin xl {
+	@media (min-width: $breakpoint-xl) {
+		@content;
+	}
+}
+
+@mixin xxl {
+	@media (min-width: $breakpoint-2xl) {
+		@content;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Flexbox Utilities
+// -----------------------------------------------------------------------------
+@mixin flex-center {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+@mixin flex-between {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+@mixin flex-start {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+}
+
+@mixin flex-column {
+	display: flex;
+	flex-direction: column;
+}
+
+// -----------------------------------------------------------------------------
+// Panel Styles
+// -----------------------------------------------------------------------------
+@mixin panel {
+	background: $bg-700;
+	border: $border-width-thick solid $border-color;
+	border-radius: $radius-xl;
+	padding: $panel-padding;
+}
+
+@mixin panel-hover {
+	transition: border-color $transition-base, box-shadow $transition-base;
+
+	&:hover {
+		border-color: $border-color-hover;
+		box-shadow: $shadow-glow-cyan;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Button Styles
+// -----------------------------------------------------------------------------
+@mixin button-base {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: $spacing-sm;
+	padding: $spacing-sm $spacing-md;
+	border-radius: $radius-md;
+	font-weight: $font-weight-semibold;
+	font-size: $font-size-sm;
+	cursor: pointer;
+	transition: all $transition-fast;
+	border: none;
+	text-decoration: none;
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+}
+
+@mixin button-primary {
+	@include button-base;
+	background: linear-gradient(90deg, $accent-cyan, $accent-green);
+	color: $bg-900;
+
+	&:hover:not(:disabled) {
+		box-shadow: $shadow-glow-cyan;
+		transform: translateY(-1px);
+	}
+
+	&:active:not(:disabled) {
+		transform: translateY(0);
+	}
+}
+
+@mixin button-secondary {
+	@include button-base;
+	background: transparent;
+	border: $border-width-thick solid $accent-cyan;
+	color: $accent-cyan;
+
+	&:hover:not(:disabled) {
+		background: rgba($accent-cyan, 0.1);
+	}
+}
+
+@mixin button-ghost {
+	@include button-base;
+	background: transparent;
+	color: $text-300;
+
+	&:hover:not(:disabled) {
+		background: rgba($accent-cyan, 0.1);
+		color: $text-100;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Chip/Badge Styles
+// -----------------------------------------------------------------------------
+@mixin chip {
+	display: inline-flex;
+	align-items: center;
+	gap: $spacing-xs;
+	padding: $spacing-xs $spacing-sm;
+	border-radius: $radius-full;
+	font-size: $font-size-xs;
+	font-weight: $font-weight-medium;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+}
+
+@mixin chip-cyan {
+	@include chip;
+	background: rgba($accent-cyan, 0.12);
+	color: $accent-cyan;
+}
+
+@mixin chip-green {
+	@include chip;
+	background: rgba($accent-green, 0.12);
+	color: $accent-green;
+}
+
+@mixin chip-amber {
+	@include chip;
+	background: rgba($accent-amber, 0.12);
+	color: $accent-amber;
+}
+
+@mixin chip-red {
+	@include chip;
+	background: rgba($accent-red, 0.12);
+	color: $accent-red;
+}
+
+// -----------------------------------------------------------------------------
+// Status Indicators
+// -----------------------------------------------------------------------------
+@mixin status-dot($color) {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: $color;
+	box-shadow: 0 0 8px $color;
+}
+
+@mixin status-online {
+	@include status-dot($accent-green);
+}
+
+@mixin status-offline {
+	@include status-dot($accent-red);
+}
+
+// -----------------------------------------------------------------------------
+// Text Utilities
+// -----------------------------------------------------------------------------
+@mixin text-truncate {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+@mixin text-clamp($lines: 2) {
+	display: -webkit-box;
+	-webkit-line-clamp: $lines;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+// -----------------------------------------------------------------------------
+// Input Styles
+// -----------------------------------------------------------------------------
+@mixin input-base {
+	width: 100%;
+	padding: $spacing-sm $spacing-md;
+	background: $bg-800;
+	border: $border-width solid $border-color;
+	border-radius: $radius-md;
+	color: $text-100;
+	font-size: $font-size-sm;
+	transition: border-color $transition-fast, box-shadow $transition-fast;
+
+	&::placeholder {
+		color: $text-400;
+	}
+
+	&:focus {
+		outline: none;
+		border-color: $accent-cyan;
+		box-shadow: 0 0 0 3px rgba($accent-cyan, 0.2);
+	}
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Scrollbar Styles
+// -----------------------------------------------------------------------------
+@mixin custom-scrollbar {
+	&::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	&::-webkit-scrollbar-track {
+		background: $bg-800;
+		border-radius: $radius-sm;
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background: $bg-600;
+		border-radius: $radius-sm;
+
+		&:hover {
+			background: $bg-500;
+		}
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Animation Utilities
+// -----------------------------------------------------------------------------
+@mixin fade-in($duration: $transition-base) {
+	animation: fadeIn $duration forwards;
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+}
+
+@mixin slide-in-up($duration: $transition-base) {
+	animation: slideInUp $duration forwards;
+
+	@keyframes slideInUp {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+}
+
+@mixin pulse-glow($color: $accent-cyan) {
+	animation: pulseGlow 2s ease-in-out infinite;
+
+	@keyframes pulseGlow {
+		0%,
+		100% {
+			box-shadow: 0 0 5px rgba($color, 0.3);
+		}
+		50% {
+			box-shadow: 0 0 20px rgba($color, 0.5);
+		}
+	}
+}
