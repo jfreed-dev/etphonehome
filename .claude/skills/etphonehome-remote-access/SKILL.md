@@ -280,21 +280,24 @@ run_command:
 #### Issue 1: Heredocs Don't Work Through SSH
 **Problem**: `cat << 'EOF'` syntax fails with "unexpected EOF" errors.
 
-**Solution**: Use base64 encoding instead:
+**Solution**: Use SCP to transfer files directly instead of inline content:
 ```
-# Encode script content as base64, decode on remote
+# Transfer file via SCP, then execute on remote
 run_command:
-  cmd: "ssh user@server \"echo 'BASE64_CONTENT' | base64 -d > /tmp/script.py && python /tmp/script.py\""
+  cmd: "scp -o StrictHostKeyChecking=no C:\\path\\to\\script.py user@server:/tmp/"
+
+run_command:
+  cmd: "ssh -o StrictHostKeyChecking=no user@server \"python /tmp/script.py\""
 ```
 
 #### Issue 2: Complex Quote Escaping
 **Problem**: Multi-layer escaping (Windows → SSH → Shell → Command) breaks.
 
-**Solution**: Use base64 for complex content, or write to temp file first:
+**Solution**: Write output to temp file, then read separately:
 ```
-# Write simple command results to temp file, then read
+# Write command results to temp file, then read
 run_command:
-  cmd: "ssh user@server \"mysql -e 'SELECT 1'\" > C:\\temp\\result.txt"
+  cmd: "ssh -o StrictHostKeyChecking=no user@server \"mysql -e 'SELECT 1'\" > C:\\temp\\result.txt 2>&1"
 
 # Then read the file separately
 run_command:
@@ -325,51 +328,63 @@ run_command:
   cmd: "type C:\\temp\\out.txt"
 ```
 
-## Base64 Encoding for Code Transfer
+## File Transfer via SCP
 
-For transferring scripts or complex content through multiple SSH hops:
+For transferring files between the Windows client and remote Linux servers, use SCP directly. This is the **preferred method** - no file size limits, no encoding needed.
 
-### Pattern: Encode → Transfer → Decode → Execute
+### Single File Transfer
 
-```python
-# 1. Encode your script content as base64 (do this locally or calculate)
-# Example: "print('hello')" → "cHJpbnQoJ2hlbGxvJyk="
-
-# 2. Transfer and execute via SSH
+```
+# Windows → Linux: Upload a file
 run_command:
-  cmd: "ssh user@server \"echo 'cHJpbnQoJ2hlbGxvJyk=' | base64 -d > /tmp/script.py && python /tmp/script.py\""
-```
+  cmd: "scp -o StrictHostKeyChecking=no C:\\path\\to\\file.py user@server:/tmp/"
 
-### Large File Chunking
-
-For files larger than ~4KB (command line limits):
-
-```
-# Split base64 into chunks and append
+# Linux → Windows: Download a file
 run_command:
-  cmd: "ssh user@server \"echo 'CHUNK1' | base64 -d > /tmp/file.py\""
+  cmd: "scp -o StrictHostKeyChecking=no user@server:/tmp/file.py C:\\Users\\user\\Downloads"
+```
 
+### Multiple File Transfer
+
+```
+# Upload multiple files (list each source separately)
 run_command:
-  cmd: "ssh user@server \"echo 'CHUNK2' | base64 -d >> /tmp/file.py\""
+  cmd: "scp -o StrictHostKeyChecking=no user@server:/tmp/file1.py user@server:/tmp/file2.py user@server:/tmp/file3.py C:\\Users\\user\\Downloads"
 
-# Continue for each chunk...
+# Upload using wildcards on remote
+run_command:
+  cmd: "scp -o StrictHostKeyChecking=no \"user@server:/tmp/da_*.py\" C:\\Users\\user\\Downloads"
 ```
 
-### Quick Base64 Reference
+### Directory Transfer
 
-```bash
-# Encode on Linux
-cat script.py | base64 -w 0
-
-# Decode on Linux
-echo "BASE64" | base64 -d > script.py
-
-# Encode on Windows PowerShell
-[Convert]::ToBase64String([System.IO.File]::ReadAllBytes("script.py"))
-
-# Decode on Windows PowerShell
-[System.IO.File]::WriteAllBytes("script.py", [Convert]::FromBase64String("BASE64"))
 ```
+# Download entire directory recursively
+run_command:
+  cmd: "scp -r -o StrictHostKeyChecking=no user@server:/tmp/exports/ C:\\Users\\user\\Downloads\\exports"
+```
+
+### Transfer and Execute Pattern
+
+```
+# 1. Transfer script to remote server
+run_command:
+  cmd: "scp -o StrictHostKeyChecking=no C:\\scripts\\update.py user@server:/tmp/"
+
+# 2. Execute on remote
+run_command:
+  cmd: "ssh -o StrictHostKeyChecking=no user@server \"python /tmp/update.py\""
+
+# 3. Clean up (optional)
+run_command:
+  cmd: "ssh -o StrictHostKeyChecking=no user@server \"rm /tmp/update.py\""
+```
+
+### Windows Path Tips
+
+- Use forward slashes or escaped backslashes: `C:/path/to/file` or `C:\\path\\to\\file`
+- Avoid trailing backslashes on directories
+- Quote paths with spaces: `"C:\\Users\\user\\My Documents\\file.txt"`
 
 ## Database Operations Through SSH
 
@@ -400,14 +415,20 @@ run_command:
 
 ### Python Script for Complex Queries
 
-For complex database operations, create a Python script via base64:
+For complex database operations, transfer a Python script via SCP:
 
-```python
-# Script to run on remote server
-#!/usr/bin/env python2.7
-import subprocess
-result = subprocess.check_output("mysql -e 'complex query'", shell=True)
-print result
+```
+# 1. Create script locally on Windows (C:\temp\db_query.py)
+# 2. Transfer to remote server
+run_command:
+  cmd: "scp -o StrictHostKeyChecking=no C:\\temp\\db_query.py user@server:/tmp/"
+
+# 3. Execute and capture output
+run_command:
+  cmd: "ssh -o StrictHostKeyChecking=no user@server \"python /tmp/db_query.py\" > C:\\temp\\result.txt 2>&1"
+
+run_command:
+  cmd: "type C:\\temp\\result.txt"
 ```
 
 ## Troubleshooting Checklist
@@ -437,6 +458,6 @@ print result
 ### Escaping Problems
 
 1. Start with single quotes around entire command
-2. Use base64 encoding for complex content
+2. Use SCP to transfer complex content as files (preferred)
 3. Write to temp file and execute, instead of inline
 4. Test incrementally - simple command first, then add complexity
