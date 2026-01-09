@@ -55,8 +55,8 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
 
         registry = imported_registry
 
-    # Create MCP server instance
-    mcp_server = create_server()
+    # Create MCP server instance, passing registry explicitly to avoid __main__ import issues
+    mcp_server = create_server(registry_override=registry)
 
     # Create SSE transport
     sse_transport = SseServerTransport("/messages/")
@@ -87,6 +87,9 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
 
     async def list_clients(request: Request) -> JSONResponse:
         """List all registered clients."""
+        logger.info(
+            f"HTTP list_clients: registry id={id(registry)}, online_count={registry.online_count}"
+        )
         clients = await registry.list_clients()
         return JSONResponse(
             {
@@ -104,10 +107,19 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
         try:
             registration = await request.json()
             uuid = registration.get("identity", {}).get("uuid", "unknown")
+            client_id = registration.get("client_info", {}).get("client_id")
+
+            # Clear stale connections BEFORE registration
+            # Tunnel port may have changed on reconnect, so we must not reuse old connections
+            if client_id:
+                from server.mcp_server import clear_stale_connection
+
+                clear_stale_connection(client_id)
 
             # Reset health tracking BEFORE registration to ensure fresh grace period
+            # Pass client_id to clear health monitor's cached connection too
             if _health_monitor and uuid != "unknown":
-                _health_monitor.reset_health(uuid)
+                _health_monitor.reset_health(uuid, client_id=client_id)
 
             await registry.register(registration)
             display_name = registration.get("identity", {}).get("display_name", "unknown")
