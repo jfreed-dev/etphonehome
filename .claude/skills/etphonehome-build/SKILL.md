@@ -32,13 +32,19 @@ Builds are published to the ET Phone Home update server for client auto-updates.
 
 ### version.json Format
 
+**IMPORTANT**: Downloads must include full URLs for the auto-updater to work.
+
 ```json
 {
   "version": "{VERSION}",
   "release_date": "2026-01-05T12:00:00Z",
   "downloads": {
-    "linux-x86_64": "phonehome-linux-x86_64.tar.gz",
-    "linux-aarch64": "phonehome-linux-aarch64.tar.gz"
+    "linux-x86_64": {
+      "url": "http://72.60.125.7/v{VERSION}/phonehome-linux-x86_64.tar.gz"
+    },
+    "linux-aarch64": {
+      "url": "http://72.60.125.7/v{VERSION}/phonehome-linux-aarch64.tar.gz"
+    }
   },
   "changelog": "Bug fixes and improvements"
 }
@@ -62,14 +68,7 @@ Creates a self-contained package with embedded Python - no system dependencies r
 ./build/portable/package_linux.sh
 ```
 
-**Build for specific architecture (cross-compile):**
-```bash
-# Build for ARM64 (e.g., DGX Spark)
-./build/portable/package_linux.sh aarch64
-
-# Build for x86_64
-./build/portable/package_linux.sh x86_64
-```
+**Cross-compilation note:** Cross-compiling for a different architecture (e.g., building aarch64 on x86_64) will fail with "Exec format error" because the portable build runs pip from the downloaded Python binary. **Build natively on the target architecture instead.**
 
 **Output**: `dist/phonehome-linux-{arch}.tar.gz`
 
@@ -139,20 +138,39 @@ If the remote client is already connected, you can build directly on it:
 
 The NVIDIA DGX Spark uses ARM64 (aarch64) architecture.
 
-### Building for DGX Spark
+### Building for DGX Spark (Recommended: Native Build)
 
-**Option 1: Cross-compile from x86_64 server**
-```bash
-./build/portable/package_linux.sh aarch64
+Cross-compilation does not work. Build natively on the DGX Spark via ET Phone Home:
+
+```python
+# Using Python with ClientConnection (for scripting)
+from server.client_connection import ClientConnection
+
+conn = ClientConnection("127.0.0.1", spark_tunnel_port, timeout=600.0)
+
+# Clone and build
+await conn.run_command(
+    "cd /tmp && rm -rf etphonehome && git clone https://github.com/jfreed-dev/etphonehome.git",
+    timeout=120
+)
+await conn.run_command(
+    "./build/portable/package_linux.sh",
+    cwd="/tmp/etphonehome",
+    timeout=600
+)
+# Output: /tmp/etphonehome/dist/phonehome-linux-aarch64.tar.gz
 ```
 
-**Option 2: Build natively on DGX Spark**
-If the DGX Spark is already connected:
-```
-run_command:
-  client_id: "dgx-spark"
-  cmd: "cd /tmp && git clone https://github.com/jfreed-dev/etphonehome.git && cd etphonehome && ./build/portable/package_linux.sh"
-  timeout: 900
+### Publishing ARM64 Build from Remote Client
+
+After building on the Spark, SCP the artifact directly to the update server:
+
+```python
+# Have the Spark upload directly to update server
+await conn.run_command(
+    "scp /tmp/etphonehome/dist/phonehome-linux-aarch64.tar.gz etphonehome@72.60.125.7:/var/www/phonehome/v{VERSION}/",
+    timeout=120
+)
 ```
 
 ### Verifying Architecture
@@ -305,14 +323,14 @@ VERSION=$(grep -oP '__version__ = "\K[^"]+' shared/version.py)
 echo "Building version: $VERSION"
 ```
 
-### Step 3: Build Both Architectures
+### Step 3: Build Architectures
 
 ```bash
-# Build x86_64
+# Build x86_64 (can build locally)
 ./build/portable/package_linux.sh x86_64
 
-# Build ARM64 (aarch64)
-./build/portable/package_linux.sh aarch64
+# Build ARM64 - must build on ARM64 machine (e.g., DGX Spark)
+# See "DGX Spark / ARM64 Specific" section for remote build workflow
 ```
 
 ### Step 4: Create Version Directory on Server
@@ -345,8 +363,12 @@ ssh etphonehome@72.60.125.7 "cat > /tmp/version.json << 'EOF'
   \"version\": \"${VERSION}\",
   \"release_date\": \"${RELEASE_DATE}\",
   \"downloads\": {
-    \"linux-x86_64\": \"phonehome-linux-x86_64.tar.gz\",
-    \"linux-aarch64\": \"phonehome-linux-aarch64.tar.gz\"
+    \"linux-x86_64\": {
+      \"url\": \"http://72.60.125.7/v${VERSION}/phonehome-linux-x86_64.tar.gz\"
+    },
+    \"linux-aarch64\": {
+      \"url\": \"http://72.60.125.7/v${VERSION}/phonehome-linux-aarch64.tar.gz\"
+    }
   },
   \"changelog\": \"See release notes\"
 }
@@ -406,12 +428,12 @@ echo "=== Publishing ET Phone Home v${VERSION} ==="
 echo "Checking SSH access..."
 ssh -o BatchMode=yes -o ConnectTimeout=5 $SERVER "echo 'SSH OK'" || { echo "SSH failed"; exit 1; }
 
-# Build both architectures
+# Build x86_64 locally
 echo "Building x86_64..."
 ./build/portable/package_linux.sh x86_64
 
-echo "Building aarch64..."
-./build/portable/package_linux.sh aarch64
+# Note: ARM64 must be built on ARM64 machine - see DGX Spark section
+# Assumes ARM64 build already exists in dist/ from remote build
 
 # Create version directory
 echo "Creating version directory..."
@@ -422,15 +444,19 @@ echo "Uploading builds..."
 scp dist/phonehome-linux-x86_64.tar.gz $SERVER:${WEB_ROOT}/v${VERSION}/
 scp dist/phonehome-linux-aarch64.tar.gz $SERVER:${WEB_ROOT}/v${VERSION}/
 
-# Create version.json
+# Create version.json with full URLs
 echo "Creating version.json..."
 ssh $SERVER "cat > /tmp/version.json << EOF
 {
   \"version\": \"${VERSION}\",
   \"release_date\": \"${RELEASE_DATE}\",
   \"downloads\": {
-    \"linux-x86_64\": \"phonehome-linux-x86_64.tar.gz\",
-    \"linux-aarch64\": \"phonehome-linux-aarch64.tar.gz\"
+    \"linux-x86_64\": {
+      \"url\": \"http://72.60.125.7/v${VERSION}/phonehome-linux-x86_64.tar.gz\"
+    },
+    \"linux-aarch64\": {
+      \"url\": \"http://72.60.125.7/v${VERSION}/phonehome-linux-aarch64.tar.gz\"
+    }
   },
   \"changelog\": \"See release notes\"
 }
@@ -495,13 +521,42 @@ All files must be owned by www-data for nginx to serve them:
 ssh etphonehome@72.60.125.7 "sudo chown -R www-data:www-data /var/www/phonehome/"
 ```
 
+## Triggering Auto-Updates on Remote Clients
+
+After publishing a new version, trigger updates on connected clients:
+
+```python
+from server.client_connection import ClientConnection
+
+conn = ClientConnection("127.0.0.1", client_tunnel_port, timeout=300.0)
+
+# Trigger update check and apply
+result = await conn.run_command("""
+cd ~/.local/share/phonehome && ./python/bin/python3 -c "
+import sys
+sys.path.insert(0, 'app')
+from client.updater import check_for_update, perform_update
+
+info = check_for_update('http://72.60.125.7/latest/version.json')
+print('Update info:', info)
+if info:
+    result = perform_update(info)
+    print('Update applied:', result)
+"
+""", timeout=300)
+print(result['stdout'])
+
+# Restart client to use new version
+await conn.run_command("systemctl --user restart phonehome")
+```
+
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
 | Test SSH access | `ssh -o BatchMode=yes etphonehome@72.60.125.7 "echo OK"` |
 | Build for x86_64 | `./build/portable/package_linux.sh x86_64` |
-| Build for ARM64 | `./build/portable/package_linux.sh aarch64` |
+| Build for ARM64 | Build natively on ARM64 machine (see DGX Spark section) |
 | Check client arch | `run_command: "uname -m"` |
 | Upload build | `scp dist/*.tar.gz etphonehome@72.60.125.7:/var/www/phonehome/v{VERSION}/` |
 | Update latest | `ssh ... "cd /var/www/phonehome && sudo ln -sf v{VERSION} latest"` |
