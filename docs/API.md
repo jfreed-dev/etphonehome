@@ -501,7 +501,18 @@ Open a persistent SSH session to a remote host through the ET Phone Home client.
 | `password` | string | No | SSH password (use this OR key_file) |
 | `key_file` | string | No | Path to SSH private key on the client |
 | `port` | integer | No | SSH port (default: 22) |
+| `jump_hosts` | array | No | List of jump/bastion hosts to connect through |
 | `client_id` | string | No | ET Phone Home client to use |
+
+**Jump Host Format**:
+```json
+{
+  "jump_hosts": [
+    {"host": "bastion.example.com", "username": "admin", "key_file": "~/.ssh/id_rsa"},
+    {"host": "internal-jump", "username": "admin", "port": 2222}
+  ]
+}
+```
 
 **Returns**:
 ```json
@@ -510,6 +521,8 @@ Open a persistent SSH session to a remote host through the ET Phone Home client.
   "host": "192.168.1.100",
   "username": "admin",
   "port": 22,
+  "created_at": "2026-01-08T12:34:56Z",
+  "last_activity": "2026-01-08T12:34:56Z",
   "message": "SSH session opened successfully"
 }
 ```
@@ -518,16 +531,24 @@ Open a persistent SSH session to a remote host through the ET Phone Home client.
 - `SSH_AUTH_FAILED` - Authentication failed (bad password/key)
 - `SSH_CONNECTION_FAILED` - Cannot connect to host
 - `SSH_KEY_NOT_FOUND` - Specified key file doesn't exist
+- `SSH_JUMP_HOST_ERROR` - Failed to connect through jump host
 
-**Example**:
+**Example** (direct connection):
 ```
 ssh_session_open with host="db-server.internal" username="admin" password="secret"  # pragma: allowlist secret
+```
+
+**Example** (via jump host):
+```
+ssh_session_open with host="private-server" username="admin" key_file="~/.ssh/id_rsa" jump_hosts=[{"host": "bastion.example.com", "username": "admin", "key_file": "~/.ssh/id_rsa"}]
 ```
 
 **Notes**:
 - Sessions persist until explicitly closed or client disconnects
 - Use password OR key_file, not both
 - Key file path is on the ET Phone Home client, not the MCP server
+- Jump hosts are connected in order (first in list is closest to client)
+- Key-authenticated sessions can be restored after client reconnects
 
 ---
 
@@ -611,12 +632,149 @@ List all active SSH sessions on the client.
       "host": "192.168.1.100",
       "username": "admin",
       "port": 22,
-      "created_at": "2026-01-07T12:34:56Z"
+      "created_at": "2026-01-07T12:34:56Z",
+      "last_activity": "2026-01-07T13:45:00Z"
     }
   ],
   "count": 1
 }
 ```
+
+---
+
+### ssh_session_send
+
+Send raw input to an SSH session for interactive prompts (sudo password, y/n confirmations).
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `session_id` | string | Yes | Session ID from ssh_session_open |
+| `text` | string | Yes | Text to send |
+| `send_newline` | boolean | No | Append newline (default: true) |
+| `client_id` | string | No | ET Phone Home client |
+
+**Returns**:
+```json
+{
+  "session_id": "sess_abc123",
+  "sent": true,
+  "bytes_sent": 12
+}
+```
+
+**Errors**:
+- `SSH_SESSION_NOT_FOUND` - Invalid or expired session ID
+- `SSH_SESSION_SEND_ERROR` - Failed to send input
+
+**Example** (sudo password):
+```
+1. ssh_session_command with command="sudo apt update"
+   # Returns "Password:" prompt in output
+2. ssh_session_send with session_id="sess_abc123" text="mypassword"  # pragma: allowlist secret
+3. ssh_session_read with session_id="sess_abc123"
+   # Returns command output
+```
+
+**Example** (y/n confirmation):
+```
+ssh_session_send with session_id="sess_abc123" text="y"
+```
+
+**Notes**:
+- Use `send_newline=false` for single character inputs that shouldn't include newline
+- After sending, use `ssh_session_read` to get the response
+
+---
+
+### ssh_session_read
+
+Read pending output from an SSH session without sending a command.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `session_id` | string | Yes | Session ID from ssh_session_open |
+| `timeout` | number | No | Wait time in seconds (default: 0.5) |
+| `client_id` | string | No | ET Phone Home client |
+
+**Returns**:
+```json
+{
+  "session_id": "sess_abc123",
+  "stdout": "output from the session\n",
+  "has_more": false
+}
+```
+
+**Errors**:
+- `SSH_SESSION_NOT_FOUND` - Invalid or expired session ID
+
+**Use Cases**:
+- Read output after `ssh_session_send`
+- Poll for output from long-running commands
+- Check for prompts or confirmations
+
+**Example** (poll for output):
+```
+1. ssh_session_command with command="./long_running_script.sh &"
+2. # Later...
+3. ssh_session_read with session_id="sess_abc123" timeout=1.0
+   # Check if has_more=true to know if more output is coming
+```
+
+---
+
+### ssh_session_restore
+
+Attempt to restore SSH sessions after client reconnect.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `client_id` | string | No | ET Phone Home client |
+
+**Returns**:
+```json
+{
+  "restored": [
+    {
+      "old_session_id": "sess_old123",
+      "new_session_id": "sess_new456",
+      "host": "192.168.1.100",
+      "username": "admin"
+    }
+  ],
+  "failed": [
+    {
+      "session_id": "sess_failed789",
+      "host": "unreachable.internal",
+      "error": "Connection refused"
+    }
+  ],
+  "manual_required": [
+    {
+      "session_id": "sess_manual012",
+      "host": "password-auth.internal",
+      "reason": "Password authentication required"
+    }
+  ]
+}
+```
+
+**Errors**:
+- `SSH_SESSION_RESTORE_ERROR` - Store access failed
+
+**Notes**:
+- Only key-authenticated sessions can be automatically restored (passwords are not stored for security)
+- Sessions requiring password authentication are returned in `manual_required`
+- Failed restorations include the error reason
+- Old session IDs are replaced with new ones
+
+**When to use**:
+- After ET Phone Home client reconnects
+- To recover from network interruptions
+- During maintenance windows
 
 ---
 
@@ -655,6 +813,9 @@ All errors follow this structure:
 | `SSH_KEY_NOT_FOUND` | SSH key file not found | Check path on ET Phone Home client |
 | `SSH_SESSION_NOT_FOUND` | Invalid session ID | Use `ssh_session_list` to find valid sessions |
 | `SSH_COMMAND_TIMEOUT` | SSH command timed out | Increase timeout or check remote host |
+| `SSH_SESSION_SEND_ERROR` | Failed to send input | Check session is still active |
+| `SSH_JUMP_HOST_ERROR` | Jump host connection failed | Verify jump host credentials and reachability |
+| `SSH_SESSION_RESTORE_ERROR` | Session restore failed | Check session store and target hosts |
 
 ---
 

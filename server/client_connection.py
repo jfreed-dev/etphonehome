@@ -136,6 +136,7 @@ class ClientConnection:
         password: str = None,
         key_file: str = None,
         port: int = 22,
+        jump_hosts: list[dict] = None,
     ) -> dict:
         """Open a persistent SSH session on the client."""
         params = {
@@ -147,6 +148,8 @@ class ClientConnection:
             params["password"] = password
         if key_file:
             params["key_file"] = key_file
+        if jump_hosts:
+            params["jump_hosts"] = jump_hosts
 
         response = await self.send_request("ssh_session_open", params)
         if response.error:
@@ -177,6 +180,45 @@ class ClientConnection:
         response = await self.send_request("ssh_session_list", {})
         if response.error:
             raise RuntimeError(f"SSH session list failed: {response.error['message']}")
+        return response.result
+
+    async def ssh_session_send(
+        self,
+        session_id: str,
+        text: str,
+        send_newline: bool = True,
+    ) -> dict:
+        """Send raw input to an SSH session for interactive prompts."""
+        params = {
+            "session_id": session_id,
+            "text": text,
+            "send_newline": send_newline,
+        }
+        response = await self.send_request("ssh_session_send", params)
+        if response.error:
+            raise RuntimeError(f"SSH session send failed: {response.error['message']}")
+        return response.result
+
+    async def ssh_session_read(
+        self,
+        session_id: str,
+        timeout: float = 0.5,
+    ) -> dict:
+        """Read pending output from an SSH session."""
+        params = {
+            "session_id": session_id,
+            "timeout": timeout,
+        }
+        response = await self.send_request("ssh_session_read", params)
+        if response.error:
+            raise RuntimeError(f"SSH session read failed: {response.error['message']}")
+        return response.result
+
+    async def ssh_session_restore(self) -> dict:
+        """Attempt to restore SSH sessions after client reconnect."""
+        response = await self.send_request("ssh_session_restore", {})
+        if response.error:
+            raise RuntimeError(f"SSH session restore failed: {response.error['message']}")
         return response.result
 
     # SFTP Support

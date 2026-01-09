@@ -21,6 +21,9 @@ METHOD_SSH_SESSION_OPEN = "ssh_session_open"
 METHOD_SSH_SESSION_COMMAND = "ssh_session_command"
 METHOD_SSH_SESSION_CLOSE = "ssh_session_close"
 METHOD_SSH_SESSION_LIST = "ssh_session_list"
+METHOD_SSH_SESSION_SEND = "ssh_session_send"
+METHOD_SSH_SESSION_READ = "ssh_session_read"
+METHOD_SSH_SESSION_RESTORE = "ssh_session_restore"
 
 
 @dataclass
@@ -358,6 +361,46 @@ class SSHConnectionError(ToolError):
             message=f"Failed to connect to {host}: {reason}",
             details={"host": host, "reason": reason},
             recovery_hint="Verify host is reachable, credentials are correct, and SSH is enabled on the target.",
+        )
+
+
+class SSHSessionSendError(ToolError):
+    """Raised when sending to an SSH session fails."""
+
+    def __init__(self, session_id: str, reason: str):
+        super().__init__(
+            code="SSH_SESSION_SEND_ERROR",
+            message=f"Failed to send to session {session_id}: {reason}",
+            details={"session_id": session_id, "reason": reason},
+            recovery_hint="Check if session is still active with 'ssh_session_list'.",
+        )
+
+
+class SSHJumpHostError(ToolError):
+    """Raised when jump host connection fails."""
+
+    def __init__(self, jump_host: str, reason: str, hop_number: int = 0):
+        super().__init__(
+            code="SSH_JUMP_HOST_ERROR",
+            message=f"Failed to connect through jump host {jump_host}: {reason}",
+            details={
+                "jump_host": jump_host,
+                "reason": reason,
+                "hop_number": hop_number,
+            },
+            recovery_hint="Verify jump host credentials and network connectivity.",
+        )
+
+
+class SSHSessionRestoreError(ToolError):
+    """Raised when session restoration fails."""
+
+    def __init__(self, session_id: str, host: str, reason: str):
+        super().__init__(
+            code="SSH_SESSION_RESTORE_ERROR",
+            message=f"Failed to restore session to {host}: {reason}",
+            details={"session_id": session_id, "host": host, "reason": reason},
+            recovery_hint="Session may require password auth (not persisted). Use 'ssh_session_open' to create a new session.",
         )
 
 
