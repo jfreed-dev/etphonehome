@@ -6,6 +6,18 @@
 
 ## Recent Changes (v0.1.9)
 
+### Web Management Interface Phase 1 (2026-01-09)
+
+- **Real-time dashboard**: Browser-based Mission Control showing client status, server health, and activity stream
+- **Client detail page**: View client metadata, tags, capabilities, and connection info
+- **REST API endpoints**: `/api/v1/dashboard`, `/api/v1/clients`, `/api/v1/clients/{uuid}`, `/api/v1/events`
+- **WebSocket support**: Real-time updates when clients connect/disconnect via `/api/v1/ws`
+- **Event store**: Activity stream tracking recent client and command events
+- **API key authentication**: Protected endpoints with bearer token auth, query param support for WebSocket
+- **Static file serving**: Serves dashboard assets from `server/static/`
+- **Webhook broadcast integration**: Events dispatched to both webhooks and WebSocket clients
+- **36 new tests**: Comprehensive coverage for EventStore, WebSocketManager, REST API, and auth
+
 ### SSH Session Phase 2-3 (2026-01-09)
 
 - **Interactive prompt support**: New `ssh_session_send` and `ssh_session_read` tools for handling sudo passwords, y/n confirmations
@@ -111,12 +123,12 @@
 | Component | Status | Notes |
 |-----------|--------|-------|
 | Client (tunnel, agent, config, CLI, updater, capabilities, metrics) | ✓ Complete | ~1200 lines across 7 modules |
-| Server (MCP tools, registry, store, webhooks, rate limiter) | ✓ Complete | ~1800 lines, enhanced schemas & error handling |
+| Server (MCP tools, registry, store, webhooks, rate limiter) | ✓ Complete | ~2200 lines, enhanced schemas & error handling |
 | Protocol (JSON-RPC, length-prefixed) | ✓ Complete | 150+ lines + custom exception classes |
 | Build system (PyInstaller + portable) | ✓ Complete | Linux (x64, ARM64) + Windows |
 | CI/CD (GitHub Actions) | ✓ Complete | Auto-releases on version tags |
 | Documentation | ✓ Excellent | README.md, CLAUDE.md, docs/API.md |
-| Tests | ✓ Comprehensive | 17 test files, 351 tests |
+| Tests | ✓ Comprehensive | 18 test files, 420 tests |
 | Systemd service | ✓ Complete | User and system service files |
 | Update server | ✓ Complete | http://<PUBLIC_IP>/latest/version.json |
 | Deployment automation | ✓ Complete | Ansible, Docker, Terraform |
@@ -125,23 +137,27 @@
 | SFTP file transfers | ✓ Complete | Streaming transfers via `upload_file`/`download_file` |
 | R2 file exchange | ✓ Complete | Async transfers via `exchange_*` tools |
 | R2 key rotation | ✓ Complete | `r2_rotate_keys`, `r2_list_tokens`, `r2_check_rotation_status` |
+| Web management interface | ✓ Phase 1 | Dashboard, client list, REST API, WebSocket real-time updates |
 
 ## Next Steps (Priority Order)
 
-### 1. Platform Expansion
+### 1. Web Management Interface Phase 2
+- Browser-based terminal (WebSocket + xterm.js)
+- File browser with drag-and-drop upload
+- Command history and output viewer
+
+### 2. Platform Expansion
 - macOS support (Intel and Apple Silicon)
 - Windows ARM64 support
 - Windows service wrapper (NSSM alternative)
 
-### 2. Web Management Interface
-- Real-time client status dashboard
-- Browser-based terminal (WebSocket + xterm.js)
-- File browser with drag-and-drop upload
+### 3. Web Management Interface Phase 3
 - User authentication and RBAC
-
-### 3. Enterprise Features
-- Multi-tenant support
+- Multi-user session management
 - Audit logging with retention
+
+### 4. Enterprise Features
+- Multi-tenant support
 - Prometheus metrics endpoint
 - Grafana dashboard template
 
@@ -157,6 +173,8 @@ Messages: [4-byte length][JSON-RPC payload]
 
 - **Entry points**: `client/phonehome.py`, `server/mcp_server.py`
 - **Core logic**: `client/tunnel.py`, `client/agent.py`, `server/client_connection.py`
+- **HTTP server**: `server/http_server.py` (REST API, WebSocket, static files)
+- **Web UI**: `server/static/` (dashboard, client detail, JS, CSS, icons)
 - **Protocol**: `shared/protocol.py` (includes custom exception classes)
 - **Webhooks**: `server/webhooks.py`
 - **Rate limiting**: `server/rate_limiter.py`
@@ -179,6 +197,10 @@ phonehome -s host -p 2222     # Connect with overrides
 # Server (via MCP, not direct)
 python -m server.mcp_server
 
+# Web Dashboard (HTTP mode)
+python -m server.mcp_server --transport http --port 8765 --api-key YOUR_KEY
+# Then open http://localhost:8765/ in browser
+
 # Build
 ./build/portable/package_linux.sh
 ./build/pyinstaller/build_linux.sh
@@ -199,7 +221,8 @@ ruff check --fix .
 
 1. **No macOS support** - Darwin builds not yet implemented
 2. **No Windows Server docs** - Setup guide is Linux-focused
-3. **No web dashboard** - Management via Claude CLI only
+3. **No browser terminal** - Web dashboard shows status only, no command execution yet
+4. **No multi-user auth** - Single API key authentication, no user accounts or RBAC
 
 ## Active Deployments
 
