@@ -76,6 +76,7 @@ etphonehome/
 │   ├── generate_keys.py    # Standalone SSH key generator
 │   ├── deploy_mcp_service.sh    # Deploy MCP server as systemd daemon
 │   ├── etphonehome-mcp.service  # Systemd service file for MCP server
+│   ├── etphonehome-webhook-test.service  # Webhook test receiver service
 │   └── server.env.example       # Environment config template
 └── build/                   # Build infrastructure
     ├── pyinstaller/        # Single executable builds
@@ -133,3 +134,36 @@ The server exposes these tools to Claude CLI:
 - `mcp` - Model Context Protocol SDK
 - `cryptography` - SSH key generation
 - `starlette` / `uvicorn` - HTTP/SSE server (for daemon mode)
+
+## Webhooks
+
+The server can dispatch webhooks for client events. Configure via environment variables:
+
+```bash
+# In /etc/etphonehome/server.env
+ETPHONEHOME_WEBHOOK_URL=http://127.0.0.1:9999/webhook
+ETPHONEHOME_WEBHOOK_TIMEOUT=10.0
+ETPHONEHOME_WEBHOOK_MAX_RETRIES=3
+```
+
+**Webhook Events:**
+- `client.connected` - Client establishes tunnel
+- `client.disconnected` - Client tunnel drops
+- `client.unhealthy` - Client fails consecutive health checks
+- `client.key_mismatch` - SSH key doesn't match stored key
+- `command_executed` - Command run via MCP
+- `file_accessed` - File read/write via MCP
+
+**Webhook Test Receiver:**
+
+A simple webhook receiver for testing/logging is included:
+
+```bash
+# Deploy as systemd service
+sudo cp scripts/etphonehome-webhook-test.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now etphonehome-webhook-test
+
+# View captured webhooks
+tail -f /var/log/etphonehome/webhooks.log
+```
