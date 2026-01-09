@@ -303,9 +303,30 @@ curl http://localhost:8765/health        # Health check
 | `read_file` | Read file contents |
 | `write_file` | Write to files |
 | `list_files` | List directory contents |
-| `upload_file` | Send file from server to client |
-| `download_file` | Fetch file from client to server |
+| `upload_file` | Send file from server to client (SFTP) |
+| `download_file` | Fetch file from client to server (SFTP) |
 | `get_client_metrics` | Get system health metrics (CPU, memory, disk) |
+
+### SSH Sessions
+
+| Tool | Description |
+|------|-------------|
+| `ssh_session_open` | Open persistent SSH session to remote host |
+| `ssh_session_command` | Run command in session (state preserved) |
+| `ssh_session_send` | Send input for interactive prompts |
+| `ssh_session_read` | Read output from session |
+| `ssh_session_close` | Close session |
+| `ssh_session_list` | List active sessions |
+| `ssh_session_restore` | Restore sessions after reconnect |
+
+### File Exchange (R2)
+
+| Tool | Description |
+|------|-------------|
+| `exchange_upload` | Upload file to R2 storage |
+| `exchange_download` | Download file from R2 |
+| `exchange_list` | List pending transfers |
+| `exchange_delete` | Delete transfer from R2 |
 
 ---
 
@@ -402,10 +423,26 @@ log_level: INFO
 | [SSH + Claude Code](docs/ssh-claude-code-guide.md) | Remote MCP access via SSH |
 | [Management Guide](docs/management-guide.md) | Client management workflows |
 | [Webhooks Guide](docs/webhooks-guide.md) | Webhook integration examples |
+| [R2 Setup Guide](docs/R2_SETUP_GUIDE.md) | Cloudflare R2 storage configuration |
 | [Deployment Guide](deploy/README.md) | Ansible, Docker, Terraform automation |
 | [Hostinger Setup](docs/hostinger-server-setup.md) | VPS deployment reference |
 | [Download Server](docs/download-server-setup.md) | Client distribution setup |
 | [Roadmap](docs/roadmap.md) | Planned features |
+
+### Claude Code Skills
+
+ET Phone Home includes specialized Claude Code skills for common workflows:
+
+| Skill | Description |
+|-------|-------------|
+| `etphonehome-remote-access` | Safe remote access best practices |
+| `etphonehome-diagnostics` | Client health monitoring |
+| `etphonehome-infrastructure` | Client management and organization |
+| `etphonehome-build` | Cross-architecture builds and publishing |
+| `etphonehome-file-exchange` | R2 storage file transfers |
+| `etphonehome-windows-server` | Windows Server and PowerShell |
+
+Skills are located in `.claude/skills/` and activate automatically based on context.
 
 ---
 

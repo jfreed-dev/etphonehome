@@ -9,6 +9,8 @@ Complete reference for all MCP tools exposed by the ET Phone Home server.
 - [Client Management](#client-management)
 - [Command Execution](#command-execution)
 - [File Operations](#file-operations)
+- [File Exchange (R2 Storage)](#file-exchange-r2-storage)
+- [R2 Key Rotation](#r2-key-rotation)
 - [Monitoring & Diagnostics](#monitoring--diagnostics)
 - [Configuration & Administration](#configuration--administration)
 - [SSH Session Management](#ssh-session-management)
@@ -346,9 +348,16 @@ Upload a file from the MCP server to a remote client.
 ```json
 {
   "uploaded": "/home/user/file.txt",
-  "size": 1234
+  "size": 1234,
+  "method": "sftp"
 }
 ```
+
+**Transfer Methods**:
+- **SFTP** (preferred): Uses SSH's SFTP subsystem for streaming transfers. No size limit, efficient for large files.
+- **JSON-RPC** (fallback): Base64-encoded transfer if SFTP unavailable. Works but less efficient for large files.
+
+The tool automatically tries SFTP first and falls back to JSON-RPC if needed.
 
 ---
 
@@ -367,11 +376,205 @@ Download a file from a remote client to the MCP server.
 ```json
 {
   "downloaded": "/tmp/downloaded_file.txt",
-  "size": 1234
+  "size": 1234,
+  "method": "sftp"
 }
 ```
 
-**Use case**: Download files larger than 10MB that `read_file` rejects.
+**Transfer Methods**:
+- **SFTP** (preferred): Streaming download via SSH's SFTP subsystem. No size limit.
+- **JSON-RPC** (fallback): Base64-encoded transfer if SFTP unavailable.
+
+**Use case**: Download files of any size. For files larger than 10MB, use this instead of `read_file`.
+
+---
+
+## File Exchange (R2 Storage)
+
+Cloudflare R2 storage integration for async file transfers, large files, or when clients are offline.
+
+**When to use R2 exchange vs direct transfer**:
+| Scenario | Recommended Tool |
+|----------|------------------|
+| Client online, normal files | `upload_file` / `download_file` |
+| Very large files (> 100MB) | R2 exchange (resumable) |
+| Client offline | R2 exchange (async) |
+| Multiple recipients | R2 exchange (share URL) |
+| Audit trail needed | R2 exchange (lifecycle management) |
+
+### exchange_upload
+
+Upload a file to R2 for transfer to a client. Generates a presigned download URL.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `local_path` | string | Yes | Path to file on the MCP server |
+| `dest_client` | string | No | Destination client UUID (for tracking) |
+| `expires_hours` | integer | No | URL expiration (default: 12, max: 12) |
+
+**Returns**:
+```json
+{
+  "transfer_id": "abc-123_20260108_143022_deploy.tar.gz",
+  "download_url": "https://account.r2.cloudflarestorage.com/...",
+  "expires_at": "2026-01-08T20:30:22Z",
+  "size": 15728640,
+  "filename": "deploy.tar.gz"
+}
+```
+
+**Example**:
+```
+exchange_upload with local_path="/tmp/config.yaml" dest_client="client-uuid" expires_hours=6
+```
+
+---
+
+### exchange_download
+
+Download a file from a presigned URL to the MCP server.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `download_url` | string | Yes | Presigned URL from exchange_upload |
+| `local_path` | string | Yes | Destination path on MCP server |
+
+**Returns**:
+```json
+{
+  "local_path": "/tmp/received_file.tar.gz",
+  "size": 15728640
+}
+```
+
+---
+
+### exchange_list
+
+List pending file transfers in R2 storage.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `client_id` | string | No | Filter by source client UUID |
+
+**Returns**:
+```json
+{
+  "transfers": [
+    {
+      "key": "transfers/abc-123/abc-123_20260108_143022_deploy.tar.gz",
+      "size": 15728640,
+      "last_modified": "2026-01-08T14:30:22Z",
+      "metadata": {
+        "source_client": "abc-123",
+        "dest_client": "xyz-789",
+        "filename": "deploy.tar.gz"
+      }
+    }
+  ],
+  "count": 1
+}
+```
+
+---
+
+### exchange_delete
+
+Manually delete a transfer from R2 before automatic expiration (48 hours).
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `transfer_id` | string | Yes | Transfer ID from exchange_upload |
+| `source_client` | string | Yes | Source client UUID |
+
+**Returns**:
+```json
+{
+  "key": "transfers/abc-123/abc-123_20260108_143022_deploy.tar.gz",
+  "deleted": true
+}
+```
+
+---
+
+## R2 Key Rotation
+
+Tools for managing Cloudflare R2 API credentials and automatic rotation.
+
+### r2_rotate_keys
+
+Rotate Cloudflare R2 API keys. Creates new token, updates GitHub Secrets, and optionally deletes old token.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `old_access_key_id` | string | No | Old R2 access key ID to delete |
+| `keep_old` | boolean | No | Keep old token instead of deleting (default: false) |
+
+**Returns**:
+```json
+{
+  "new_access_key_id": "abc123...",
+  "github_secrets_updated": true,
+  "old_token_deleted": true,
+  "message": "R2 keys rotated successfully"
+}
+```
+
+**Errors**:
+- `ROTATION_NOT_CONFIGURED` - Missing required environment variables
+
+**When to use**:
+- Manual key rotation for security policy compliance
+- After suspected key compromise
+- Regular rotation schedule (e.g., every 90 days)
+
+---
+
+### r2_list_tokens
+
+List all active R2 API tokens for the Cloudflare account.
+
+**Parameters**: None
+
+**Returns**:
+```json
+{
+  "tokens": [
+    {
+      "id": "token-id-123",
+      "name": "etphonehome-r2-token",
+      "created_on": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+---
+
+### r2_check_rotation_status
+
+Check if R2 key rotation is due based on configured schedule.
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `rotation_days` | integer | No | Days between rotations (default: 90, max: 365) |
+
+**Returns**:
+```json
+{
+  "last_rotation": "2026-01-01T00:00:00Z",
+  "days_since_rotation": 8,
+  "rotation_due": false,
+  "next_rotation_in_days": 82
+}
+```
 
 ---
 
@@ -816,6 +1019,10 @@ All errors follow this structure:
 | `SSH_SESSION_SEND_ERROR` | Failed to send input | Check session is still active |
 | `SSH_JUMP_HOST_ERROR` | Jump host connection failed | Verify jump host credentials and reachability |
 | `SSH_SESSION_RESTORE_ERROR` | Session restore failed | Check session store and target hosts |
+| `R2_NOT_CONFIGURED` | R2 credentials missing | Set R2 environment variables |
+| `ROTATION_NOT_CONFIGURED` | R2 rotation not configured | Set Cloudflare API token and GitHub repo |
+| `R2_UPLOAD_ERROR` | Failed to upload to R2 | Check R2 credentials and bucket |
+| `R2_DOWNLOAD_ERROR` | Failed to download from R2 | Check URL validity and expiration |
 
 ---
 
@@ -833,6 +1040,8 @@ Events sent to configured webhook URLs.
 | `client.unhealthy` | Health check failures |
 | `command_executed` | Shell command run |
 | `file_accessed` | File read/write/list |
+| `file_transferred` | File uploaded/downloaded via SFTP |
+| `r2_transfer` | R2 exchange upload/download |
 
 ### Payload Format
 
@@ -891,6 +1100,13 @@ get_client_metrics with summary=true
 1. ssh_session_open with host="target" username="user" password="pass"  # pragma: allowlist secret
 2. ssh_session_command with session_id="sess_xxx" command="your command"
 3. ssh_session_close with session_id="sess_xxx"
+```
+
+**Transfer file via R2 (async/large files):**
+```
+1. exchange_upload with local_path="/path/to/file" dest_client="uuid"
+2. Share download_url with client (or use run_command to curl it)
+3. exchange_delete with transfer_id="..." source_client="..." after download
 ```
 
 ### Path Requirements

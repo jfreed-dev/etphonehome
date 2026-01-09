@@ -1,8 +1,32 @@
 # ET Phone Home - Project Status
 
-**Last Updated**: 2026-01-07
-**Version**: 0.1.8
+**Last Updated**: 2026-01-09
+**Version**: 0.1.9
 **Status**: Production-ready
+
+## Recent Changes (v0.1.9)
+
+### SSH Session Phase 2-3 (2026-01-09)
+
+- **Interactive prompt support**: New `ssh_session_send` and `ssh_session_read` tools for handling sudo passwords, y/n confirmations
+- **Jump host support**: SSH sessions can traverse multiple bastion hosts via `jump_hosts` parameter
+- **Session persistence**: `ssh_session_restore` recovers key-authenticated sessions after client reconnects
+- **Prompt detection**: `PromptDetector` class for reliable output capture
+- **Idle cleanup**: Automatic cleanup of sessions idle > 30 minutes
+
+### SFTP File Transfers (2026-01-08)
+
+- **SFTP subsystem**: `upload_file` and `download_file` now use SFTP for streaming transfers
+- **No size limits**: Large files transfer efficiently without base64 encoding overhead
+- **Automatic fallback**: Falls back to JSON-RPC if SFTP unavailable
+
+### Cloudflare R2 Integration (2026-01-08)
+
+- **File exchange tools**: `exchange_upload`, `exchange_download`, `exchange_list`, `exchange_delete` for async transfers
+- **Presigned URLs**: Secure, time-limited download links (max 12 hours)
+- **Key rotation**: `r2_rotate_keys`, `r2_list_tokens`, `r2_check_rotation_status` for credential management
+- **GitHub Secrets**: Automatic update of GitHub repository secrets during rotation
+- **Lifecycle management**: Files auto-delete after 48 hours
 
 ## Recent Changes (v0.1.8)
 
@@ -96,8 +120,11 @@
 | Systemd service | ✓ Complete | User and system service files |
 | Update server | ✓ Complete | http://72.60.125.7/latest/version.json |
 | Deployment automation | ✓ Complete | Ansible, Docker, Terraform |
-| Claude Code skills | ✓ Complete | 7 skills (remote-access, diagnostics, infrastructure, build, sl1-powerpack, windows-server, sl1-development) |
-| SSH session management | ✓ Phase 1 Complete | Persistent sessions via `ssh_session_*` tools |
+| Claude Code skills | ✓ Complete | 8 skills (remote-access, diagnostics, infrastructure, build, sl1-powerpack, windows-server, sl1-development, file-exchange) |
+| SSH session management | ✓ Complete | Phases 1-3: `ssh_session_*` tools with jump hosts, prompts, persistence |
+| SFTP file transfers | ✓ Complete | Streaming transfers via `upload_file`/`download_file` |
+| R2 file exchange | ✓ Complete | Async transfers via `exchange_*` tools |
+| R2 key rotation | ✓ Complete | `r2_rotate_keys`, `r2_list_tokens`, `r2_check_rotation_status` |
 
 ## Next Steps (Priority Order)
 
@@ -178,9 +205,9 @@ ruff check --fix .
 
 | Client | Architecture | Platform | Version | Status |
 |--------|--------------|----------|---------|--------|
-| lokipopcosmic (Jon Laptop) | x86_64 | Linux (Pop!_OS) | 0.1.7 | Online |
-| spark-2f34 (DGX Spark) | aarch64 | Linux (NVIDIA) | 0.1.7 | Online |
-| ep-dev-ts (iad-m-rdp06) | x86_64 | Windows Server 2019 | 0.1.7 | Online |
+| lokipopcosmic (Jon Laptop) | x86_64 | Linux (Pop!_OS) | 0.1.9 | Online |
+| spark-2f34 (DGX Spark) | aarch64 | Linux (NVIDIA) | 0.1.9 | Online |
+| ep-dev-ts (iad-m-rdp06) | x86_64 | Windows Server 2019 | 0.1.9 | Online |
 
 **Update Server**: http://72.60.125.7/latest/version.json
 
