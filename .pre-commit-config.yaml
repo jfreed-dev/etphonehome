@@ -30,6 +30,7 @@ repos:
       - id: black
         language_version: python3
         args: [--line-length=100]
+        exclude: ^\.claude/skills/.*/da_snippets/  # SL1 Python 2.7 code
 
   # Python linting with Ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -38,8 +39,10 @@ repos:
       # Linter
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
+        exclude: ^\.claude/skills/.*/da_snippets/  # SL1 Python 2.7 code
       # Formatter (as backup to black)
       - id: ruff-format
+        exclude: ^\.claude/skills/.*/da_snippets/  # SL1 Python 2.7 code
 
   # Security scanning
   - repo: https://github.com/Yelp/detect-secrets
