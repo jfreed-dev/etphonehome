@@ -611,7 +611,7 @@ def create_server() -> Server:
             # ===== SSH SESSION MANAGEMENT =====
             Tool(
                 name="ssh_session_open",
-                description="Open a persistent SSH session to a remote host through the ET Phone Home client. The session maintains state (working directory, environment) across commands. Use password OR key_file for authentication.",
+                description="Open a persistent SSH session to a remote host through the ET Phone Home client. Supports jump hosts for accessing private networks. The session maintains state (working directory, environment) across commands. Use password OR key_file for authentication.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -641,6 +641,39 @@ def create_server() -> Server:
                             "default": 22,
                             "minimum": 1,
                             "maximum": 65535,
+                        },
+                        "jump_hosts": {
+                            "type": "array",
+                            "description": "List of jump/bastion hosts to connect through (in order)",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "host": {
+                                        "type": "string",
+                                        "description": "Jump host hostname or IP",
+                                        "minLength": 1,
+                                    },
+                                    "username": {
+                                        "type": "string",
+                                        "description": "SSH username for jump host",
+                                        "minLength": 1,
+                                    },
+                                    "port": {
+                                        "type": "integer",
+                                        "description": "SSH port (default: 22)",
+                                        "default": 22,
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "description": "SSH password for jump host",
+                                    },
+                                    "key_file": {
+                                        "type": "string",
+                                        "description": "Path to SSH key file for jump host",
+                                    },
+                                },
+                                "required": ["host", "username"],
+                            },
                         },
                         "client_id": {
                             "type": "string",
@@ -706,6 +739,76 @@ def create_server() -> Server:
             Tool(
                 name="ssh_session_list",
                 description="List all active SSH sessions on the client. Shows session IDs, target hosts, and creation times.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "client_id": {
+                            "type": "string",
+                            "description": "ET Phone Home client (uses active client if not specified)",
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="ssh_session_send",
+                description="Send raw input to an SSH session for interactive prompts (sudo password, y/n confirmations). Does not wait for output - use ssh_session_read after.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "Session ID from ssh_session_open",
+                            "minLength": 1,
+                        },
+                        "text": {
+                            "type": "string",
+                            "description": "Raw text to send to the session",
+                        },
+                        "send_newline": {
+                            "type": "boolean",
+                            "description": "Append newline after text (default: true)",
+                            "default": True,
+                        },
+                        "client_id": {
+                            "type": "string",
+                            "description": "ET Phone Home client (uses active client if not specified)",
+                        },
+                    },
+                    "required": ["session_id", "text"],
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="ssh_session_read",
+                description="Read pending output from an SSH session without sending a command. Use after ssh_session_send or to check for async output.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "Session ID from ssh_session_open",
+                            "minLength": 1,
+                        },
+                        "timeout": {
+                            "type": "number",
+                            "description": "Max seconds to wait for output (default: 0.5)",
+                            "default": 0.5,
+                            "minimum": 0.1,
+                            "maximum": 30.0,
+                        },
+                        "client_id": {
+                            "type": "string",
+                            "description": "ET Phone Home client (uses active client if not specified)",
+                        },
+                    },
+                    "required": ["session_id"],
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="ssh_session_restore",
+                description="Attempt to restore SSH sessions after client reconnect. Only key-authenticated sessions can be auto-restored.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -1168,6 +1271,7 @@ async def _handle_tool(name: str, args: dict) -> Any:
             password=args.get("password"),
             key_file=args.get("key_file"),
             port=args.get("port", 22),
+            jump_hosts=args.get("jump_hosts"),
         )
         return result
 
@@ -1191,6 +1295,31 @@ async def _handle_tool(name: str, args: dict) -> Any:
         client_id = args.get("client_id")
         conn = await get_connection(client_id)
         result = await conn.ssh_session_list()
+        return result
+
+    elif name == "ssh_session_send":
+        client_id = args.get("client_id")
+        conn = await get_connection(client_id)
+        result = await conn.ssh_session_send(
+            session_id=args["session_id"],
+            text=args["text"],
+            send_newline=args.get("send_newline", True),
+        )
+        return result
+
+    elif name == "ssh_session_read":
+        client_id = args.get("client_id")
+        conn = await get_connection(client_id)
+        result = await conn.ssh_session_read(
+            session_id=args["session_id"],
+            timeout=args.get("timeout", 0.5),
+        )
+        return result
+
+    elif name == "ssh_session_restore":
+        client_id = args.get("client_id")
+        conn = await get_connection(client_id)
+        result = await conn.ssh_session_restore()
         return result
 
     # ===== FILE EXCHANGE (R2 STORAGE) =====

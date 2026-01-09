@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "paramiko>=3.0.0",
+    "paramiko-jump>=0.0.6",
     "pyyaml>=6.0",
     "cryptography>=41.0.0",
 ]

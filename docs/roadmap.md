@@ -4,7 +4,7 @@ Planned features and improvements for ET Phone Home.
 
 ---
 
-## Current Version: 0.1.8
+## Current Version: 0.1.9
 
 ### Completed Features
 
@@ -42,6 +42,7 @@ Planned features and improvements for ET Phone Home.
 | Terraform modules | Done | 0.1.6 |
 | SSH session management (Phase 1) | Done | 0.1.7 |
 | Startup recovery for active tunnels | Done | 0.1.8 |
+| SSH session management (Phase 2-3) | Done | 0.1.9 |
 
 ---
 
@@ -69,7 +70,7 @@ Persistent SSH sessions through ET Phone Home clients for stateful remote access
 
 **Solution**: New MCP tools for managing persistent SSH sessions on remote hosts accessed through ET Phone Home clients.
 
-**New Tools**:
+**Tools**:
 | Tool | Description |
 |------|-------------|
 | `ssh_session_open` | Open persistent SSH session to remote host → returns session_id |
@@ -78,6 +79,7 @@ Persistent SSH sessions through ET Phone Home clients for stateful remote access
 | `ssh_session_read` | Read pending output from session |
 | `ssh_session_list` | List active sessions with status |
 | `ssh_session_close` | Close session and free resources |
+| `ssh_session_restore` | Restore sessions after client reconnect |
 
 **Implementation Phases**:
 
@@ -88,17 +90,18 @@ Persistent SSH sessions through ET Phone Home clients for stateful remote access
   - Support password and key file authentication
   - Keepalive to prevent SSH timeout
 
-- [ ] **Phase 2: Enhanced Features**
-  - `ssh_session_send` for interactive prompts
-  - Prompt detection for reliable output capture
-  - `ssh_session_list` for session management
-  - Session metadata (host, user, created_at, last_activity)
+- [x] **Phase 2: Enhanced Features** ✓ (v0.1.9)
+  - `ssh_session_send` for interactive prompts (sudo, confirmations)
+  - `ssh_session_read` for non-blocking output polling
+  - Prompt detection (`PromptDetector`) for reliable output capture
+  - Session metadata with `last_activity` tracking
+  - Idle session cleanup (`SSHSessionCleanup`, 30-minute timeout)
 
-- [ ] **Phase 3: Advanced**
-  - Jump host support via `paramiko-jump` or `jumpssh`
-  - Key-based authentication option
-  - Session persistence across client reconnects
-  - Consider AsyncSSH migration for better performance
+- [x] **Phase 3: Advanced** ✓ (v0.1.9)
+  - Jump host support via `paramiko-jump` library
+  - `ssh_session_restore` for session persistence across client reconnects
+  - `SSHSessionStore` for persisting session metadata to disk
+  - Only key-authenticated sessions can be auto-restored (passwords not stored for security)
 
 **Technical Details**: See [research-interactive-ssh-sessions.md](research-interactive-ssh-sessions.md)
 
@@ -148,6 +151,7 @@ Persistent SSH sessions through ET Phone Home clients for stateful remote access
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.1.9 | 2026-01-08 | SSH session Phase 2-3: `ssh_session_send/read/restore`, jump host support, prompt detection, idle cleanup, session persistence |
 | 0.1.8 | 2026-01-07 | Startup recovery for active tunnels, module duplication fix |
 | 0.1.7 | 2026-01-07 | SSH session management (Phase 1) - persistent sessions with `ssh_session_open/command/close/list` |
 | 0.1.6 | 2026-01-05 | Webhooks, rate limiting, metrics, deployment automation (Ansible/Docker/Terraform), comprehensive tests |
