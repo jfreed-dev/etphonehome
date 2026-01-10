@@ -77,6 +77,15 @@ class JumpHost:
         )
 
 
+# ANSI escape code pattern for stripping colors from terminal output
+ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07")
+
+
+def strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from text."""
+    return ANSI_ESCAPE_PATTERN.sub("", text)
+
+
 class PromptDetector:
     """Detect common shell prompts for command completion."""
 
@@ -89,6 +98,8 @@ class PromptDetector:
         r">>>\s*$",  # Python REPL
         r"\([\w\-]+\)\s*[\$#]\s*$",  # virtualenv prefix
         r"PS\s*[A-Za-z]:\\[^>]*>\s*$",  # PowerShell: PS C:\Users>
+        r"[❯➜→]\s*$",  # Starship/oh-my-zsh: ❯ or ➜ or →
+        r"λ\s*$",  # Lambda prompts
     ]
 
     def __init__(self, custom_patterns: list[str] | None = None):
@@ -120,8 +131,10 @@ class PromptDetector:
             line = line.strip()
             if not line:
                 continue
+            # Strip ANSI escape codes for pattern matching (Starship, etc.)
+            clean_line = strip_ansi(line)
             for pattern in self._patterns:
-                if pattern.search(line):
+                if pattern.search(clean_line):
                     self._last_prompt = line
                     return line
         return None
