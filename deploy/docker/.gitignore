@@ -1,0 +1,12 @@
+# Environment files (contain secrets)
+.env
+
+# Secrets directory
+secrets/*
+!secrets/.gitkeep
+
+# Let's Encrypt certificates
+traefik/acme.json
+
+# Local overrides
+docker-compose.override.yml

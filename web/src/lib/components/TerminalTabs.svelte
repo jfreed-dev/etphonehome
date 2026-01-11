@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import Terminal from './Terminal.svelte';
 	import {
 		terminalState,
 		createSession,
 		closeSession,
 		setActiveSession,
-		getSessionsForClient
+		getSessionsForClient,
+		type TerminalSession
 	} from '$stores/terminal';
 
 	interface Props {
@@ -15,21 +16,40 @@
 
 	let { clientUuid }: Props = $props();
 
-	// Filter sessions for this client
-	let clientSessions = $derived($terminalState.sessions.filter((s) => s.clientUuid === clientUuid));
-	let activeSession = $derived(clientSessions.find((s) => s.id === $terminalState.activeSessionId));
+	// Reactive store subscriptions using Svelte's $ syntax with derived values
+	let storeState = $state<{ sessions: TerminalSession[]; activeSessionId: string | null }>({
+		sessions: [],
+		activeSessionId: null
+	});
+
+	// Derive filtered values
+	let clientSessions = $derived(storeState.sessions.filter((s) => s.clientUuid === clientUuid));
+	let activeSession = $derived(clientSessions.find((s) => s.id === storeState.activeSessionId));
+
+	let unsubscribe: (() => void) | null = null;
 
 	onMount(() => {
+		// Subscribe to store and update local state
+		unsubscribe = terminalState.subscribe((state) => {
+			storeState = { sessions: state.sessions, activeSessionId: state.activeSessionId };
+		});
+
 		// Create initial session if none exist for this client
-		if (getSessionsForClient(clientUuid).length === 0) {
-			createSession(clientUuid);
-		} else {
-			// Set active to first session for this client if current active is different client
-			const sessions = getSessionsForClient(clientUuid);
-			if (sessions.length > 0 && !activeSession) {
-				setActiveSession(sessions[0].id);
+		setTimeout(() => {
+			const existingSessions = getSessionsForClient(clientUuid);
+			if (existingSessions.length === 0) {
+				createSession(clientUuid);
+			} else {
+				const currentActive = clientSessions.find((s) => s.id === storeState.activeSessionId);
+				if (!currentActive && existingSessions.length > 0) {
+					setActiveSession(existingSessions[0].id);
+				}
 			}
-		}
+		}, 0);
+	});
+
+	onDestroy(() => {
+		unsubscribe?.();
 	});
 
 	function handleNewSession() {
@@ -52,12 +72,12 @@
 			{#each clientSessions as session (session.id)}
 				<div
 					class="terminal-tabs__tab"
-					class:terminal-tabs__tab--active={$terminalState.activeSessionId === session.id}
+					class:terminal-tabs__tab--active={activeSession?.id === session.id}
 					onclick={() => handleSelectSession(session.id)}
 					onkeydown={(e) => e.key === 'Enter' && handleSelectSession(session.id)}
 					role="tab"
 					tabindex="0"
-					aria-selected={$terminalState.activeSessionId === session.id}
+					aria-selected={activeSession?.id === session.id}
 				>
 					<span class="terminal-tabs__tab-icon">⬢</span>
 					<span class="terminal-tabs__tab-name">Terminal {session.index}</span>

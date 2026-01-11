@@ -363,6 +363,10 @@ export class WebSocketClient {
 		};
 
 		this.ws.onmessage = (event) => {
+			// Skip ping/pong keepalive messages
+			if (event.data === 'pong' || event.data === 'ping') {
+				return;
+			}
 			try {
 				const message = JSON.parse(event.data);
 				this.handleMessage(message);
