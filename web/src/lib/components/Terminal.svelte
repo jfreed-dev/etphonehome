@@ -1,9 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { Terminal } from '@xterm/xterm';
-	import { FitAddon } from '@xterm/addon-fit';
-	import { WebLinksAddon } from '@xterm/addon-web-links';
-	import '@xterm/xterm/css/xterm.css';
+	import { browser } from '$app/environment';
 	import {
 		terminalState,
 		executeCommand,
@@ -13,6 +10,10 @@
 		type TerminalSession
 	} from '$stores/terminal';
 
+	// Dynamic imports for xterm (browser-only)
+	type TerminalType = import('@xterm/xterm').Terminal;
+	type FitAddonType = import('@xterm/addon-fit').FitAddon;
+
 	interface Props {
 		session: TerminalSession;
 	}
@@ -20,14 +21,27 @@
 	let { session }: Props = $props();
 
 	let terminalElement: HTMLDivElement;
-	let terminal: Terminal;
-	let fitAddon: FitAddon;
+	let terminal: TerminalType;
+	let fitAddon: FitAddonType;
 	let currentLine = '';
 	let cursorPosition = 0;
 
 	const PROMPT = '\x1b[36m➜\x1b[0m ';
 
-	onMount(() => {
+	onMount(async () => {
+		if (!browser) return;
+
+		// Dynamic imports for browser-only xterm
+		const [xtermModule, fitModule, webLinksModule] = await Promise.all([
+			import('@xterm/xterm'),
+			import('@xterm/addon-fit'),
+			import('@xterm/addon-web-links')
+		]);
+		await import('@xterm/xterm/css/xterm.css');
+
+		const { Terminal } = xtermModule;
+		const { FitAddon } = fitModule;
+		const { WebLinksAddon } = webLinksModule;
 		// Initialize xterm.js
 		terminal = new Terminal({
 			cursorBlink: true,

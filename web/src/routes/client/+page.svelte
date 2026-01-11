@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
 	import {
 		clientDetail,
@@ -11,7 +12,15 @@
 	import { clearHistory } from '$stores/commandHistory';
 	import { clearBrowser } from '$stores/fileBrowser';
 	import { clearTerminal } from '$stores/terminal';
-	import { CommandHistory, FileBrowser, TerminalTabs } from '$components';
+	import { CommandHistory, FileBrowser } from '$components';
+
+	// Lazy load TerminalTabs (uses browser-only xterm.js)
+	let TerminalTabs: typeof import('$lib/components/TerminalTabs.svelte').default;
+	if (browser) {
+		import('$lib/components/TerminalTabs.svelte').then((m) => {
+			TerminalTabs = m.default;
+		});
+	}
 
 	type TabId = 'info' | 'terminal' | 'files' | 'history';
 
@@ -224,7 +233,11 @@
 			{:else if activeTab === 'terminal'}
 				<div class="client-detail__terminal">
 					{#if $clientDetail.online && uuid}
-						<TerminalTabs clientUuid={uuid} />
+						{#if TerminalTabs}
+							<svelte:component this={TerminalTabs} clientUuid={uuid} />
+						{:else}
+							<div class="client-detail__loading">Loading terminal...</div>
+						{/if}
 					{:else}
 						<div class="client-detail__offline-notice">
 							<p>Client is offline. Terminal is only available when the client is connected.</p>
