@@ -69,6 +69,19 @@ export const isPreviewLoading = derived(fileBrowserState, ($state) => $state.pre
 export const isUploading = derived(fileBrowserState, ($state) => $state.uploading);
 export const uploadProgress = derived(fileBrowserState, ($state) => $state.uploadProgress);
 
+/**
+ * Parse modified time to milliseconds (handles Unix timestamps and ISO strings)
+ */
+function parseModifiedTime(modified: string | number): number {
+	if (typeof modified === 'number') {
+		return modified * 1000;
+	} else if (typeof modified === 'string' && !isNaN(Number(modified))) {
+		return Number(modified) * 1000;
+	} else {
+		return new Date(modified).getTime();
+	}
+}
+
 // Sorted entries with directories first
 export const sortedEntries = derived(fileBrowserState, ($state) => {
 	const sorted = [...$state.entries].sort((a, b) => {
@@ -86,7 +99,7 @@ export const sortedEntries = derived(fileBrowserState, ($state) => {
 				comparison = a.size - b.size;
 				break;
 			case 'modified':
-				comparison = new Date(a.modified).getTime() - new Date(b.modified).getTime();
+				comparison = parseModifiedTime(a.modified) - parseModifiedTime(b.modified);
 				break;
 			case 'type':
 				comparison = a.type.localeCompare(b.type);
@@ -437,9 +450,27 @@ export function formatSize(bytes: number): string {
 
 /**
  * Format modified date
+ * Handles both Unix timestamps (seconds since epoch) and ISO strings
  */
-export function formatModified(iso: string): string {
-	const date = new Date(iso);
+export function formatModified(modified: string | number): string {
+	let date: Date;
+
+	if (typeof modified === 'number') {
+		// Unix timestamp (seconds) - convert to milliseconds
+		date = new Date(modified * 1000);
+	} else if (typeof modified === 'string' && !isNaN(Number(modified))) {
+		// String that looks like a Unix timestamp
+		date = new Date(Number(modified) * 1000);
+	} else {
+		// ISO string or other date format
+		date = new Date(modified);
+	}
+
+	// Check for invalid date
+	if (isNaN(date.getTime())) {
+		return 'Unknown';
+	}
+
 	const now = new Date();
 	const diff = now.getTime() - date.getTime();
 
@@ -464,7 +495,32 @@ export function getFileIcon(entry: FileEntry): string {
 	if (entry.type === 'dir') return 'folder';
 	if (entry.type === 'symlink') return 'link';
 
-	const ext = entry.name.split('.').pop()?.toLowerCase();
+	const name = entry.name.toLowerCase();
+
+	// Handle dotfiles - they're usually config files
+	if (name.startsWith('.')) {
+		// Check for shell config files
+		if (
+			name.includes('rc') ||
+			name.includes('profile') ||
+			name.includes('aliases') ||
+			name.includes('logout')
+		) {
+			return 'file-code';
+		}
+		// Check for git-related files
+		if (name.startsWith('.git')) {
+			return 'file-config';
+		}
+		// Check for environment files
+		if (name.startsWith('.env')) {
+			return 'file-config';
+		}
+		// Default dotfiles to config icon
+		return 'file-config';
+	}
+
+	const ext = name.split('.').pop()?.toLowerCase();
 	switch (ext) {
 		case 'txt':
 		case 'md':
@@ -515,50 +571,125 @@ export function getFileIcon(entry: FileEntry): string {
 }
 
 /**
+ * Common dotfiles that are previewable text/config files
+ */
+const PREVIEWABLE_DOTFILES = [
+	'.bashrc',
+	'.bash_profile',
+	'.bash_aliases',
+	'.bash_logout',
+	'.profile',
+	'.zshrc',
+	'.zprofile',
+	'.zshenv',
+	'.zlogout',
+	'.vimrc',
+	'.gvimrc',
+	'.exrc',
+	'.inputrc',
+	'.screenrc',
+	'.tmux.conf',
+	'.gitconfig',
+	'.gitignore',
+	'.gitattributes',
+	'.gitmodules',
+	'.hgrc',
+	'.hgignore',
+	'.npmrc',
+	'.yarnrc',
+	'.nvmrc',
+	'.prettierrc',
+	'.eslintrc',
+	'.editorconfig',
+	'.dockerignore',
+	'.env',
+	'.env.local',
+	'.env.example',
+	'.htaccess',
+	'.htpasswd',
+	'.curlrc',
+	'.wgetrc',
+	'.netrc',
+	'.ssh/config',
+	'.gnupg/gpg.conf',
+	'.config',
+	'.xinitrc',
+	'.Xresources',
+	'.xsession',
+	'.pam_environment',
+	'.mailrc',
+	'.muttrc',
+	'.crontab',
+	'.selected_editor'
+];
+
+/**
  * Check if file is previewable
  */
 export function isPreviewable(entry: FileEntry): boolean {
 	if (entry.type !== 'file') return false;
 	if (entry.size > 1024 * 1024) return false; // 1MB limit
 
-	const ext = entry.name.split('.').pop()?.toLowerCase();
-	const previewableExts = [
-		'txt',
-		'md',
-		'log',
-		'js',
-		'ts',
-		'py',
-		'sh',
-		'rs',
-		'go',
-		'json',
-		'yaml',
-		'yml',
-		'xml',
-		'toml',
-		'html',
-		'css',
-		'scss',
-		'svelte',
-		'vue',
-		'jsx',
-		'tsx',
-		'c',
-		'cpp',
-		'h',
-		'java',
-		'rb',
-		'php',
-		'sql',
-		'env',
-		'gitignore',
-		'dockerfile',
-		'makefile',
-		'ini',
-		'conf',
-		'cfg'
-	];
+	const name = entry.name.toLowerCase();
 
+	// Check if it's a known dotfile
+	if (name.startsWith('.')) {
+		// Check exact match first
+		if (PREVIEWABLE_DOTFILES.includes(name)) {
+			return true;
+		}
+		// Check if it's a dotfile with a previewable extension (e.g., .env.local)
+		const parts = name.split('.');
+		if (parts.length > 2) {
+			const ext = parts.pop();
+			if (ext && previewableExts.includes(ext)) {
+				return true;
+			}
+		}
+		// Generic dotfiles without extension are usually config files
+		if (parts.length === 2 && parts[0] === '') {
+			return true; // .bashrc, .vimrc, etc.
+		}
+	}
+
+	const ext = name.split('.').pop()?.toLowerCase();
 	return previewableExts.includes(ext ?? '');
 }
+
+const previewableExts = [
+	'txt',
+	'md',
+	'log',
+	'js',
+	'ts',
+	'py',
+	'sh',
+	'rs',
+	'go',
+	'json',
+	'yaml',
+	'yml',
+	'xml',
+	'toml',
+	'html',
+	'css',
+	'scss',
+	'svelte',
+	'vue',
+	'jsx',
+	'tsx',
+	'c',
+	'cpp',
+	'h',
+	'java',
+	'rb',
+	'php',
+	'sql',
+	'env',
+	'gitignore',
+	'dockerfile',
+	'makefile',
+	'ini',
+	'conf',
+	'cfg'
+];

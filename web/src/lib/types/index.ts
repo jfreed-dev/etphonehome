@@ -177,7 +177,7 @@ export interface FileEntry {
 	type: 'file' | 'dir' | 'symlink';
 	size: number;
 	permissions: string;
-	modified: string;
+	modified: string | number; // Unix timestamp (seconds) or ISO string
 	owner?: string;
 	group?: string;
 	target?: string; // For symlinks
