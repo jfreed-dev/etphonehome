@@ -14,5 +14,7 @@ export { default as FileBrowser } from './FileBrowser.svelte';
 export { default as FileList } from './FileList.svelte';
 export { default as FilePreview } from './FilePreview.svelte';
 export { default as Breadcrumb } from './Breadcrumb.svelte';
-export { default as Terminal } from './Terminal.svelte';
-export { default as TerminalTabs } from './TerminalTabs.svelte';
+
+// Terminal components use browser-only xterm.js - import directly where needed
+// import Terminal from '$lib/components/Terminal.svelte';
+// import TerminalTabs from '$lib/components/TerminalTabs.svelte';
