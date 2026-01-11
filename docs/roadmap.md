@@ -4,7 +4,7 @@ Planned features and improvements for ET Phone Home.
 
 ---
 
-## Current Version: 0.1.9
+## Current Version: 0.1.10
 
 ### Completed Features
 
@@ -43,6 +43,8 @@ Planned features and improvements for ET Phone Home.
 | SSH session management (Phase 1) | Done | 0.1.7 |
 | Startup recovery for active tunnels | Done | 0.1.8 |
 | SSH session management (Phase 2-3) | Done | 0.1.9 |
+| Web management interface (Phase 1-3) | Done | 0.1.10 |
+| Docker production deployment with Traefik | Done | 0.1.10 |
 
 ---
 
@@ -106,6 +108,9 @@ Persistent SSH sessions through ET Phone Home clients for stateful remote access
 **Technical Details**: See [research-interactive-ssh-sessions.md](research-interactive-ssh-sessions.md)
 
 #### Web Management Interface
+
+Svelte + TypeScript + SCSS frontend with real-time client management.
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  ET Phone Home Dashboard                        [user@admin]│
@@ -123,12 +128,41 @@ Persistent SSH sessions through ET Phone Home clients for stateful remote access
 └─────────────────────────────────────────────────────────────┘
 ```
 
-- [ ] Real-time client status dashboard
-- [ ] Browser-based terminal (WebSocket + xterm.js)
-- [ ] File browser with drag-and-drop upload
-- [ ] Command history and favorites
+**Implementation Phases**:
+
+- [x] **Phase 1: Foundation** ✓ (v0.1.10)
+  - Svelte 5 + TypeScript + SCSS project setup
+  - Real-time client status dashboard with WebSocket updates
+  - Client list with online/offline indicators
+  - Client details panel with metadata display
+
+- [x] **Phase 2: Remote Operations** ✓ (v0.1.10)
+  - Browser-based terminal with xterm.js
+  - Multi-tab terminal sessions
+  - Command history with up/down navigation
+  - Ctrl+C, Ctrl+L, Ctrl+U keyboard shortcuts
+
+- [x] **Phase 3: File Management** ✓ (v0.1.10)
+  - File browser with directory navigation
+  - File preview for text/code/config files
+  - Dotfile support (.bashrc, .gitconfig, etc.)
+  - File upload with progress indicator
+  - File download via API
+  - Breadcrumb navigation and history (back/forward)
+
+- [x] **Phase 4: Production Deployment** ✓ (v0.1.10)
+  - Docker multi-stage builds (frontend + backend)
+  - Traefik reverse proxy with SSL termination
+  - Let's Encrypt via Cloudflare DNS-01 challenge
+  - Network isolation (proxy, web, internal)
+  - Docker secrets for API keys
+  - Health checks and logging configuration
+
+**Remaining**:
+- [ ] Command favorites/bookmarks
 - [ ] Multi-client command execution UI
 - [ ] User authentication and RBAC
+- [ ] Dark/light theme toggle
 
 ### Long Term
 
@@ -151,6 +185,7 @@ Persistent SSH sessions through ET Phone Home clients for stateful remote access
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.1.10 | 2026-01-11 | Web management interface: Svelte dashboard, xterm.js terminal, file browser with preview. Docker production deployment with Traefik and Let's Encrypt SSL |
 | 0.1.9 | 2026-01-08 | SSH session Phase 2-3: `ssh_session_send/read/restore`, jump host support, prompt detection, idle cleanup, session persistence |
 | 0.1.8 | 2026-01-07 | Startup recovery for active tunnels, module duplication fix |
 | 0.1.7 | 2026-01-07 | SSH session management (Phase 1) - persistent sessions with `ssh_session_open/command/close/list` |
