@@ -2,6 +2,7 @@
 // ET Phone Home - Global Styles
 // =============================================================================
 
+@use 'sass:color';
 @use 'variables' as *;
 @use 'mixins' as *;
 @use 'components';
@@ -77,7 +78,7 @@ a {
 	transition: color $transition-fast;
 
 	&:hover {
-		color: lighten($accent-cyan, 10%);
+		color: color.adjust($accent-cyan, $lightness: 10%);
 	}
 }
 

@@ -234,7 +234,8 @@
 				<div class="client-detail__terminal">
 					{#if $clientDetail.online && uuid}
 						{#if TerminalTabs}
-							<svelte:component this={TerminalTabs} clientUuid={uuid} />
+							{@const Terminal = TerminalTabs}
+							<Terminal clientUuid={uuid} />
 						{:else}
 							<div class="client-detail__loading">Loading terminal...</div>
 						{/if}
