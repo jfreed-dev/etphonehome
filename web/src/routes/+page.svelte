@@ -117,7 +117,14 @@
 			}
 		}
 
-		&__loading,
+		&__loading {
+			@include panel;
+			@include flex-center;
+			padding: $spacing-2xl;
+			text-align: center;
+			color: $text-400;
+		}
+
 		&__empty {
 			@include panel;
 			@include flex-center;
