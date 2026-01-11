@@ -15,7 +15,9 @@
 	import { CommandHistory, FileBrowser } from '$components';
 
 	// Lazy load TerminalTabs (uses browser-only xterm.js)
-	let TerminalTabs: typeof import('$lib/components/TerminalTabs.svelte').default;
+	let TerminalTabs = $state<typeof import('$lib/components/TerminalTabs.svelte').default | null>(
+		null
+	);
 	if (browser) {
 		import('$lib/components/TerminalTabs.svelte').then((m) => {
 			TerminalTabs = m.default;
