@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
 	import {
 		clientDetail,
@@ -18,11 +17,6 @@
 	let TerminalTabs = $state<typeof import('$lib/components/TerminalTabs.svelte').default | null>(
 		null
 	);
-	if (browser) {
-		import('$lib/components/TerminalTabs.svelte').then((m) => {
-			TerminalTabs = m.default;
-		});
-	}
 
 	type TabId = 'info' | 'terminal' | 'files' | 'history';
 
@@ -33,6 +27,11 @@
 		if (uuid) {
 			fetchClientDetail(uuid);
 		}
+
+		// Load TerminalTabs dynamically (browser-only xterm.js)
+		import('$lib/components/TerminalTabs.svelte').then((m) => {
+			TerminalTabs = m.default;
+		});
 	});
 
 	onDestroy(() => {

@@ -1,0 +1,67 @@
+# =============================================================================
+# ET Phone Home - Traefik Static Configuration
+# =============================================================================
+
+# API and Dashboard
+api:
+  dashboard: true
+  insecure: false  # Dashboard behind authentication
+
+# Logging
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json
+  filters:
+    statusCodes:
+      - "400-599"  # Only log errors
+    retryAttempts: true
+    minDuration: "100ms"
+
+# Entry Points
+entryPoints:
+  # HTTPS only - no port 80 needed with DNS-01 challenge and R2 downloads
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: cloudflare
+    http2:
+      maxConcurrentStreams: 250
+
+# Providers
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: proxy
+    watch: true
+
+  # Dynamic file provider for additional configuration
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+# Certificate Resolvers
+certificatesResolvers:
+  cloudflare:
+    acme:
+      # Email for Let's Encrypt account
+      email: "${ACME_EMAIL}"
+      # Storage file for certificates
+      storage: /letsencrypt/acme.json
+      # DNS-01 challenge using Cloudflare
+      dnsChallenge:
+        provider: cloudflare
+        # Delay before checking DNS propagation
+        delayBeforeCheck: 10s
+        # DNS resolvers for verification
+        resolvers:
+          - "1.1.1.1:53"
+          - "8.8.8.8:53"
+
+# Ping endpoint for health checks
+ping:
+  entryPoint: websecure

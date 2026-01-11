@@ -1,0 +1,69 @@
+# =============================================================================
+# ET Phone Home - Traefik Dynamic Configuration
+# Middleware and security settings
+# =============================================================================
+
+http:
+  middlewares:
+    # Security headers middleware
+    security-headers:
+      headers:
+        browserXssFilter: true
+        contentTypeNosniff: true
+        frameDeny: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customFrameOptionsValue: "SAMEORIGIN"
+        referrerPolicy: "strict-origin-when-cross-origin"
+
+    # Compression middleware
+    compress:
+      compress:
+        excludedContentTypes:
+          - text/event-stream  # Don't compress SSE
+
+    # Rate limiting middleware
+    rate-limit:
+      rateLimit:
+        average: 100
+        period: 1m
+        burst: 50
+
+    # CORS middleware for API
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Authorization
+          - Content-Type
+        accessControlAllowOriginList:
+          - "*"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
+    # Strip /api prefix when proxying to backend
+    strip-api-prefix:
+      stripPrefix:
+        prefixes:
+          - /api
+
+    # Chain middleware for frontend
+    frontend-chain:
+      chain:
+        middlewares:
+          - security-headers
+          - compress
+
+    # Chain middleware for API
+    api-chain:
+      chain:
+        middlewares:
+          - cors
+          - compress
+          - rate-limit
