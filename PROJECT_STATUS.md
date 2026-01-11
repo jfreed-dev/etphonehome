@@ -1,8 +1,29 @@
 # ET Phone Home - Project Status
 
-**Last Updated**: 2026-01-09
-**Version**: 0.1.9
+**Last Updated**: 2026-01-11
+**Version**: 0.1.10
 **Status**: Production-ready
+
+## Recent Changes (v0.1.10)
+
+### Web Management Interface Phase 3 - Terminal & File Browser (2026-01-11)
+
+- **Browser-based terminal**: xterm.js integration with full keyboard support (arrows, Ctrl+C/L/U, history navigation)
+- **Multi-tab terminal sessions**: Create, switch, and close multiple terminal sessions per client
+- **File browser**: Navigate directories, sort by name/size/date, breadcrumb navigation
+- **Drag-and-drop upload**: Drop files onto browser to upload to remote client
+- **File preview**: View text file contents with syntax highlighting hints
+- **File download**: Download files directly from remote clients
+- **Command history**: SQLite-backed persistent storage with search, filter, and re-run
+- **New backend module**: `server/command_history.py` for command record persistence
+- **New API endpoints**:
+  - `GET/POST /api/v1/clients/{uuid}/history` - Command history and execution
+  - `GET /api/v1/clients/{uuid}/files` - Directory listing
+  - `GET /api/v1/clients/{uuid}/files/preview` - File content preview
+  - `GET /api/v1/clients/{uuid}/files/download` - File download
+  - `POST /api/v1/clients/{uuid}/files/upload` - Multipart file upload
+- **8 new Svelte components**: Terminal, TerminalTabs, FileBrowser, FileList, FilePreview, Breadcrumb, CommandHistory
+- **3 new stores**: terminal.ts, fileBrowser.ts, commandHistory.ts
 
 ## Recent Changes (v0.1.9)
 
@@ -149,26 +170,21 @@
 | SFTP file transfers | ✓ Complete | Streaming transfers via `upload_file`/`download_file` |
 | R2 file exchange | ✓ Complete | Async transfers via `exchange_*` tools |
 | R2 key rotation | ✓ Complete | `r2_rotate_keys`, `r2_list_tokens`, `r2_check_rotation_status` |
-| Web management interface | ✓ Phase 1-2 | Dashboard, REST API, WebSocket + Svelte/TypeScript/SCSS frontend |
+| Web management interface | ✓ Phase 1-3 | Dashboard, REST API, WebSocket, Svelte frontend, Terminal, File Browser, Command History |
 
 ## Next Steps (Priority Order)
 
-### 1. Web Management Interface Phase 3
-- Browser-based terminal (WebSocket + xterm.js)
-- File browser with drag-and-drop upload
-- Command history and output viewer
+### 1. Web Management Interface Phase 4
+- User authentication and RBAC
+- Multi-user session management
+- Audit logging with retention
 
 ### 2. Platform Expansion
 - macOS support (Intel and Apple Silicon)
 - Windows ARM64 support
 - Windows service wrapper (NSSM alternative)
 
-### 3. Web Management Interface Phase 4
-- User authentication and RBAC
-- Multi-user session management
-- Audit logging with retention
-
-### 4. Enterprise Features
+### 3. Enterprise Features
 - Multi-tenant support
 - Prometheus metrics endpoint
 - Grafana dashboard template
@@ -186,6 +202,7 @@ Messages: [4-byte length][JSON-RPC payload]
 - **Entry points**: `client/phonehome.py`, `server/mcp_server.py`
 - **Core logic**: `client/tunnel.py`, `client/agent.py`, `server/client_connection.py`
 - **HTTP server**: `server/http_server.py` (REST API, WebSocket, static files)
+- **Command history**: `server/command_history.py` (SQLite-backed command storage)
 - **Web UI (vanilla)**: `server/static/` (dashboard, client detail, JS, CSS, icons)
 - **Web UI (Svelte)**: `web/` (SvelteKit + TypeScript + SCSS frontend)
   - Components: `web/src/lib/components/`
@@ -244,17 +261,16 @@ ruff check --fix .
 
 1. **No macOS support** - Darwin builds not yet implemented
 2. **No Windows Server docs** - Setup guide is Linux-focused
-3. **No browser terminal** - Web dashboard shows status only, no command execution yet
-4. **No multi-user auth** - Single API key authentication, no user accounts or RBAC
-5. **Two UI codebases** - Vanilla JS (`server/static/`) and Svelte (`web/`) coexist during transition
+3. **No multi-user auth** - Single API key authentication, no user accounts or RBAC
+4. **Two UI codebases** - Vanilla JS (`server/static/`) and Svelte (`web/`) coexist during transition
 
 ## Active Deployments
 
 | Client | Architecture | Platform | Version | Status |
 |--------|--------------|----------|---------|--------|
-| lokipopcosmic (Jon Laptop) | x86_64 | Linux (Pop!_OS) | 0.1.9 | Online |
-| spark-2f34 (DGX Spark) | aarch64 | Linux (NVIDIA) | 0.1.9 | Online |
-| ep-dev-ts (iad-m-rdp06) | x86_64 | Windows Server 2019 | 0.1.9 | Online |
+| lokipopcosmic (Jon Laptop) | x86_64 | Linux (Pop!_OS) | 0.1.10 | Online |
+| spark-2f34 (DGX Spark) | aarch64 | Linux (NVIDIA) | 0.1.10 | Online |
+| ep-dev-ts (iad-m-rdp06) | x86_64 | Windows Server 2019 | 0.1.10 | Online |
 
 **Update Server**: http://72.60.125.7/latest/version.json
 

@@ -26,6 +26,7 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from server.command_history import get_history_store, record_command
 from shared.version import __version__
 
 logger = logging.getLogger("etphonehome.http")
@@ -393,6 +394,341 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
         return JSONResponse({"events": events})
 
     # =========================================================================
+    # Command History Endpoints
+    # =========================================================================
+
+    async def api_command_history(request: Request) -> JSONResponse:
+        """Get command history for a client."""
+        uuid = request.path_params["uuid"]
+        limit = int(request.query_params.get("limit", 50))
+        offset = int(request.query_params.get("offset", 0))
+        search = request.query_params.get("search")
+        status = request.query_params.get("status")  # 'success', 'failed', or None
+
+        # Convert status to returncode filter
+        returncode_filter = None
+        if status == "success":
+            returncode_filter = 0
+        elif status == "failed":
+            returncode_filter = -1  # Non-zero
+
+        store = get_history_store()
+        records, total = await store.list_for_client(
+            client_uuid=uuid,
+            limit=limit,
+            offset=offset,
+            search=search,
+            returncode_filter=returncode_filter,
+        )
+
+        return JSONResponse(
+            {
+                "commands": [r.to_dict() for r in records],
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+            }
+        )
+
+    async def api_command_detail(request: Request) -> JSONResponse:
+        """Get a single command record."""
+        command_id = request.path_params["command_id"]
+        store = get_history_store()
+        record = await store.get(command_id)
+
+        if record is None:
+            return JSONResponse({"error": "Command not found"}, status_code=404)
+
+        return JSONResponse(record.to_dict())
+
+    async def api_run_command(request: Request) -> JSONResponse:
+        """Run a command on a client and save to history."""
+        from datetime import datetime, timezone
+
+        from server.mcp_server import get_connection
+
+        uuid = request.path_params["uuid"]
+
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+
+        command = body.get("command")
+        if not command:
+            return JSONResponse({"error": "Missing 'command' field"}, status_code=400)
+
+        cwd = body.get("cwd")
+        timeout = body.get("timeout", 300)
+
+        # Verify client exists
+        client_info = await registry.describe_client(uuid)
+        if client_info is None:
+            return JSONResponse({"error": "Client not found"}, status_code=404)
+
+        # Check if client is online
+        if not client_info.get("online", False):
+            return JSONResponse({"error": "Client is offline"}, status_code=503)
+
+        started_at = datetime.now(timezone.utc)
+
+        try:
+            # Get connection and execute command
+            conn = await get_connection(uuid)
+            result = await conn.run_command(command, cwd=cwd, timeout=timeout)
+            completed_at = datetime.now(timezone.utc)
+
+            # Record to history
+            record = await record_command(
+                client_uuid=uuid,
+                command=command,
+                cwd=cwd,
+                stdout=result.get("stdout", ""),
+                stderr=result.get("stderr", ""),
+                returncode=result.get("returncode", -1),
+                started_at=started_at,
+                completed_at=completed_at,
+                user="web",
+            )
+
+            # Add event
+            _event_store.add(
+                event_type="command_executed",
+                client_uuid=uuid,
+                client_name=client_info.get("display_name", "Unknown"),
+                summary=f"Ran: {command[:50]}{'...' if len(command) > 50 else ''}",
+                data={"command": command, "returncode": result.get("returncode", -1)},
+            )
+
+            return JSONResponse(record.to_dict())
+
+        except Exception as e:
+            completed_at = datetime.now(timezone.utc)
+
+            # Record failed command to history
+            record = await record_command(
+                client_uuid=uuid,
+                command=command,
+                cwd=cwd,
+                stdout="",
+                stderr=str(e),
+                returncode=-1,
+                started_at=started_at,
+                completed_at=completed_at,
+                user="web",
+            )
+
+            return JSONResponse({"error": str(e), "record": record.to_dict()}, status_code=500)
+
+    # =========================================================================
+    # File Browser Endpoints
+    # =========================================================================
+
+    async def api_list_files(request: Request) -> JSONResponse:
+        """List files in a directory on a client."""
+        from server.mcp_server import get_connection
+
+        uuid = request.path_params["uuid"]
+        path = request.query_params.get("path", "/")
+
+        # Verify client exists and is online
+        client_info = await registry.describe_client(uuid)
+        if client_info is None:
+            return JSONResponse({"error": "Client not found"}, status_code=404)
+        if not client_info.get("online", False):
+            return JSONResponse({"error": "Client is offline"}, status_code=503)
+
+        try:
+            conn = await get_connection(uuid)
+            result = await conn.list_files(path)
+
+            # Add event
+            _event_store.add(
+                event_type="file_accessed",
+                client_uuid=uuid,
+                client_name=client_info.get("display_name", "Unknown"),
+                summary=f"Listed: {path}",
+                data={"path": path, "operation": "list"},
+            )
+
+            return JSONResponse(
+                {
+                    "path": path,
+                    "entries": result.get("files", []),
+                }
+            )
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+    async def api_file_preview(request: Request) -> JSONResponse:
+        """Preview file content (text files only, limited size)."""
+        from server.mcp_server import get_connection
+
+        uuid = request.path_params["uuid"]
+        path = request.query_params.get("path")
+
+        if not path:
+            return JSONResponse({"error": "Missing 'path' parameter"}, status_code=400)
+
+        # Verify client exists and is online
+        client_info = await registry.describe_client(uuid)
+        if client_info is None:
+            return JSONResponse({"error": "Client not found"}, status_code=404)
+        if not client_info.get("online", False):
+            return JSONResponse({"error": "Client is offline"}, status_code=503)
+
+        try:
+            conn = await get_connection(uuid)
+            result = await conn.read_file(path)
+
+            content = result.get("content", "")
+            binary = result.get("binary", False)
+            size = result.get("size", len(content))
+
+            # Determine MIME type from extension
+            ext = Path(path).suffix.lower()
+            mime_types = {
+                ".txt": "text/plain",
+                ".md": "text/markdown",
+                ".py": "text/x-python",
+                ".js": "text/javascript",
+                ".ts": "text/typescript",
+                ".json": "application/json",
+                ".yaml": "text/yaml",
+                ".yml": "text/yaml",
+                ".xml": "text/xml",
+                ".html": "text/html",
+                ".css": "text/css",
+                ".sh": "text/x-shellscript",
+                ".log": "text/plain",
+                ".csv": "text/csv",
+            }
+            mime_type = mime_types.get(ext, "application/octet-stream")
+
+            return JSONResponse(
+                {
+                    "path": path,
+                    "content": content if not binary else None,
+                    "binary": binary,
+                    "size": size,
+                    "mimeType": mime_type,
+                }
+            )
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+    async def api_file_download(request: Request) -> Response:
+        """Download a file from a client."""
+
+        from server.mcp_server import get_connection
+
+        uuid = request.path_params["uuid"]
+        path = request.query_params.get("path")
+
+        if not path:
+            return JSONResponse({"error": "Missing 'path' parameter"}, status_code=400)
+
+        # Verify client exists and is online
+        client_info = await registry.describe_client(uuid)
+        if client_info is None:
+            return JSONResponse({"error": "Client not found"}, status_code=404)
+        if not client_info.get("online", False):
+            return JSONResponse({"error": "Client is offline"}, status_code=503)
+
+        try:
+            conn = await get_connection(uuid)
+            result = await conn.read_file(path)
+
+            content = result.get("content", "")
+            binary = result.get("binary", False)
+
+            # Convert content to bytes
+            if binary:
+                import base64
+
+                data = base64.b64decode(content)
+            else:
+                data = content.encode("utf-8")
+
+            filename = Path(path).name
+
+            # Add event
+            _event_store.add(
+                event_type="file_accessed",
+                client_uuid=uuid,
+                client_name=client_info.get("display_name", "Unknown"),
+                summary=f"Downloaded: {filename}",
+                data={"path": path, "operation": "download"},
+            )
+
+            return Response(
+                content=data,
+                media_type="application/octet-stream",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            )
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+    async def api_file_upload(request: Request) -> JSONResponse:
+        """Upload a file to a client."""
+        from server.mcp_server import get_connection
+
+        uuid = request.path_params["uuid"]
+
+        # Verify client exists and is online
+        client_info = await registry.describe_client(uuid)
+        if client_info is None:
+            return JSONResponse({"error": "Client not found"}, status_code=404)
+        if not client_info.get("online", False):
+            return JSONResponse({"error": "Client is offline"}, status_code=503)
+
+        try:
+            # Parse multipart form data
+            form = await request.form()
+            file = form.get("file")
+            dest_path = form.get("path")
+
+            if not file:
+                return JSONResponse({"error": "No file provided"}, status_code=400)
+            if not dest_path:
+                return JSONResponse({"error": "Missing 'path' field"}, status_code=400)
+
+            # Read file content
+            content = await file.read()
+
+            # Check if binary (try to decode as UTF-8)
+            try:
+                text_content = content.decode("utf-8")
+                binary = False
+            except UnicodeDecodeError:
+                import base64
+
+                text_content = base64.b64encode(content).decode("ascii")
+                binary = True
+
+            conn = await get_connection(uuid)
+            await conn.write_file(dest_path, text_content)
+
+            # Add event
+            _event_store.add(
+                event_type="file_accessed",
+                client_uuid=uuid,
+                client_name=client_info.get("display_name", "Unknown"),
+                summary=f"Uploaded: {Path(dest_path).name}",
+                data={"path": dest_path, "operation": "upload", "size": len(content)},
+            )
+
+            return JSONResponse(
+                {
+                    "path": dest_path,
+                    "size": len(content),
+                    "binary": binary,
+                }
+            )
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+    # =========================================================================
     # WebSocket Endpoint
     # =========================================================================
 
@@ -448,6 +784,43 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
         Route("/api/v1/clients", endpoint=api_clients, methods=["GET"]),
         Route("/api/v1/clients/{uuid}", endpoint=api_client_detail, methods=["GET"]),
         Route("/api/v1/events", endpoint=api_events, methods=["GET"]),
+        # Command History API
+        Route(
+            "/api/v1/clients/{uuid}/history",
+            endpoint=api_command_history,
+            methods=["GET"],
+        ),
+        Route(
+            "/api/v1/clients/{uuid}/history",
+            endpoint=api_run_command,
+            methods=["POST"],
+        ),
+        Route(
+            "/api/v1/clients/{uuid}/history/{command_id}",
+            endpoint=api_command_detail,
+            methods=["GET"],
+        ),
+        # File Browser API
+        Route(
+            "/api/v1/clients/{uuid}/files",
+            endpoint=api_list_files,
+            methods=["GET"],
+        ),
+        Route(
+            "/api/v1/clients/{uuid}/files/preview",
+            endpoint=api_file_preview,
+            methods=["GET"],
+        ),
+        Route(
+            "/api/v1/clients/{uuid}/files/download",
+            endpoint=api_file_download,
+            methods=["GET"],
+        ),
+        Route(
+            "/api/v1/clients/{uuid}/files/upload",
+            endpoint=api_file_upload,
+            methods=["POST"],
+        ),
         # WebSocket
         WebSocketRoute("/api/v1/ws", endpoint=websocket_handler),
     ]

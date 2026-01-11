@@ -9,7 +9,12 @@ import type {
 	ClientsResponse,
 	DashboardData,
 	EventsResponse,
-	ActivityEvent
+	ActivityEvent,
+	CommandRecord,
+	CommandHistoryResponse,
+	FileListResponse,
+	FilePreview,
+	UploadResponse
 } from '$types';
 
 // -----------------------------------------------------------------------------
@@ -151,6 +156,152 @@ export const api = {
 		} catch {
 			return false;
 		}
+	},
+
+	// -------------------------------------------------------------------------
+	// Command History API
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Get command history for a client
+	 */
+	async getCommandHistory(
+		clientUuid: string,
+		options?: {
+			limit?: number;
+			offset?: number;
+			search?: string;
+			status?: 'all' | 'success' | 'failed';
+		}
+	): Promise<ApiResponse<CommandHistoryResponse>> {
+		const params = new URLSearchParams();
+		if (options?.limit) params.set('limit', String(options.limit));
+		if (options?.offset) params.set('offset', String(options.offset));
+		if (options?.search) params.set('search', options.search);
+		if (options?.status && options.status !== 'all') {
+			params.set('status', options.status);
+		}
+		const query = params.toString();
+		return request<CommandHistoryResponse>(
+			`/clients/${clientUuid}/history${query ? `?${query}` : ''}`
+		);
+	},
+
+	/**
+	 * Get a single command record
+	 */
+	async getCommandDetail(
+		clientUuid: string,
+		commandId: string
+	): Promise<ApiResponse<CommandRecord>> {
+		return request<CommandRecord>(`/clients/${clientUuid}/history/${commandId}`);
+	},
+
+	/**
+	 * Run a command on a client and save to history
+	 */
+	async runCommand(
+		clientUuid: string,
+		command: string,
+		options?: {
+			cwd?: string;
+			timeout?: number;
+		}
+	): Promise<ApiResponse<CommandRecord>> {
+		return request<CommandRecord>(`/clients/${clientUuid}/history`, {
+			method: 'POST',
+			body: JSON.stringify({
+				command,
+				cwd: options?.cwd,
+				timeout: options?.timeout
+			})
+		});
+	},
+
+	// -------------------------------------------------------------------------
+	// File Browser API
+	// -------------------------------------------------------------------------
+
+	/**
+	 * List files in a directory
+	 */
+	async listFiles(
+		clientUuid: string,
+		path: string = '/'
+	): Promise<ApiResponse<FileListResponse>> {
+		return request<FileListResponse>(
+			`/clients/${clientUuid}/files?path=${encodeURIComponent(path)}`
+		);
+	},
+
+	/**
+	 * Preview file content
+	 */
+	async previewFile(
+		clientUuid: string,
+		path: string
+	): Promise<ApiResponse<FilePreview>> {
+		return request<FilePreview>(
+			`/clients/${clientUuid}/files/preview?path=${encodeURIComponent(path)}`
+		);
+	},
+
+	/**
+	 * Download a file (triggers browser download)
+	 */
+	downloadFile(clientUuid: string, path: string): void {
+		const token = getApiToken();
+		const url = `${API_BASE}/clients/${clientUuid}/files/download?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token || '')}`;
+		window.location.href = url;
+	},
+
+	/**
+	 * Upload a file to a client
+	 */
+	async uploadFile(
+		clientUuid: string,
+		file: File,
+		destPath: string,
+		onProgress?: (percent: number) => void
+	): Promise<ApiResponse<UploadResponse>> {
+		const token = getApiToken();
+
+		return new Promise((resolve) => {
+			const xhr = new XMLHttpRequest();
+			const formData = new FormData();
+			formData.append('file', file);
+			formData.append('path', destPath);
+
+			xhr.upload.onprogress = (event) => {
+				if (event.lengthComputable && onProgress) {
+					const percent = Math.round((event.loaded / event.total) * 100);
+					onProgress(percent);
+				}
+			};
+
+			xhr.onload = () => {
+				try {
+					const data = JSON.parse(xhr.responseText);
+					if (xhr.status >= 200 && xhr.status < 300) {
+						resolve({ data, error: null });
+					} else {
+						resolve({ data: null, error: data.error || `Upload failed: ${xhr.status}` });
+					}
+				} catch {
+					resolve({ data: null, error: 'Failed to parse response' });
+				}
+			};
+
+			xhr.onerror = () => {
+				resolve({ data: null, error: 'Network error during upload' });
+			};
+
+			xhr.open('POST', `${API_BASE}/clients/${clientUuid}/files/upload`);
+			if (token) {
+				xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+			}
+			xhr.send(formData);
+		});
 	}
 };
 
