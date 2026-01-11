@@ -167,21 +167,41 @@ export async function executeCommand(sessionId: string, command: string): Promis
 		return null;
 	}
 
-	// Handle cd command to track working directory
-	const cdMatch = command.trim().match(/^cd\s+(.+)$/);
+	// Check if this is a cd command
+	const cdMatch = command.trim().match(/^cd(\s+(.*))?$/);
+	let actualCommand = command;
+	let isCdCommand = false;
+
 	if (cdMatch) {
-		const newDir = cdMatch[1].trim();
+		isCdCommand = true;
+		// Combine cd with pwd to get the new absolute path
+		// If just "cd" with no args, go to home
+		const cdArg = cdMatch[2]?.trim() || '~';
+		if (cdArg === '~') {
+			actualCommand = 'cd && pwd';
+		} else {
+			actualCommand = `cd ${cdArg} && pwd`;
+		}
+	}
+
+	const response = await api.runCommand(session.clientUuid, actualCommand, {
+		cwd: session.cwd !== '~' ? session.cwd : undefined
+	});
+
+	// If cd command succeeded, update cwd with the pwd output
+	if (isCdCommand && response.data?.returncode === 0 && response.data?.stdout) {
+		const newCwd = response.data.stdout.trim();
 		terminalState.update((s) => ({
 			...s,
 			sessions: s.sessions.map((sess) =>
-				sess.id === sessionId ? { ...sess, cwd: newDir } : sess
+				sess.id === sessionId ? { ...sess, cwd: newCwd } : sess
 			)
 		}));
+		// Clear the stdout so it doesn't show the pwd output
+		if (response.data) {
+			response.data.stdout = '';
+		}
 	}
-
-	const response = await api.runCommand(session.clientUuid, command, {
-		cwd: session.cwd !== '~' ? session.cwd : undefined
-	});
 
 	if (response.error) {
 		terminalState.update((s) => ({
