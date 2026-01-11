@@ -23,6 +23,7 @@
 	let terminalElement: HTMLDivElement;
 	let terminal: TerminalType;
 	let fitAddon: FitAddonType;
+	let resizeObserver: ResizeObserver | null = null;
 	let currentLine = '';
 	let cursorPosition = 0;
 
@@ -101,18 +102,14 @@
 		terminal.onData(handleInput);
 
 		// Handle resize
-		const resizeObserver = new ResizeObserver(() => {
+		resizeObserver = new ResizeObserver(() => {
 			fitAddon.fit();
 		});
 		resizeObserver.observe(terminalElement);
-
-		return () => {
-			resizeObserver.disconnect();
-			terminal.dispose();
-		};
 	});
 
 	onDestroy(() => {
+		resizeObserver?.disconnect();
 		terminal?.dispose();
 	});
 
