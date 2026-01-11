@@ -95,6 +95,22 @@ def get_default_log_dir(component: str = "client") -> Path:
         return Path.home() / ".etphonehome" / "logs"
 
 
+def get_logger(name: str) -> logging.Logger:
+    """
+    Get a logger instance with the given name.
+
+    This is a simple wrapper that returns a standard Python logger.
+    For more control, use setup_logging() instead.
+
+    Args:
+        name: Logger name (typically __name__)
+
+    Returns:
+        Logger instance
+    """
+    return logging.getLogger(name)
+
+
 def get_default_log_file(component: str = "client") -> Path:
     """
     Get the default log file path for a component.
