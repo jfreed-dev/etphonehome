@@ -554,7 +554,7 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
             return JSONResponse(
                 {
                     "path": path,
-                    "entries": result.get("files", []),
+                    "entries": result.get("entries", []),
                 }
             )
         except Exception as e:

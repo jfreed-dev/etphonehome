@@ -1,0 +1,39 @@
+# Dependencies (installed during build)
+node_modules
+
+# Build output (rebuilt during build)
+build
+.svelte-kit
+
+# Development files
+.env
+.env.*
+!.env.example
+
+# IDE/Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test files
+coverage
+*.test.ts
+*.spec.ts
+
+# Documentation (not needed in image)
+*.md
+!README.md
+
+# Git
+.git
+.gitignore

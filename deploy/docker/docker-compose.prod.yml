@@ -1,0 +1,214 @@
+# =============================================================================
+# ET Phone Home - Production Docker Compose
+# Traefik reverse proxy with Let's Encrypt SSL via Cloudflare DNS
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Traefik Reverse Proxy
+  # ---------------------------------------------------------------------------
+  traefik:
+    image: traefik:v3.0
+    container_name: etphonehome-proxy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    ports:
+      # HTTPS only - no port 80 needed with DNS-01 challenge
+      - "443:443"
+    environment:
+      # Cloudflare API token for DNS-01 challenge
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      # Docker socket for container discovery (read-only)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Traefik configuration
+      - ./traefik/traefik.yml:/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      # Let's Encrypt certificate storage
+      - letsencrypt:/letsencrypt
+      # Timezone
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      traefik.enable: "true"
+      # Dashboard (optional - remove in high-security environments)
+      traefik.http.routers.dashboard.rule: "Host(`${DOMAIN}`) && PathPrefix(`/traefik`)"
+      traefik.http.routers.dashboard.service: "api@internal"
+      traefik.http.routers.dashboard.entrypoints: "websecure"
+      traefik.http.routers.dashboard.tls.certresolver: "cloudflare"
+      traefik.http.routers.dashboard.middlewares: "dashboard-auth"
+      # Basic auth for dashboard (generate with: htpasswd -nb admin password)
+      traefik.http.middlewares.dashboard-auth.basicauth.users: "${TRAEFIK_DASHBOARD_AUTH}"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # Frontend (Svelte SPA served by nginx)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../../web
+      dockerfile: Dockerfile
+    container_name: etphonehome-frontend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+      - web
+    environment:
+      # API URL for client-side requests (routed through Traefik)
+      PUBLIC_API_URL: "https://${DOMAIN}/api"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      traefik.enable: "true"
+      # Main frontend route
+      traefik.http.routers.frontend.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.frontend.entrypoints: "websecure"
+      traefik.http.routers.frontend.tls.certresolver: "cloudflare"
+      traefik.http.routers.frontend.middlewares: "frontend-chain@file"
+      traefik.http.services.frontend.loadbalancer.server.port: "3000"
+      # Lower priority so API routes match first
+      traefik.http.routers.frontend.priority: "1"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Backend (Python MCP Server)
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.server
+    container_name: etphonehome-backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+      - web
+      - internal
+    ports:
+      # SSH tunnel port for ET Phone Home clients
+      - "2222:2222"
+    environment:
+      ETPHONEHOME_HOST: "0.0.0.0"
+      ETPHONEHOME_PORT: "8765"
+      ETPHONEHOME_SSH_PORT: "2222"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # R2 configuration (for file exchange)
+      ETPHONEHOME_R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      ETPHONEHOME_R2_ACCESS_KEY: ${R2_ACCESS_KEY:-}
+      ETPHONEHOME_R2_SECRET_KEY: ${R2_SECRET_KEY:-}
+      ETPHONEHOME_R2_BUCKET: ${R2_BUCKET:-}
+    secrets:
+      - api_key
+    volumes:
+      # Persistent data
+      - server-data:/var/lib/etphonehome
+      # Logs
+      - server-logs:/var/log/etphonehome
+      # Timezone
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      traefik.enable: "true"
+      # API routes
+      traefik.http.routers.backend-api.rule: "Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      traefik.http.routers.backend-api.entrypoints: "websecure"
+      traefik.http.routers.backend-api.tls.certresolver: "cloudflare"
+      traefik.http.routers.backend-api.middlewares: "api-chain@file"
+      traefik.http.routers.backend-api.priority: "10"
+      traefik.http.services.backend-api.loadbalancer.server.port: "8765"
+      # SSE routes (for MCP protocol)
+      traefik.http.routers.backend-sse.rule: "Host(`${DOMAIN}`) && PathPrefix(`/sse`)"
+      traefik.http.routers.backend-sse.entrypoints: "websecure"
+      traefik.http.routers.backend-sse.tls.certresolver: "cloudflare"
+      traefik.http.routers.backend-sse.priority: "10"
+      traefik.http.services.backend-sse.loadbalancer.server.port: "8765"
+      # Health endpoint
+      traefik.http.routers.backend-health.rule: "Host(`${DOMAIN}`) && Path(`/health`)"
+      traefik.http.routers.backend-health.entrypoints: "websecure"
+      traefik.http.routers.backend-health.tls.certresolver: "cloudflare"
+      traefik.http.routers.backend-health.priority: "10"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# -----------------------------------------------------------------------------
+# Networks
+# -----------------------------------------------------------------------------
+networks:
+  # External-facing network (Traefik routes to services)
+  proxy:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br_proxy
+
+  # Web tier network (frontend <-> backend communication)
+  web:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br_web
+
+  # Internal network (backend <-> databases, future services)
+  internal:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br_internal
+    internal: true
+
+# -----------------------------------------------------------------------------
+# Volumes
+# -----------------------------------------------------------------------------
+volumes:
+  # Let's Encrypt certificates
+  letsencrypt:
+    driver: local
+
+  # Backend persistent data
+  server-data:
+    driver: local
+
+  # Backend logs
+  server-logs:
+    driver: local
+
+# -----------------------------------------------------------------------------
+# Secrets
+# -----------------------------------------------------------------------------
+secrets:
+  api_key:
+    file: ./secrets/api_key.txt

@@ -124,7 +124,10 @@
 			// Color output based on success/failure
 			const color = entry.returncode === 0 ? '' : '\x1b[31m';
 			const reset = entry.returncode === 0 ? '' : '\x1b[0m';
-			terminal.writeln(color + entry.output + reset);
+			terminal.write(color + normalizeLineEndings(entry.output) + reset);
+			if (!entry.output.endsWith('\n')) {
+				terminal.write('\r\n');
+			}
 		}
 	}
 
@@ -251,6 +254,13 @@
 		}
 	}
 
+	/**
+	 * Convert LF to CRLF for proper xterm.js display
+	 */
+	function normalizeLineEndings(text: string): string {
+		return text.replace(/\r?\n/g, '\r\n');
+	}
+
 	async function runCommand(command: string) {
 		terminal.writeln(`\x1b[90mExecuting...\x1b[0m`);
 
@@ -259,12 +269,19 @@
 		if (command.trim() === 'clear') {
 			terminal.clear();
 		} else if (result) {
-			// Write output
+			// Write output with proper line endings
 			if (result.stdout) {
-				terminal.writeln(result.stdout);
+				terminal.write(normalizeLineEndings(result.stdout));
+				// Add final newline if not present
+				if (!result.stdout.endsWith('\n')) {
+					terminal.write('\r\n');
+				}
 			}
 			if (result.stderr) {
-				terminal.writeln(`\x1b[31m${result.stderr}\x1b[0m`);
+				terminal.write(`\x1b[31m${normalizeLineEndings(result.stderr)}\x1b[0m`);
+				if (!result.stderr.endsWith('\n')) {
+					terminal.write('\r\n');
+				}
 			}
 
 			// Show exit code if non-zero
