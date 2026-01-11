@@ -151,12 +151,88 @@ export interface CommandResult {
 	duration_ms: number;
 }
 
+export interface CommandRecord {
+	id: string;
+	client_uuid: string;
+	command: string;
+	cwd: string | null;
+	stdout: string;
+	stderr: string;
+	returncode: number;
+	started_at: string;
+	completed_at: string;
+	duration_ms: number;
+	user: string;
+}
+
+export interface CommandHistoryResponse {
+	commands: CommandRecord[];
+	total: number;
+	limit: number;
+	offset: number;
+}
+
 export interface FileEntry {
 	name: string;
-	type: 'file' | 'dir';
+	type: 'file' | 'dir' | 'symlink';
 	size: number;
 	permissions: string;
 	modified: string;
+	owner?: string;
+	group?: string;
+	target?: string; // For symlinks
+}
+
+export interface FileListResponse {
+	path: string;
+	entries: FileEntry[];
+}
+
+export interface FilePreview {
+	path: string;
+	content: string | null;
+	binary: boolean;
+	size: number;
+	mimeType: string;
+}
+
+export interface UploadProgress {
+	filename: string;
+	loaded: number;
+	total: number;
+	percent: number;
+}
+
+export interface UploadResponse {
+	path: string;
+	size: number;
+	binary: boolean;
+}
+
+// -----------------------------------------------------------------------------
+// Terminal Types
+// -----------------------------------------------------------------------------
+
+// Note: TerminalSession is defined in stores/terminal.ts as TerminalSessionState
+
+export type TerminalMessageType =
+	| 'terminal.open'
+	| 'terminal.input'
+	| 'terminal.output'
+	| 'terminal.resize'
+	| 'terminal.close'
+	| 'terminal.error';
+
+export interface TerminalMessage {
+	type: TerminalMessageType;
+	data: {
+		session_id?: string;
+		client_uuid?: string;
+		data?: string;
+		rows?: number;
+		cols?: number;
+		error?: string;
+	};
 }
 
 // -----------------------------------------------------------------------------
