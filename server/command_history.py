@@ -231,16 +231,16 @@ class CommandHistoryStore:
 
                 where_clause = " AND ".join(where_parts)
 
-                # Get total count
+                # Get total count (where_clause is built from hardcoded strings, values are parameterized)
                 count_cursor = conn.execute(
-                    f"SELECT COUNT(*) FROM command_history WHERE {where_clause}",
+                    f"SELECT COUNT(*) FROM command_history WHERE {where_clause}",  # nosec B608
                     params,
                 )
                 total = count_cursor.fetchone()[0]
 
-                # Get records
+                # Get records (where_clause is built from hardcoded strings, values are parameterized)
                 params.extend([limit, offset])
-                cursor = conn.execute(
+                cursor = conn.execute(  # nosec B608
                     f"""
                     SELECT id, client_uuid, command, cwd, stdout, stderr,
                            returncode, started_at, completed_at, duration_ms, user
