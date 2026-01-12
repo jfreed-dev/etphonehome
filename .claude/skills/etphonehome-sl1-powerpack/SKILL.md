@@ -656,3 +656,374 @@ WHERE ld.device LIKE '%ION%';
 | List devices | `mysql master_dev -e "SELECT id,device,class_type FROM legend_device WHERE device LIKE '%name%';"` |
 | Check device class | `mysql master -e "SELECT id,descript FROM definitions_dev_classes WHERE id={CLASS_ID};"` |
 | Component mapping | `mysql master -e "SELECT * FROM dynamic_app_component WHERE app_id={AID};"` |
+
+## SSH Session Access to SL1 (via ET Phone Home)
+
+When accessing SL1 through ET Phone Home, use persistent SSH sessions for better reliability.
+
+### Open SSH Session to SL1
+
+```
+# Use ssh_session_open with em7admin credentials
+ssh_session_open:
+  host: 108.174.225.156
+  username: em7admin
+  password: em7admin
+```
+
+### Database Access via silo_mysql
+
+**IMPORTANT**: Use `sudo silo_mysql` instead of `mysql` for socket access:
+
+```bash
+# Correct - uses proper socket path
+sudo silo_mysql -e "SELECT aid, name FROM master.dynamic_app WHERE name LIKE '%Prisma%'"
+
+# Backticks required for reserved column names
+sudo silo_mysql -e "SELECT \`key\`, LENGTH(value) FROM cache.dynamic_app WHERE \`key\` LIKE 'PRISMACLOUD%'"
+```
+
+### Correct Table/Column Names (January 2026 Verified)
+
+| Table | Primary Key | Columns | Notes |
+|-------|-------------|---------|-------|
+| `master.dynamic_app` | `aid` | `aid`, `name`, `version`, `state`, `poll` | NOT app_id, app_name |
+| `master.definitions_dev_classes` | `class_type` | `class_type`, `descript`, `identifyer_1`, `identifyer_2` | NOT class_id, descr |
+| `master.policies_events` | `id` | `id`, `ename`, `eseverity`, `emessage` | Event policies |
+| `master_dev.V_legend_device` | `m_id` | `m_id`, `m_device`, `m_ip`, `m_class_type` | View with m_ prefix |
+| `cache.dynamic_app` | `key` | `key`, `value` | Pickle-serialized, use backticks for `key` |
+
+## Reading Cached API Data (Pickle Format)
+
+The cache stores pickle-serialized Python objects. Use this pattern to read:
+
+### Python 3.6 Compatible Script (RHEL 7)
+
+```bash
+# Write script to temp file first (heredocs work better than inline)
+cat > /tmp/read_cache.py << 'PYEOF'
+import pickle
+import subprocess
+
+# Python 3.6: No capture_output, use stdout/stderr=PIPE
+result = subprocess.run(
+    ["sudo", "silo_mysql", "-N", "-e",
+     "SELECT `key`, HEX(value) FROM cache.dynamic_app WHERE `key` LIKE 'PRISMACLOUD+DEVICES+3204+%'"],
+    stdout=subprocess.PIPE, stderr=subprocess.PIPE
+)
+
+for line in result.stdout.decode().strip().split('\n'):
+    if not line:
+        continue
+    parts = line.split('\t', 1)
+    if len(parts) == 2:
+        key, hex_value = parts
+        try:
+            data = pickle.loads(bytes.fromhex(hex_value))
+            if isinstance(data, dict):
+                name = data.get('name', 'Unknown')
+                model = data.get('model_name', 'N/A')
+                print("{0}|{1}".format(name, model))
+        except Exception as e:
+            pass
+PYEOF
+python3 /tmp/read_cache.py
+```
+
+**Key Points**:
+- Use `HEX(value)` to get hex-encoded data from MySQL
+- Parse with `pickle.loads(bytes.fromhex(hex_value))`
+- Python 3.6 requires `stdout=subprocess.PIPE` (no `capture_output`)
+- Use `.format()` not f-strings for Python 3.6 compatibility
+
+## Device Class Structure (SNMP vs API Discovery)
+
+Prisma SD-WAN devices are discovered via BOTH API and SNMP, then merged. Device classes exist in pairs:
+
+### SNMP-Based Classes (sysObjectID matching)
+
+```sql
+-- SNMP classes use OID matching
+SELECT class_type, descript, identifyer_1 FROM master.definitions_dev_classes
+WHERE identifyer_1 LIKE '1.3.6.1.4.1.50114%';
+```
+
+| class_type | descript | identifyer_1 (sysObjectID) |
+|------------|----------|---------------------------|
+| 6154 | ION 7000 | 1.3.6.1.4.1.50114.11.1.10.7000 |
+| 6158 | ION 7108V | 1.3.6.1.4.1.50114.11.1.11.7108 |
+| 6159 | ION 7116V | 1.3.6.1.4.1.50114.11.1.11.7116 |
+
+### API-Based Classes (model_name string matching)
+
+```sql
+-- API classes use lowercase model string
+SELECT class_type, descript, identifyer_1 FROM master.definitions_dev_classes
+WHERE identifyer_1 LIKE 'ion %';
+```
+
+| class_type | descript | identifyer_1 (API model_name) |
+|------------|----------|------------------------------|
+| 6164 | ION 3000 | ion 3000 |
+| 6165 | ION 9000 | ion 9000 |
+| 6170 | ION 3200 | ion 3200 |
+| 6169 | ION 7000 | ion 7000 |
+
+### Missing API Classes (Identified January 2026)
+
+The following virtual ION models need API-based device classes added:
+- `ion 7108v` - currently misclassified as ION 3000
+- Potentially other virtual variants (7116v, 7132v)
+
+## Element Interfaces API (for Management IPs)
+
+The Elements API doesn't return management IPs. Use the Element Interfaces API:
+
+### API Endpoint
+
+```
+/sdwan/v{VERSION}/api/sites/{site_id}/elements/{element_id}/interfaces
+```
+
+### Extracting Management IP
+
+```python
+def extract_mgmt_ip(interfaces):
+    """Extract management IP from element interfaces."""
+    for intf in interfaces:
+        # Controller interface has management IP
+        if intf.get('used_for') == 'controller':
+            ipv4_config = intf.get('ipv4_config', {})
+            if isinstance(ipv4_config, dict):
+                static_config = ipv4_config.get('static_config', {})
+                if isinstance(static_config, dict):
+                    ip_addr = static_config.get('address')
+                    if ip_addr:
+                        # Strip CIDR notation
+                        return ip_addr.split('/')[0] if '/' in str(ip_addr) else ip_addr
+    return None
+```
+
+### DA 1932 Version History
+
+**v2.7**: Added element interfaces fetching to extract management IPs
+- Stores `_mgmt_ip` in element cache for SNMP discovery/merge
+- Uses controller interface detection
+
+**v2.8**: Fixed controller interface detection
+- Now checks interface name for "controller" to correctly identify management interfaces
+
+**v2.9**: Fixed site-level cache to include `_mgmt_ip` for downstream DAs
+- Prisma Cloud Devices DA can now collect controller IP
+
+**v3.0**: Enhanced controller IP detection with ION 3200 fallback logic
+- Adds fallback to interface "5" with x.x.2.x pattern when no explicit controller interface found
+
+**v3.1**: Removed subnet pattern requirement for interface 5
+- Interface 5 now accepts any valid IP address (not just x.x.2.x pattern)
+- Priority: controller type first, interface 5 as best guess fallback
+
+### DA 1932 v2.7+ Implementation
+
+Add after devices section to fetch interfaces and extract management IPs:
+
+```python
+CACHE_KEY_INTF = "PRISMACLOUD+INTERFACES+%s" % (self.did)
+INTERFACES_VERSION = '4.20'
+
+# Fetch interfaces for each element
+for ele_dict in element_list:
+    element_id = str(ele_dict['id'])
+    site_id = str(ele_dict['site_id'])
+
+    intf_path = '/sdwan/v%s/api/sites/%s/elements/%s/interfaces' % (
+        INTERFACES_VERSION, site_id, element_id)
+    intf_data = fetch_api_data(intf_path)
+
+    if isinstance(intf_data, dict) and 'items' in intf_data:
+        mgmt_ip = extract_mgmt_ip(intf_data['items'])
+        if mgmt_ip:
+            ele_dict['_mgmt_ip'] = mgmt_ip
+            # Update element cache with mgmt_ip
+            cache_key = "%s+%s" % (CACHE_KEY_DEVS, element_id)
+            CACHE_PTR.cache_result(ele_dict, ttl=CACHE_TTL, commit=True, key=cache_key)
+```
+
+## Troubleshooting Patterns
+
+### SSH Session File Locking (Windows)
+
+If you get "file in use" errors on Windows, reuse existing SSH sessions:
+
+```bash
+# List existing sessions
+ssh_session_list
+
+# Reuse session ID instead of opening new one
+ssh_session_command session_id=f9a4b454 command="..."
+```
+
+### Query Device Classifications
+
+```bash
+# Check how devices are classified
+sudo silo_mysql -e "
+SELECT d.m_device, d.m_class_type, c.descript
+FROM master_dev.V_legend_device d
+JOIN master.definitions_dev_classes c ON d.m_class_type = c.class_type
+WHERE d.m_device LIKE '%ION%'
+ORDER BY d.m_device"
+```
+
+### Compare API model_name vs SL1 Classification
+
+```bash
+# Extract model_name from cache, compare to device class
+python3 /tmp/read_cache.py | while read line; do
+    name=$(echo "$line" | cut -d'|' -f1)
+    model=$(echo "$line" | cut -d'|' -f2)
+    echo "Device: $name, API Model: $model"
+done
+```
+
+## File Transfer to SL1 (Standard Method - January 2026)
+
+**IMPORTANT**: SSH heredoc/echo approaches corrupt Python files. Use the SFTP/SCP chain method.
+
+### Transfer Chain: MCP Server → Windows Client → SCP → SL1
+
+#### Step 1: Write File to Windows Client via write_file
+
+```
+# Use mcp__etphonehome__write_file tool
+path: /C:/temp/my_file.py
+content: <file content>
+```
+
+**Note**: The path `/C:/temp/` actually writes to `C:\Users\{user}\AppData\Local\phonehome\temp\` on Windows.
+
+#### Step 2: SCP from Windows Client to SL1
+
+```bash
+# Run command on Windows client
+scp "C:\Users\jfreed\AppData\Local\phonehome\temp\my_file.py" em7admin@108.174.225.156:/tmp/
+```
+
+#### Step 3: Verify Python Syntax on SL1
+
+```bash
+ssh em7admin@108.174.225.156 "python2 -m py_compile /tmp/my_file.py && echo 'Syntax OK'"
+```
+
+### Example: Complete DA Update Workflow
+
+```bash
+# 1. Write DA code to Windows via write_file MCP tool (content omitted)
+# 2. SCP to SL1
+scp "C:\Users\jfreed\AppData\Local\phonehome\temp\da_1932_v27.py" em7admin@108.174.225.156:/tmp/
+
+# 3. Verify syntax
+ssh em7admin@108.174.225.156 "python2 -m py_compile /tmp/da_1932_v27.py && echo 'Syntax OK'"
+
+# 4. Update database (see Database Update Method below)
+```
+
+## Database Update Method (January 2026 Verified)
+
+### Using silo_common.database.local_db()
+
+This is the **correct** method to update DA snippets programmatically:
+
+#### Step 1: Write Update Script to Windows Client
+
+```python
+# update_da.py - write via mcp__etphonehome__write_file
+import sys
+sys.path.insert(0, '/opt/em7/lib/python')
+import silo_common.database as db
+
+with open('/tmp/da_1932_v27.py', 'r') as f:
+    snippet_code = f.read()
+
+cursor = db.local_db()
+cursor.execute('UPDATE master.dynamic_app_requests SET request=%s WHERE req_id=1932', (snippet_code,))
+cursor.connection.commit()
+print 'Updated %d row(s)' % cursor.rowcount
+cursor.close()
+```
+
+#### Step 2: SCP and Execute
+
+```bash
+# SCP update script to SL1
+scp "C:\Users\jfreed\AppData\Local\phonehome\temp\update_da.py" em7admin@108.174.225.156:/tmp/
+
+# Execute to update database
+ssh em7admin@108.174.225.156 "python2 /tmp/update_da.py"
+```
+
+#### Step 3: Verify Update
+
+```bash
+ssh em7admin@108.174.225.156 "/opt/em7/bin/silo_mysql -e \"SELECT req_id, SUBSTRING(request, LOCATE('SNIPPET_NAME', request), 80) as version FROM master.dynamic_app_requests WHERE req_id=1932\""
+```
+
+### silo_mysql for Direct Queries
+
+**Use `/opt/em7/bin/silo_mysql`** instead of `mysql` for proper socket access:
+
+```bash
+# List DAs
+ssh em7admin@108.174.225.156 "/opt/em7/bin/silo_mysql -e 'SELECT aid, name FROM master.dynamic_app WHERE name LIKE \"%Prisma%\"'"
+
+# Check DA snippet size
+ssh em7admin@108.174.225.156 "/opt/em7/bin/silo_mysql -e 'SELECT req_id, LENGTH(request) as bytes FROM master.dynamic_app_requests WHERE req_id=1932'"
+
+# View snippet preview
+ssh em7admin@108.174.225.156 "/opt/em7/bin/silo_mysql -e 'SELECT LEFT(request, 200) FROM master.dynamic_app_requests WHERE req_id=1932'"
+```
+
+### Methods That DO NOT Work
+
+| Method | Issue |
+|--------|-------|
+| SSH heredoc (`cat << 'EOF'`) | Newlines stored as literal `\n` strings |
+| `echo` with escaping | Shell escaping corrupts Python code |
+| `mysql LOAD_FILE()` | Returns NULL due to FILE privilege restrictions |
+| `MySQLdb.connect()` without socket | Connection fails without credentials |
+| Direct `mysql` command | Access denied without proper authentication |
+
+### Adding New Device Classes
+
+```bash
+# Insert new API-based device class via silo_mysql
+ssh em7admin@108.174.225.156 "/opt/em7/bin/silo_mysql -e \"
+INSERT INTO master.definitions_dev_classes
+(devtype_guid, ppguid, class, descript, class_type, identifyer_1, weight, image, family, family_guid, virtual, is_snmp, date_edit)
+VALUES (MD5(RAND()), '21D9648A7D551E5F84294B72C86000C9', 'Palo Alto Networks', 'ION 7108V', 12261, 'ion 7108v', 1, 'palo_prisma_sdwan.png', 134, '8A569E7BA82D16E38099947AA24D21AE', 2, 0, NOW())  # pragma: allowlist secret
+\""
+```
+
+## SSH Command Execution from Windows
+
+### Direct SSH Commands (Recommended)
+
+```bash
+# Simple commands via run_command on Windows client
+ssh em7admin@108.174.225.156 "command"
+
+# Chaining commands
+ssh em7admin@108.174.225.156 "command1 && command2"
+```
+
+### SSH Sessions (For Stateful Operations)
+
+SSH sessions through ET Phone Home can become stale. If `ssh_session_command` fails with "Socket is closed", open a new session or use direct SSH commands instead.
+
+```bash
+# Check for stale sessions
+ssh_session_list
+
+# Prefer direct ssh command over sessions for one-off operations
+ssh em7admin@108.174.225.156 "/opt/em7/bin/silo_mysql -e 'SELECT 1'"
+```
