@@ -1,4 +1,5 @@
-.PHONY: install lint format test check clean web-build web-deploy dev
+.PHONY: install lint format test check clean web-build web-deploy dev \
+       docker-lint docker-build docker-test docker-clean
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
@@ -56,3 +57,31 @@ dev: install
 	@echo "API: http://localhost:8765"
 	cd web && npm run dev &
 	$(PYTHON) -m server.mcp_server --transport http --port 8765
+
+# =============================================================================
+# Docker targets
+# =============================================================================
+
+# Lint Dockerfiles and docker-compose files
+docker-lint: install
+	@echo "Linting Docker files..."
+	@./scripts/test_docker.sh lint
+
+# Build all Docker images
+docker-build:
+	@echo "Building Docker images..."
+	@./scripts/test_docker.sh build
+
+# Run all Docker tests
+docker-test:
+	@echo "Running Docker tests..."
+	@./scripts/test_docker.sh all
+
+# Run Docker pytest tests (structure validation, no daemon required)
+docker-pytest: install
+	$(VENV)/bin/pytest tests/test_docker.py -v
+
+# Clean Docker test artifacts
+docker-clean:
+	@echo "Cleaning Docker test artifacts..."
+	@./scripts/test_docker.sh clean
