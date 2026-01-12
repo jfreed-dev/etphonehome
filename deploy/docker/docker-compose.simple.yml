@@ -1,0 +1,62 @@
+version: "3.8"
+
+# ET Phone Home Server - Simplified Docker Compose
+# Single container deployment with persistent volumes
+
+services:
+  etphonehome:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.simple
+    image: etphonehome-server:latest
+    container_name: etphonehome-server
+    restart: unless-stopped
+
+    ports:
+      - "8765:8765"
+
+    volumes:
+      # Persistent client data
+      - etphonehome-data:/data
+      # Optional: logs directory
+      - etphonehome-logs:/var/log/etphonehome
+
+    environment:
+      # API authentication (recommended for production)
+      - ETPHONEHOME_API_KEY=${ETPHONEHOME_API_KEY:-}
+      # Logging level: DEBUG, INFO, WARNING, ERROR
+      - ETPHONEHOME_LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Optional: Webhook URL for client events
+      - ETPHONEHOME_WEBHOOK_URL=${WEBHOOK_URL:-}
+      # Optional: Cloudflare R2 storage for file exchange
+      - ETPHONEHOME_R2_ACCOUNT_ID=${R2_ACCOUNT_ID:-}
+      - ETPHONEHOME_R2_ACCESS_KEY=${R2_ACCESS_KEY:-}
+      - ETPHONEHOME_R2_SECRET_KEY=${R2_SECRET_KEY:-}
+      - ETPHONEHOME_R2_BUCKET=${R2_BUCKET:-}
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    # Resource limits (optional, uncomment to enable)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 512M
+    #     reservations:
+    #       memory: 128M
+
+volumes:
+  etphonehome-data:
+    driver: local
+  etphonehome-logs:
+    driver: local
+
+# Example .env file:
+# ETPHONEHOME_API_KEY=your-secure-api-key
+# LOG_LEVEL=INFO
+# WEBHOOK_URL=http://your-webhook-endpoint/webhook
