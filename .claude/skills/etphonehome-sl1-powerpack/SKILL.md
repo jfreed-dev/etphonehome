@@ -504,6 +504,14 @@ if result:
 
 ### Common Issues
 
+#### SCP "File not found" after write_file
+
+Files written via `write_file` with path `/C:/temp/file.py` go to:
+```
+C:\Users\jfreed\AppData\Local\phonehome\temp\file.py
+```
+Use this full path in SCP commands, not `C:\temp\`. See "CRITICAL: Windows Path Mapping" section above.
+
 #### LOAD_FILE() Returns NULL
 
 MySQL's `secure_file_priv` restricts file loading. Use bash script method instead.
@@ -900,13 +908,37 @@ path: /C:/temp/my_file.py
 content: <file content>
 ```
 
-**Note**: The path `/C:/temp/` actually writes to `C:\Users\{user}\AppData\Local\phonehome\temp\` on Windows.
+### ⚠️ CRITICAL: Windows Path Mapping
+
+When using `write_file` with path `/C:/temp/filename.py`, the file is written to:
+```
+C:\Users\{user}\AppData\Local\phonehome\temp\filename.py
+```
+
+**NOT** to `C:\temp\filename.py`!
+
+| write_file path | Actual Windows location |
+|-----------------|------------------------|
+| `/C:/temp/file.py` | `C:\Users\jfreed\AppData\Local\phonehome\temp\file.py` |
+
+The ET Phone Home client sandboxes file writes to its AppData directory for security.
 
 #### Step 2: SCP from Windows Client to SL1
 
+**Use the actual phonehome temp path**, not `C:\temp\`:
+
 ```bash
-# Run command on Windows client
+# CORRECT - use phonehome temp directory
 scp "C:\Users\jfreed\AppData\Local\phonehome\temp\my_file.py" em7admin@108.174.225.156:/tmp/
+
+# WRONG - file won't exist here!
+# scp "C:\temp\my_file.py" em7admin@108.174.225.156:/tmp/
+```
+
+**Alternative**: Write directly to `C:\temp\` using `run_command` instead of `write_file`:
+```bash
+# This writes to actual C:\temp\ (but only works for small files)
+run_command: powershell -Command "Set-Content -Path 'C:\temp\file.py' -Value 'content'"
 ```
 
 #### Step 3: Verify Python Syntax on SL1
@@ -919,7 +951,10 @@ ssh em7admin@108.174.225.156 "python2 -m py_compile /tmp/my_file.py && echo 'Syn
 
 ```bash
 # 1. Write DA code to Windows via write_file MCP tool (content omitted)
-# 2. SCP to SL1
+#    - write_file path: /C:/temp/da_1932_v27.py
+#    - Actual location: C:\Users\jfreed\AppData\Local\phonehome\temp\da_1932_v27.py
+
+# 2. SCP to SL1 (use the ACTUAL path, not /C:/temp/)
 scp "C:\Users\jfreed\AppData\Local\phonehome\temp\da_1932_v27.py" em7admin@108.174.225.156:/tmp/
 
 # 3. Verify syntax
@@ -955,7 +990,7 @@ cursor.close()
 #### Step 2: SCP and Execute
 
 ```bash
-# SCP update script to SL1
+# SCP update script to SL1 (use phonehome temp path - see Path Mapping section above)
 scp "C:\Users\jfreed\AppData\Local\phonehome\temp\update_da.py" em7admin@108.174.225.156:/tmp/
 
 # Execute to update database
