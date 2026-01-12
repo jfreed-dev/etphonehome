@@ -1,13 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { ClientCard, ActivityStream, StatsCard } from '$components';
-	import {
-		clients,
-		onlineCount,
-		totalCount,
-		fetchClients,
-		clientsLoading
-	} from '$stores/clients';
+	import { clients, onlineCount, totalCount, fetchClients, clientsLoading } from '$stores/clients';
 	import { fetchEvents } from '$stores/events';
 	import { fetchDashboard, serverUptime, serverVersion } from '$stores/dashboard';
 

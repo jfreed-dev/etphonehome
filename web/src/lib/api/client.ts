@@ -53,10 +53,7 @@ export function hasApiToken(): boolean {
 // HTTP Client
 // -----------------------------------------------------------------------------
 
-async function request<T>(
-	endpoint: string,
-	options: RequestInit = {}
-): Promise<ApiResponse<T>> {
+async function request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
 	const token = getApiToken();
 
 	const headers: HeadersInit = {
@@ -225,10 +222,7 @@ export const api = {
 	/**
 	 * List files in a directory
 	 */
-	async listFiles(
-		clientUuid: string,
-		path: string = '/'
-	): Promise<ApiResponse<FileListResponse>> {
+	async listFiles(clientUuid: string, path: string = '/'): Promise<ApiResponse<FileListResponse>> {
 		return request<FileListResponse>(
 			`/clients/${clientUuid}/files?path=${encodeURIComponent(path)}`
 		);
@@ -237,10 +231,7 @@ export const api = {
 	/**
 	 * Preview file content
 	 */
-	async previewFile(
-		clientUuid: string,
-		path: string
-	): Promise<ApiResponse<FilePreview>> {
+	async previewFile(clientUuid: string, path: string): Promise<ApiResponse<FilePreview>> {
 		return request<FilePreview>(
 			`/clients/${clientUuid}/files/preview?path=${encodeURIComponent(path)}`
 		);
@@ -386,11 +377,7 @@ export class WebSocketClient {
 					online_count: number;
 					total_count: number;
 				};
-				this.callbacks.onInitialState?.(
-					data.clients,
-					data.online_count,
-					data.total_count
-				);
+				this.callbacks.onInitialState?.(data.clients, data.online_count, data.total_count);
 				break;
 			}
 

@@ -74,7 +74,9 @@
 }
 
 @mixin panel-hover {
-	transition: border-color $transition-base, box-shadow $transition-base;
+	transition:
+		border-color $transition-base,
+		box-shadow $transition-base;
 
 	&:hover {
 		border-color: $border-color-hover;
@@ -227,7 +229,9 @@
 	border-radius: $radius-md;
 	color: $text-100;
 	font-size: $font-size-sm;
-	transition: border-color $transition-fast, box-shadow $transition-fast;
+	transition:
+		border-color $transition-fast,
+		box-shadow $transition-fast;
 
 	&::placeholder {
 		color: $text-400;

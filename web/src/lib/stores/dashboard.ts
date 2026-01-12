@@ -23,9 +23,7 @@ export const serverUptime = derived(dashboardData, ($data) => {
 	return formatUptime($data.server.uptime_seconds);
 });
 
-export const serverVersion = derived(dashboardData, ($data) =>
-	$data?.server.version ?? null
-);
+export const serverVersion = derived(dashboardData, ($data) => $data?.server.version ?? null);
 
 // -----------------------------------------------------------------------------
 // Actions

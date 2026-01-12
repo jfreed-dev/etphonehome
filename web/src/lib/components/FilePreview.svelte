@@ -54,7 +54,10 @@
 				<button class="file-preview__download-btn" onclick={onDownload}>Download File</button>
 			</div>
 		{:else if preview?.content}
-			<pre class="file-preview__code language-{getLanguageClass(preview.mimeType)}">{preview.content}</pre>
+			<pre
+				class="file-preview__code language-{getLanguageClass(
+					preview.mimeType
+				)}">{preview.content}</pre>
 		{:else}
 			<div class="file-preview__empty">No preview available</div>
 		{/if}

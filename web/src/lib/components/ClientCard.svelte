@@ -21,7 +21,11 @@
 	}
 </script>
 
-<a href="/client?uuid={client.uuid}" class="client-card" class:client-card--offline={!client.online}>
+<a
+	href="/client?uuid={client.uuid}"
+	class="client-card"
+	class:client-card--offline={!client.online}
+>
 	<div class="client-card__header">
 		<div class="client-card__status" class:client-card__status--online={client.online}>
 			<span class="client-card__status-dot"></span>
