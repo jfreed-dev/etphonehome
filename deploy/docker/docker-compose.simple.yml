@@ -1,5 +1,3 @@
-version: "3.8"
-
 # ET Phone Home Server - Simplified Docker Compose
 # Single container deployment with persistent volumes
 
@@ -12,16 +10,21 @@ services:
     container_name: etphonehome-server
     restart: unless-stopped
 
-    ports:
-      - "8765:8765"
+    # Use host network so container can reach SSH reverse tunnels on localhost
+    network_mode: host
+
+    # Run as the host etphonehome user for proper file permissions
+    user: "1001:1001"
 
     volumes:
-      # Persistent client data
-      - etphonehome-data:/data
+      # Persistent client data - use host directory for consistent data with SSH handler
+      - /home/etphonehome/.etphonehome-server:/data
       # Optional: logs directory
-      - etphonehome-logs:/var/log/etphonehome
+      - /var/log/etphonehome:/var/log/etphonehome
 
     environment:
+      # Set HOME to writable directory for command history DB
+      - HOME=/data
       # API authentication (recommended for production)
       - ETPHONEHOME_API_KEY=${ETPHONEHOME_API_KEY:-}
       # Logging level: DEBUG, INFO, WARNING, ERROR
@@ -49,12 +52,6 @@ services:
     #       memory: 512M
     #     reservations:
     #       memory: 128M
-
-volumes:
-  etphonehome-data:
-    driver: local
-  etphonehome-logs:
-    driver: local
 
 # Example .env file:
 # ETPHONEHOME_API_KEY=your-secure-api-key
