@@ -190,10 +190,13 @@ Set-Location phonehome
 
 #### Option C: From Source (Development)
 
+> **Note:** When cloning, use a folder named `etphonehome` (not `etphonehome-public`).
+> Documentation, scripts, and tests assume this folder name.
+
 ```bash
 # Linux
 cd ~
-git clone https://github.com/jfreed-dev/etphonehome.git ~/etphonehome
+git clone https://github.com/jfreed-dev/etphonehome-public.git ~/etphonehome
 cd ~/etphonehome
 pip install -e .
 phonehome --init && phonehome --generate-key
@@ -203,7 +206,7 @@ phonehome -s your-server.example.com -p 443
 ```powershell
 # Windows
 Set-Location $env:USERPROFILE
-git clone https://github.com/jfreed-dev/etphonehome.git "$env:USERPROFILE\etphonehome"
+git clone https://github.com/jfreed-dev/etphonehome-public.git "$env:USERPROFILE\etphonehome"
 Set-Location "$env:USERPROFILE\etphonehome"
 pip install -e .
 phonehome --init
