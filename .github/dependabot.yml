@@ -33,3 +33,16 @@ updates:
       - "github-actions"
     commit-message:
       prefix: "ci"
+
+  # NPM dependencies (web interface)
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "javascript"
+    commit-message:
+      prefix: "deps"
