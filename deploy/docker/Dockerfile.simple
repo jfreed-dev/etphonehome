@@ -59,8 +59,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd -g 1000 etphonehome \
     && useradd -u 1000 -g etphonehome -m -s /bin/bash etphonehome
 
-# Copy venv from builder
+# Copy venv from builder and make world-readable
 COPY --from=builder /opt/venv /opt/venv
+RUN chmod -R a+rX /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
@@ -69,9 +70,12 @@ COPY --from=builder /build/server ./server/
 COPY --from=builder /build/shared ./shared/
 COPY --from=builder /build/pyproject.toml ./
 
-# Create data and log directories
+# Make app files world-readable (allows running as any UID)
+RUN chmod -R a+rX /app
+
+# Create data and log directories with open permissions for volume mounts
 RUN mkdir -p /data /var/log/etphonehome \
-    && chown -R etphonehome:etphonehome /data /var/log/etphonehome /app
+    && chmod 777 /data /var/log/etphonehome
 
 # Environment defaults
 ENV PYTHONUNBUFFERED=1 \

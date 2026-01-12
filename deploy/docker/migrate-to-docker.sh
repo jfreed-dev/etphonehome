@@ -135,12 +135,18 @@ start_docker() {
     # Ensure client data directory exists
     mkdir -p "$CLIENT_DATA_DIR"
 
+    # Get current user's UID/GID for permission compatibility
+    HOST_UID=$(id -u)
+    HOST_GID=$(id -g)
+
     log_info "Starting Docker container: $CONTAINER_NAME"
     log_info "  - Port: $PORT"
     log_info "  - Data: $CLIENT_DATA_DIR"
+    log_info "  - User: $HOST_UID:$HOST_GID"
 
     docker run -d \
         --name "$CONTAINER_NAME" \
+        --user "${HOST_UID}:${HOST_GID}" \
         -p "${PORT}:8765" \
         -v "${CLIENT_DATA_DIR}:/data" \
         -e "ETPHONEHOME_API_KEY=${ETPHONEHOME_API_KEY:-}" \
