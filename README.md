@@ -463,6 +463,33 @@ Skills are located in `.claude/skills/` and activate automatically based on cont
 
 Releases are automatically built via GitHub Actions on version tags (`v*`).
 
+## Web Management Interface
+
+The server includes a web-based management interface built with SvelteKit:
+
+**Features:**
+- Real-time dashboard with client status and activity stream
+- Interactive terminal with xterm.js
+- File browser with upload/download support
+- Command history with search and filtering
+- WebSocket-powered live updates
+
+**Access:**
+- URL: `http://localhost:8765` (when running HTTP daemon mode)
+- Authentication: API key (same as MCP server)
+
+**Development:**
+```bash
+make web-build     # Build Svelte UI
+make web-deploy    # Build and copy to server/static
+make server        # Run server with built UI
+make dev           # Run Svelte dev server + Python backend (with HMR)
+```
+
+The web UI source is in `web/` and uses SvelteKit 2.0 with TypeScript.
+
+---
+
 ## Development
 
 ```bash

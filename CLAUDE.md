@@ -40,6 +40,12 @@ pytest tests/test_agent.py -v       # Single test file
 # Lint/format
 black .
 ruff check --fix .
+
+# Web UI development
+make web-build                  # Build Svelte UI
+make web-deploy                 # Build and copy to server/static
+make server                     # Run server with built UI
+make dev                        # Svelte dev server + Python backend
 ```
 
 ## Architecture
@@ -62,7 +68,14 @@ etphonehome/
 │   ├── client_store.py     # Persistent client identity storage
 │   ├── health_monitor.py   # Background client health checks
 │   ├── webhooks.py         # Async webhook dispatch system
-│   └── rate_limiter.py     # Per-client rate limiting
+│   ├── rate_limiter.py     # Per-client rate limiting
+│   └── static/             # Built web UI (generated from web/)
+├── web/                     # Svelte web UI source
+│   ├── src/
+│   │   ├── routes/         # SvelteKit pages (/, /client)
+│   │   └── lib/            # Components, stores, API client
+│   ├── static/             # Static assets (icons, logos)
+│   └── build/              # Production build output (gitignored)
 ├── shared/
 │   ├── protocol.py         # JSON-RPC message definitions
 │   ├── version.py          # Version info and update URL
@@ -130,10 +143,16 @@ The server exposes these tools to Claude CLI:
 
 ## Key Dependencies
 
+**Python (Server/Client):**
 - `paramiko` - SSH tunnel client
 - `mcp` - Model Context Protocol SDK
 - `cryptography` - SSH key generation
 - `starlette` / `uvicorn` - HTTP/SSE server (for daemon mode)
+
+**JavaScript (Web UI):**
+- `svelte` / `@sveltejs/kit` - SvelteKit 2.0 framework
+- `@xterm/xterm` - Terminal emulation
+- `typescript` - Type safety
 
 ## Webhooks
 
