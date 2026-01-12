@@ -230,10 +230,10 @@ class TestAuthMiddleware:
         assert middleware._is_public_path("/") is True
         assert middleware._is_public_path("/health") is True
         assert middleware._is_public_path("/clients") is True
-        assert middleware._is_public_path("/client.html") is True
+        assert middleware._is_public_path("/client") is True
         assert middleware._is_public_path("/internal/register") is True
-        assert middleware._is_public_path("/static/css/theme.css") is True
-        assert middleware._is_public_path("/static/js/app.js") is True
+        assert middleware._is_public_path("/static/icons/icon_server.svg") is True
+        assert middleware._is_public_path("/_app/immutable/entry/start.Bu0FGAUT.js") is True
 
         # Protected paths
         assert middleware._is_public_path("/api/v1/dashboard") is False
@@ -327,12 +327,12 @@ class TestRESTAPIEndpoints:
         assert "total_clients" in data
 
     def test_dashboard_page(self, client):
-        """Test / endpoint serves dashboard HTML."""
+        """Test / endpoint serves SPA HTML."""
         response = client.get("/")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
-        # Check for key elements in the HTML
-        assert b"ET Phone Home" in response.content or response.status_code == 500
+        # Check for SvelteKit SPA shell markers
+        assert b"sveltekit" in response.content or b"_app/immutable" in response.content
 
     def test_api_dashboard(self, client):
         """Test /api/v1/dashboard endpoint."""
@@ -432,32 +432,25 @@ class TestStaticFiles:
             app = create_http_app(api_key="test-key", registry=mock_registry)
             return TestClient(app)
 
-    def test_static_css(self, client):
-        """Test serving CSS files."""
-        response = client.get("/static/css/theme.css")
-        # Should work without auth
-        assert response.status_code == 200
-        assert "text/css" in response.headers["content-type"]
-
-    def test_static_js(self, client):
-        """Test serving JavaScript files."""
-        response = client.get("/static/js/app.js")
-        assert response.status_code == 200
-        assert "javascript" in response.headers["content-type"]
-
     def test_static_svg(self, client):
         """Test serving SVG files."""
-        response = client.get("/static/icons/icon_server.svg")
+        response = client.get("/icons/icon_server.svg")
+        assert response.status_code == 200
+        assert "svg" in response.headers["content-type"]
+
+    def test_static_logo(self, client):
+        """Test serving logo files."""
+        response = client.get("/logos/favicon.svg")
         assert response.status_code == 200
         assert "svg" in response.headers["content-type"]
 
     def test_static_no_auth_required(self, client):
         """Test that static files don't require authentication."""
-        # These should all work without auth header
-        response = client.get("/static/css/theme.css")
+        # These should all work without auth header (icons and logos)
+        response = client.get("/icons/icon_server.svg")
         assert response.status_code == 200
 
-        response = client.get("/static/js/app.js")
+        response = client.get("/logos/favicon.svg")
         assert response.status_code == 200
 
 

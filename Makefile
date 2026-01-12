@@ -1,4 +1,4 @@
-.PHONY: install lint format test check clean
+.PHONY: install lint format test check clean web-build web-deploy dev
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
@@ -34,3 +34,25 @@ clean:
 	rm -rf __pycache__ */__pycache__ */*/__pycache__
 	rm -rf .pytest_cache .ruff_cache
 	rm -rf *.egg-info
+	rm -rf web/build web/node_modules
+
+# Build Svelte UI
+web-build:
+	cd web && npm install && npm run build
+
+# Copy Svelte build to server for local testing
+web-deploy: web-build
+	rm -rf server/static/*
+	cp -r web/build/* server/static/
+
+# Run server with built UI (for local testing)
+server: install web-deploy
+	$(PYTHON) -m server.mcp_server --transport http --port 8765
+
+# Development mode: Svelte dev server + Python backend
+dev: install
+	@echo "Starting Svelte dev server and Python backend..."
+	@echo "Web UI: http://localhost:5173 (with HMR)"
+	@echo "API: http://localhost:8765"
+	cd web && npm run dev &
+	$(PYTHON) -m server.mcp_server --transport http --port 8765

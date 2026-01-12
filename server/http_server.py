@@ -155,7 +155,7 @@ class AuthMiddleware:
     """Simple bearer token authentication middleware."""
 
     # Paths that don't require authentication
-    PUBLIC_PATHS = {"/health", "/clients", "/internal/register", "/", "/client.html"}
+    PUBLIC_PATHS = {"/health", "/clients", "/internal/register", "/", "/client"}
 
     def __init__(self, app, api_key: str | None = None):
         self.app = app
@@ -165,8 +165,8 @@ class AuthMiddleware:
         """Check if a path is publicly accessible."""
         if path in self.PUBLIC_PATHS:
             return True
-        # Static files are public
-        if path.startswith("/static/"):
+        # Static files are public (SvelteKit assets, icons, logos)
+        if path.startswith(("/static/", "/_app/", "/icons/", "/logos/")):
             return True
         return False
 
@@ -324,28 +324,19 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
             return JSONResponse({"error": str(e)}, status_code=500)
 
     # =========================================================================
-    # Web UI - Dashboard & Static Pages
+    # Web UI - SPA Fallback
     # =========================================================================
 
-    async def dashboard_page(request: Request) -> Response:
-        """Serve the dashboard HTML page."""
+    async def spa_fallback(request: Request) -> Response:
+        """Serve SPA index.html for all UI routes (client-side routing)."""
         index_path = STATIC_DIR / "index.html"
         if index_path.exists():
             return FileResponse(index_path, media_type="text/html")
         # Fallback if static files not found
         return HTMLResponse(
             "<html><body><h1>ET Phone Home</h1>"
-            "<p>Static files not found. Run from project root.</p></body></html>",
+            "<p>Static files not found. Build the web UI first.</p></body></html>",
             status_code=500,
-        )
-
-    async def client_page(request: Request) -> Response:
-        """Serve the client detail HTML page."""
-        client_path = STATIC_DIR / "client.html"
-        if client_path.exists():
-            return FileResponse(client_path, media_type="text/html")
-        return HTMLResponse(
-            "<html><body><h1>Client page not found</h1></body></html>", status_code=404
         )
 
     # =========================================================================
@@ -776,9 +767,9 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
         Route("/health", endpoint=health_check, methods=["GET"]),
         Route("/clients", endpoint=list_clients_legacy, methods=["GET"]),
         Route("/internal/register", endpoint=internal_register, methods=["POST"]),
-        # Web UI pages
-        Route("/", endpoint=dashboard_page, methods=["GET"]),
-        Route("/client.html", endpoint=client_page, methods=["GET"]),
+        # Web UI - SPA routes (Svelte handles client-side routing)
+        Route("/", endpoint=spa_fallback, methods=["GET"]),
+        Route("/client", endpoint=spa_fallback, methods=["GET"]),
         # REST API v1
         Route("/api/v1/dashboard", endpoint=api_dashboard, methods=["GET"]),
         Route("/api/v1/clients", endpoint=api_clients, methods=["GET"]),
@@ -825,9 +816,21 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
         WebSocketRoute("/api/v1/ws", endpoint=websocket_handler),
     ]
 
-    # Add static files mount if directory exists
+    # Add static files mounts if directory exists
     if STATIC_DIR.exists():
+        # SvelteKit puts compiled assets in _app directory
+        app_dir = STATIC_DIR / "_app"
+        if app_dir.exists():
+            routes.append(Mount("/_app", app=StaticFiles(directory=str(app_dir)), name="_app"))
+        # Serve icons, logos, and other static assets from root
         routes.append(Mount("/static", app=StaticFiles(directory=str(STATIC_DIR)), name="static"))
+        # Also mount icons/logos at root level for backward compatibility
+        icons_dir = STATIC_DIR / "icons"
+        logos_dir = STATIC_DIR / "logos"
+        if icons_dir.exists():
+            routes.append(Mount("/icons", app=StaticFiles(directory=str(icons_dir)), name="icons"))
+        if logos_dir.exists():
+            routes.append(Mount("/logos", app=StaticFiles(directory=str(logos_dir)), name="logos"))
     else:
         logger.warning(f"Static files directory not found: {STATIC_DIR}")
 
