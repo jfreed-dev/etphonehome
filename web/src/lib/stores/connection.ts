@@ -4,11 +4,7 @@
 
 import { writable, get } from 'svelte/store';
 import type { ConnectionStatus, Client } from '$types';
-import {
-	createWebSocketClient,
-	type WebSocketClient,
-	hasApiToken
-} from '$api/client';
+import { createWebSocketClient, type WebSocketClient, hasApiToken } from '$api/client';
 import { setClients, setClientOnline, addClient } from './clients';
 import { addEvent } from './events';
 

@@ -35,9 +35,7 @@
 			{@render children()}
 		</main>
 		<footer class="page__footer">
-			<div class="et-container">
-				ET Phone Home &bull; Remote Access Management
-			</div>
+			<div class="et-container">ET Phone Home &bull; Remote Access Management</div>
 		</footer>
 	</div>
 {:else}

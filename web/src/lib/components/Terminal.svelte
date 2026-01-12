@@ -153,7 +153,8 @@
 			// Backspace
 			if (code === 127) {
 				if (cursorPosition > 0) {
-					currentLine = currentLine.slice(0, cursorPosition - 1) + currentLine.slice(cursorPosition);
+					currentLine =
+						currentLine.slice(0, cursorPosition - 1) + currentLine.slice(cursorPosition);
 					cursorPosition--;
 					// Rewrite the line
 					terminal.write('\x1b[2K\r'); // Clear line
@@ -242,7 +243,8 @@
 
 			// Regular character
 			if (code >= 32) {
-				currentLine = currentLine.slice(0, cursorPosition) + char + currentLine.slice(cursorPosition);
+				currentLine =
+					currentLine.slice(0, cursorPosition) + char + currentLine.slice(cursorPosition);
 				cursorPosition++;
 				// Rewrite from cursor position
 				terminal.write(char + currentLine.slice(cursorPosition));

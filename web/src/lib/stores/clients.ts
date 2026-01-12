@@ -19,17 +19,11 @@ export const clientsError = writable<string | null>(null);
 // Derived Stores
 // -----------------------------------------------------------------------------
 
-export const onlineClients = derived(clients, ($clients) =>
-	$clients.filter((c) => c.online)
-);
+export const onlineClients = derived(clients, ($clients) => $clients.filter((c) => c.online));
 
-export const offlineClients = derived(clients, ($clients) =>
-	$clients.filter((c) => !c.online)
-);
+export const offlineClients = derived(clients, ($clients) => $clients.filter((c) => !c.online));
 
-export const onlineCount = derived(clients, ($clients) =>
-	$clients.filter((c) => c.online).length
-);
+export const onlineCount = derived(clients, ($clients) => $clients.filter((c) => c.online).length);
 
 export const totalCount = derived(clients, ($clients) => $clients.length);
 
@@ -65,9 +59,7 @@ export function setClients(newClients: Client[]): void {
 }
 
 export function updateClient(uuid: string, updates: Partial<Client>): void {
-	clients.update(($clients) =>
-		$clients.map((c) => (c.uuid === uuid ? { ...c, ...updates } : c))
-	);
+	clients.update(($clients) => $clients.map((c) => (c.uuid === uuid ? { ...c, ...updates } : c)));
 }
 
 export function addClient(client: Client): void {
@@ -76,9 +68,7 @@ export function addClient(client: Client): void {
 		const exists = $clients.some((c) => c.uuid === client.uuid);
 		if (exists) {
 			// Update existing client
-			return $clients.map((c) =>
-				c.uuid === client.uuid ? { ...c, ...client } : c
-			);
+			return $clients.map((c) => (c.uuid === client.uuid ? { ...c, ...client } : c));
 		}
 		// Add new client
 		return [...$clients, client];
@@ -88,9 +78,7 @@ export function addClient(client: Client): void {
 export function setClientOnline(uuid: string, online: boolean): void {
 	clients.update(($clients) =>
 		$clients.map((c) =>
-			c.uuid === uuid
-				? { ...c, online, last_seen: new Date().toISOString() }
-				: c
+			c.uuid === uuid ? { ...c, online, last_seen: new Date().toISOString() } : c
 		)
 	);
 }

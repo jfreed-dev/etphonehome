@@ -141,7 +141,10 @@ export function setActiveSession(sessionId: string): void {
 /**
  * Execute a command in a session
  */
-export async function executeCommand(sessionId: string, command: string): Promise<CommandRecord | null> {
+export async function executeCommand(
+	sessionId: string,
+	command: string
+): Promise<CommandRecord | null> {
 	let session: TerminalSession | undefined;
 	terminalState.subscribe((s) => {
 		session = s.sessions.find((sess) => sess.id === sessionId);
@@ -160,9 +163,7 @@ export async function executeCommand(sessionId: string, command: string): Promis
 		terminalState.update((s) => ({
 			...s,
 			executing: false,
-			sessions: s.sessions.map((sess) =>
-				sess.id === sessionId ? { ...sess, history: [] } : sess
-			)
+			sessions: s.sessions.map((sess) => (sess.id === sessionId ? { ...sess, history: [] } : sess))
 		}));
 		return null;
 	}
@@ -193,9 +194,7 @@ export async function executeCommand(sessionId: string, command: string): Promis
 		const newCwd = response.data.stdout.trim();
 		terminalState.update((s) => ({
 			...s,
-			sessions: s.sessions.map((sess) =>
-				sess.id === sessionId ? { ...sess, cwd: newCwd } : sess
-			)
+			sessions: s.sessions.map((sess) => (sess.id === sessionId ? { ...sess, cwd: newCwd } : sess))
 		}));
 		// Clear the stdout so it doesn't show the pwd output
 		if (response.data) {
