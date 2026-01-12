@@ -1,0 +1,61 @@
+# Git
+.git
+.github
+.gitignore
+
+# Python
+.venv
+.venv-build
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Node.js / Web build artifacts
+node_modules
+web/node_modules
+web/build
+web/.svelte-kit
+
+# IDE / Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# Claude Code
+.claude
+
+# Documentation (not needed in container)
+docs
+*.md
+!README.md
+
+# Tests (not needed in container)
+tests
+
+# Deployment configs (not needed in container)
+deploy/ansible
+deploy/terraform
+
+# Build artifacts
+build
+dist
+
+# Logs and temp files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Server static (rebuilt from web/)
+server/static/_app
+server/static/index.html
+
+# Environment files (handled via Docker env)
+.env
+.env.*
+*.env.example

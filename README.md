@@ -141,6 +141,27 @@ Data Flow:
    }
    ```
 
+   **Option C: Docker** (containerized deployment):
+   ```bash
+   cd etphonehome
+
+   # Build and run with docker-compose
+   docker-compose -f deploy/docker/docker-compose.simple.yml up -d
+
+   # Or build and run manually
+   ./deploy/docker/build-simple.sh
+   ./deploy/docker/run-simple.sh
+   ```
+
+   Configure with environment variables:
+   ```bash
+   # Generate an API key: openssl rand -hex 32
+   export ETPHONEHOME_API_KEY="<your-api-key>"  # pragma: allowlist secret
+   docker-compose -f deploy/docker/docker-compose.simple.yml up -d
+   ```
+
+   Health check: `curl http://localhost:8765/health`
+
 ### Client Deployment
 
 The client runs from the user's home folder without admin/root access.
