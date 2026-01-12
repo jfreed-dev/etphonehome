@@ -1,0 +1,19 @@
+# Hadolint configuration for ET Phone Home Docker images
+# https://github.com/hadolint/hadolint#configure
+
+ignored:
+  # DL3008: Pin versions in apt-get install
+  # We rely on base image versions and security updates from upstream
+  - DL3008
+
+  # DL3018: Pin versions in apk add
+  # Same reason as above for Alpine-based images
+  - DL3018
+
+  # DL3013: Pin versions in pip
+  # Python dependencies are pinned via pyproject.toml
+  - DL3013
+
+trustedRegistries:
+  - docker.io
+  - ghcr.io
