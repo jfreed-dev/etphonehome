@@ -45,6 +45,14 @@ __pycache__/
 venv/
 *.egg-info/
 
+# Environment files (NEVER commit - may contain secrets)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.env
+!*.env.example
+
 # Build artifacts
 build/phonehome/
 build/portable/work/

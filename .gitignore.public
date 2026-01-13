@@ -15,6 +15,14 @@ ansible/credentials/
 kubeconfig
 talosconfig
 
+# Environment files (may contain secrets)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.env
+!*.env.example
+
 # MCP config (may contain API keys)
 .mcp.json
 
