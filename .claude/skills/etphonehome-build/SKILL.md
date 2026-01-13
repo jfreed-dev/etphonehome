@@ -10,29 +10,30 @@ This skill provides guidance for building, deploying, and publishing ET Phone Ho
 
 ## Update Server Configuration
 
-Builds are published to the ET Phone Home update server for client auto-updates.
+Builds are published to **Cloudflare R2** for client auto-updates. R2 provides CDN distribution with zero egress fees.
 
-**Server**: `etphonehome@72.60.125.7`
-**Web Root**: `/var/www/phonehome`
-**Ownership**: `www-data:www-data`
+**R2 Bucket**: `phone-home`
+**Custom Domain**: `https://phone-home.techki.ai`
+**Releases Prefix**: `releases/`
 
-### Directory Structure
+### Directory Structure (R2)
 
 ```
-/var/www/phonehome/
-├── latest -> v{VERSION}/                # Symlink to current version
-├── v{VERSION}/
-│   ├── version.json                     # Version metadata for clients
-│   ├── phonehome-linux-x86_64.tar.gz    # x86_64 build
-│   └── phonehome-linux-aarch64.tar.gz   # ARM64 build
-├── v0.1.6/
+releases/
+├── latest/
+│   └── version.json              # Always points to latest version
+├── v0.1.10/
+│   ├── version.json              # Version metadata
+│   ├── phonehome-linux-x86_64.tar.gz
+│   └── phonehome-linux-aarch64.tar.gz
+├── v0.1.9/
 │   └── ...
 └── ...
 ```
 
 ### version.json Format
 
-**IMPORTANT**: Downloads must include full URLs for the auto-updater to work.
+**IMPORTANT**: Downloads must include full R2 public URLs for the auto-updater to work.
 
 ```json
 {
@@ -40,15 +41,32 @@ Builds are published to the ET Phone Home update server for client auto-updates.
   "release_date": "2026-01-05T12:00:00Z",
   "downloads": {
     "linux-x86_64": {
-      "url": "http://72.60.125.7/v{VERSION}/phonehome-linux-x86_64.tar.gz"
+      "url": "https://phone-home.techki.ai/releases/v{VERSION}/phonehome-linux-x86_64.tar.gz",
+      "sha256": "abc123...",
+      "size": 12345678
     },
     "linux-aarch64": {
-      "url": "http://72.60.125.7/v{VERSION}/phonehome-linux-aarch64.tar.gz"
+      "url": "https://phone-home.techki.ai/releases/v{VERSION}/phonehome-linux-aarch64.tar.gz",
+      "sha256": "def456...",
+      "size": 12345678
     }
   },
   "changelog": "Bug fixes and improvements"
 }
 ```
+
+### R2 Environment Variables
+
+Required for publishing releases:
+
+```bash
+ETPHONEHOME_R2_ACCOUNT_ID=<REDACTED-R2-ACCOUNT-ID>
+ETPHONEHOME_R2_ACCESS_KEY=your-access-key
+ETPHONEHOME_R2_SECRET_KEY=your-secret-key
+ETPHONEHOME_R2_BUCKET=phone-home
+```
+
+These are typically loaded from `deploy/docker/.env`.
 
 ## Supported Architectures
 
@@ -163,14 +181,28 @@ await conn.run_command(
 
 ### Publishing ARM64 Build from Remote Client
 
-After building on the Spark, SCP the artifact directly to the update server:
+After building on the Spark, download the artifact and publish to R2:
+
+```bash
+# Option 1: Download via ET Phone Home (uses SFTP)
+# Use the download_file MCP tool to get the artifact
+
+# Option 2: SCP from local machine
+scp user@spark:/tmp/etphonehome/dist/phonehome-linux-aarch64.tar.gz dist/
+
+# Then publish all artifacts to R2
+./scripts/publish_release.sh --changelog "ARM64 support"
+```
+
+Or have the Spark upload directly using R2 credentials:
 
 ```python
-# Have the Spark upload directly to update server
-await conn.run_command(
-    "scp /tmp/etphonehome/dist/phonehome-linux-aarch64.tar.gz etphonehome@72.60.125.7:/var/www/phonehome/v{VERSION}/",
-    timeout=120
-)
+# If R2 credentials are available on the Spark
+await conn.run_command("""
+cd /tmp/etphonehome
+source /path/to/.env  # With R2 credentials
+python3 scripts/publish_release_r2.py --changelog "Built on DGX Spark"
+""", timeout=300)
 ```
 
 ### Verifying Architecture
@@ -284,35 +316,45 @@ Common issues:
 - Old config format - run `phonehome --init` to regenerate
 - Missing SSH keys - run `phonehome --generate-key`
 
-## Pre-Build: SSH Key Verification
+## Pre-Build: R2 Configuration Verification
 
-Before building and publishing, verify SSH access to the update server.
+Before building and publishing, verify R2 access is configured.
 
-### Check SSH Key Configuration
-
-```bash
-# Test SSH connection to update server
-ssh -o BatchMode=yes -o ConnectTimeout=5 etphonehome@72.60.125.7 "echo 'SSH OK'"
-```
-
-If this fails:
-1. Generate SSH key if missing: `ssh-keygen -t ed25519 -f ~/.ssh/id_etphonehome`
-2. Add public key to server: `ssh-copy-id -i ~/.ssh/id_etphonehome.pub etphonehome@72.60.125.7`
-3. Or manually append to `/home/etphonehome/.ssh/authorized_keys` on server
-
-### Verify Write Access
+### Check R2 Configuration
 
 ```bash
-# Test write access to web directory
-ssh etphonehome@72.60.125.7 "touch /var/www/phonehome/.write_test && rm /var/www/phonehome/.write_test && echo 'Write OK'"
+# Verify R2 environment variables are set
+source deploy/docker/.env
+echo "Account: $ETPHONEHOME_R2_ACCOUNT_ID"
+echo "Bucket: $ETPHONEHOME_R2_BUCKET"
+
+# Test R2 access
+python3 -c "
+from shared.r2_releases import create_release_manager
+mgr = create_release_manager()
+if mgr:
+    print('R2 OK - Bucket:', mgr.r2.config.bucket)
+else:
+    print('R2 FAILED - check credentials')
+"
 ```
+
+### Enable R2 Public Access
+
+For the update URLs to work, the R2 bucket needs public access enabled:
+
+1. Go to Cloudflare Dashboard → R2 → phone-home bucket
+2. Click **Settings** tab
+3. Under **Public access**, click **Allow Access**
+4. This enables the `pub-{account_id}.r2.dev` URL
 
 ## Complete Build & Publish Workflow
 
-### Step 1: Verify SSH Access
+### Step 1: Verify R2 Access
 
 ```bash
-ssh -o BatchMode=yes etphonehome@72.60.125.7 "echo 'Connected'" || echo "SSH FAILED - fix before continuing"
+source deploy/docker/.env
+./scripts/publish_release.sh --list
 ```
 
 ### Step 2: Get Current Version
@@ -333,192 +375,109 @@ echo "Building version: $VERSION"
 # See "DGX Spark / ARM64 Specific" section for remote build workflow
 ```
 
-### Step 4: Create Version Directory on Server
+### Step 4: Publish to R2
 
 ```bash
-VERSION=$(grep -oP '__version__ = "\K[^"]+' shared/version.py)
-ssh etphonehome@72.60.125.7 "sudo mkdir -p /var/www/phonehome/v${VERSION} && sudo chown www-data:www-data /var/www/phonehome/v${VERSION}"
+# Publish with changelog
+./scripts/publish_release.sh --changelog "Bug fixes and improvements"
+
+# Or dry-run first to see what will be uploaded
+./scripts/publish_release.sh --dry-run
 ```
 
-### Step 5: Upload Build Artifacts
+### Step 5: Verify Publication
 
 ```bash
-VERSION=$(grep -oP '__version__ = "\K[^"]+' shared/version.py)
+# Check latest version in R2
+./scripts/publish_release.sh --latest
 
-# Upload x86_64 build
-scp dist/phonehome-linux-x86_64.tar.gz etphonehome@72.60.125.7:/var/www/phonehome/v${VERSION}/
-
-# Upload ARM64 build
-scp dist/phonehome-linux-aarch64.tar.gz etphonehome@72.60.125.7:/var/www/phonehome/v${VERSION}/
-```
-
-### Step 6: Create version.json
-
-```bash
-VERSION=$(grep -oP '__version__ = "\K[^"]+' shared/version.py)
-RELEASE_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-ssh etphonehome@72.60.125.7 "cat > /tmp/version.json << 'EOF'
-{
-  \"version\": \"${VERSION}\",
-  \"release_date\": \"${RELEASE_DATE}\",
-  \"downloads\": {
-    \"linux-x86_64\": {
-      \"url\": \"http://72.60.125.7/v${VERSION}/phonehome-linux-x86_64.tar.gz\"
-    },
-    \"linux-aarch64\": {
-      \"url\": \"http://72.60.125.7/v${VERSION}/phonehome-linux-aarch64.tar.gz\"
-    }
-  },
-  \"changelog\": \"See release notes\"
-}
-EOF
-sudo mv /tmp/version.json /var/www/phonehome/v${VERSION}/version.json"
-```
-
-### Step 7: Update Latest Symlink
-
-```bash
-VERSION=$(grep -oP '__version__ = "\K[^"]+' shared/version.py)
-ssh etphonehome@72.60.125.7 "cd /var/www/phonehome && sudo rm -f latest && sudo ln -s v${VERSION} latest"
-```
-
-### Step 8: Copy version.json to Latest
-
-```bash
-ssh etphonehome@72.60.125.7 "sudo cp /var/www/phonehome/latest/version.json /var/www/phonehome/latest/"
-```
-
-### Step 9: Fix Ownership
-
-```bash
-ssh etphonehome@72.60.125.7 "sudo chown -R www-data:www-data /var/www/phonehome/"
-```
-
-### Step 10: Verify Publication
-
-```bash
-# Check files exist and have correct ownership
-ssh etphonehome@72.60.125.7 "ls -la /var/www/phonehome/latest/"
-
-# Verify version.json is accessible
-curl -s https://your-domain/phonehome/latest/version.json | jq .
+# Or fetch directly
+curl -s https://phone-home.techki.ai/releases/latest/version.json | jq .
 ```
 
 ## One-Command Publish Script
 
-For convenience, here's a combined publish workflow:
+The `scripts/publish_release.sh` script handles the entire workflow:
 
 ```bash
-#!/bin/bash
-# publish_release.sh - Build and publish ET Phone Home release
-set -e
-
-# Configuration
-SERVER="etphonehome@72.60.125.7"
-WEB_ROOT="/var/www/phonehome"
-
-# Get version
-VERSION=$(grep -oP '__version__ = "\K[^"]+' shared/version.py)
-RELEASE_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-echo "=== Publishing ET Phone Home v${VERSION} ==="
-
-# Verify SSH access
-echo "Checking SSH access..."
-ssh -o BatchMode=yes -o ConnectTimeout=5 $SERVER "echo 'SSH OK'" || { echo "SSH failed"; exit 1; }
-
-# Build x86_64 locally
-echo "Building x86_64..."
+# Build and publish x86_64
 ./build/portable/package_linux.sh x86_64
+./scripts/publish_release.sh --changelog "New feature: XYZ"
 
-# Note: ARM64 must be built on ARM64 machine - see DGX Spark section
-# Assumes ARM64 build already exists in dist/ from remote build
+# With ARM64 (after building on ARM64 machine)
+./scripts/publish_release.sh --changelog "New feature: XYZ"
+```
 
-# Create version directory
-echo "Creating version directory..."
-ssh $SERVER "sudo mkdir -p ${WEB_ROOT}/v${VERSION} && sudo chown www-data:www-data ${WEB_ROOT}/v${VERSION}"
+### Script Options
 
-# Upload builds
-echo "Uploading builds..."
-scp dist/phonehome-linux-x86_64.tar.gz $SERVER:${WEB_ROOT}/v${VERSION}/
-scp dist/phonehome-linux-aarch64.tar.gz $SERVER:${WEB_ROOT}/v${VERSION}/
+```
+Usage: ./scripts/publish_release.sh [OPTIONS]
 
-# Create version.json with full URLs
-echo "Creating version.json..."
-ssh $SERVER "cat > /tmp/version.json << EOF
-{
-  \"version\": \"${VERSION}\",
-  \"release_date\": \"${RELEASE_DATE}\",
-  \"downloads\": {
-    \"linux-x86_64\": {
-      \"url\": \"http://72.60.125.7/v${VERSION}/phonehome-linux-x86_64.tar.gz\"
-    },
-    \"linux-aarch64\": {
-      \"url\": \"http://72.60.125.7/v${VERSION}/phonehome-linux-aarch64.tar.gz\"
-    }
-  },
-  \"changelog\": \"See release notes\"
-}
-EOF
-sudo mv /tmp/version.json ${WEB_ROOT}/v${VERSION}/version.json"
-
-# Update latest symlink
-echo "Updating latest symlink..."
-ssh $SERVER "cd ${WEB_ROOT} && sudo rm -f latest && sudo ln -s v${VERSION} latest"
-
-# Fix ownership
-echo "Fixing ownership..."
-ssh $SERVER "sudo chown -R www-data:www-data ${WEB_ROOT}/"
-
-# Verify
-echo "Verifying publication..."
-ssh $SERVER "ls -la ${WEB_ROOT}/latest/"
-
-echo "=== Published v${VERSION} ==="
+Options:
+  --version, -v VERSION    Version to publish (default: from shared/version.py)
+  --changelog, -c TEXT     Changelog text for this release
+  --dist-dir, -d DIR       Directory containing build artifacts (default: dist/)
+  --dry-run                Show what would be uploaded without uploading
+  --list, -l               List existing releases in R2
+  --latest                 Show the current latest version in R2
 ```
 
 ## Troubleshooting
 
-### SSH Connection Refused
+### R2 Credentials Not Working
 
 ```bash
-# Check if SSH key exists
-ls -la ~/.ssh/id_*
+# Verify credentials are loaded
+env | grep ETPHONEHOME_R2
 
-# Generate if missing
-ssh-keygen -t ed25519 -C "build@etphonehome"
+# Test with boto3 directly
+python3 -c "
+import boto3
+from botocore.config import Config
+import os
 
-# Copy to server (requires password once)
-ssh-copy-id etphonehome@72.60.125.7
+client = boto3.client(
+    's3',
+    endpoint_url=f'https://{os.environ[\"ETPHONEHOME_R2_ACCOUNT_ID\"]}.r2.cloudflarestorage.com',
+    aws_access_key_id=os.environ['ETPHONEHOME_R2_ACCESS_KEY'],
+    aws_secret_access_key=os.environ['ETPHONEHOME_R2_SECRET_KEY'],
+    config=Config(signature_version='s3v4', region_name='auto'),
+)
+result = client.list_objects_v2(Bucket=os.environ['ETPHONEHOME_R2_BUCKET'], MaxKeys=1)
+print('Success! Objects:', len(result.get('Contents', [])))
+"
 ```
 
-### Permission Denied on Web Directory
+### Public URLs Return 403
 
-The etphonehome user needs sudo access for /var/www/phonehome:
+The R2 bucket may not have public access enabled:
 
-```bash
-# On server, add to sudoers
-echo "etphonehome ALL=(ALL) NOPASSWD: /bin/chown, /bin/mkdir, /bin/ln, /bin/rm, /bin/mv, /bin/cp" | sudo tee /etc/sudoers.d/etphonehome-publish
-```
+1. Go to Cloudflare Dashboard → R2 → your bucket
+2. Settings → Public access → Allow Access
+3. Wait a few minutes for propagation
 
 ### Version.json Not Updating
 
-Ensure you're updating both locations:
-1. `/var/www/phonehome/v{VERSION}/version.json`
-2. The `latest` symlink points to the new version
+Check both locations exist:
 
 ```bash
-# Verify symlink
-ssh etphonehome@72.60.125.7 "readlink /var/www/phonehome/latest"
+./scripts/publish_release.sh --list
+
+# Should show:
+#   v0.1.10: https://pub-xxx.r2.dev/releases/v0.1.10
+#   latest: https://pub-xxx.r2.dev/releases/latest
 ```
 
-### Wrong File Ownership
+### Old Clients Not Updating
 
-All files must be owned by www-data for nginx to serve them:
+Clients built before the R2 migration may have an empty `UPDATE_URL`. Update them:
 
 ```bash
-ssh etphonehome@72.60.125.7 "sudo chown -R www-data:www-data /var/www/phonehome/"
+# Set update URL in client environment
+export PHONEHOME_UPDATE_URL="https://phone-home.techki.ai/releases/latest/version.json"
+
+# Or update config.yml
+update_url: "https://phone-home.techki.ai/releases/latest/version.json"
 ```
 
 ## Triggering Auto-Updates on Remote Clients
@@ -531,13 +490,14 @@ from server.client_connection import ClientConnection
 conn = ClientConnection("127.0.0.1", client_tunnel_port, timeout=300.0)
 
 # Trigger update check and apply
+# Note: Clients with default UPDATE_URL will use R2 automatically
 result = await conn.run_command("""
 cd ~/.local/share/phonehome && ./python/bin/python3 -c "
 import sys
 sys.path.insert(0, 'app')
 from client.updater import check_for_update, perform_update
 
-info = check_for_update('http://72.60.125.7/latest/version.json')
+info = check_for_update('https://phone-home.techki.ai/releases/latest/version.json')
 print('Update info:', info)
 if info:
     result = perform_update(info)
@@ -554,11 +514,10 @@ await conn.run_command("systemctl --user restart phonehome")
 
 | Task | Command |
 |------|---------|
-| Test SSH access | `ssh -o BatchMode=yes etphonehome@72.60.125.7 "echo OK"` |
+| Test R2 access | `./scripts/publish_release.sh --list` |
 | Build for x86_64 | `./build/portable/package_linux.sh x86_64` |
 | Build for ARM64 | Build natively on ARM64 machine (see DGX Spark section) |
 | Check client arch | `run_command: "uname -m"` |
-| Upload build | `scp dist/*.tar.gz etphonehome@72.60.125.7:/var/www/phonehome/v{VERSION}/` |
-| Update latest | `ssh ... "cd /var/www/phonehome && sudo ln -sf v{VERSION} latest"` |
-| Fix ownership | `ssh ... "sudo chown -R www-data:www-data /var/www/phonehome/"` |
-| Verify publish | `curl -s https://server/phonehome/latest/version.json` |
+| Publish to R2 | `./scripts/publish_release.sh --changelog "..."` |
+| Check latest version | `./scripts/publish_release.sh --latest` |
+| Verify publish | `curl -s https://phone-home.techki.ai/releases/latest/version.json` |
