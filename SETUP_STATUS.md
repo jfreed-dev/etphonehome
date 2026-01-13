@@ -18,12 +18,14 @@
 
 **Credentials (Correct Mapping):**
 ```bash
-ETPHONEHOME_R2_ACCOUNT_ID=<REDACTED-R2-ACCOUNT-ID>
-ETPHONEHOME_R2_ACCESS_KEY=<REDACTED-R2-ACCESS-KEY>
-ETPHONEHOME_R2_SECRET_KEY=<REDACTED-R2-SECRET-KEY>
+ETPHONEHOME_R2_ACCOUNT_ID=<your-account-id>
+ETPHONEHOME_R2_ACCESS_KEY=<your-access-key>
+ETPHONEHOME_R2_SECRET_KEY=<your-secret-key>
 ETPHONEHOME_R2_BUCKET=phone-home
 ETPHONEHOME_R2_REGION=auto
 ```
+
+**Note:** Store actual credentials in `deploy/docker/secrets/.env` (gitignored).
 
 **Important Note:** Use the "Secret Key ID" (64-character hex string), NOT the "API Key" field from Cloudflare dashboard.
 
