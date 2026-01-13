@@ -52,22 +52,24 @@ fi
 
 echo -e "${GREEN}Environment variables validated${NC}"
 
-# Create secrets directory
-echo "Creating secrets directory..."
-mkdir -p secrets
-chmod 700 secrets
-
-# Generate API key if not exists
-if [ ! -f secrets/api_key.txt ]; then
+# Generate API key if not set
+if [ -z "$ETPHONEHOME_API_KEY" ] || [ "$ETPHONEHOME_API_KEY" = "your_api_key_here" ]; then  # pragma: allowlist secret
     echo "Generating API key..."
-    openssl rand -hex 32 > secrets/api_key.txt
-    chmod 600 secrets/api_key.txt
-    echo -e "${GREEN}API key generated: secrets/api_key.txt${NC}"
-    echo -e "${YELLOW}Save this key securely - you'll need it to access the dashboard:${NC}"
-    cat secrets/api_key.txt
+    NEW_API_KEY=$(openssl rand -hex 32)
+    # Update the .env file with the generated key
+    if grep -q "^ETPHONEHOME_API_KEY=" .env; then
+        sed -i "s/^ETPHONEHOME_API_KEY=.*/ETPHONEHOME_API_KEY=$NEW_API_KEY/" .env
+    else
+        echo "ETPHONEHOME_API_KEY=$NEW_API_KEY" >> .env
+    fi
+    echo -e "${GREEN}API key generated and saved to .env${NC}"
+    echo -e "${YELLOW}Save this key securely - you'll need it to access the API:${NC}"
+    echo "$NEW_API_KEY"
     echo ""
+    # Re-source to get the new key
+    source .env
 else
-    echo "API key already exists"
+    echo "API key already configured"
 fi
 
 # Create acme.json for Let's Encrypt certificates
@@ -133,9 +135,7 @@ echo ""
 echo "To view logs:"
 echo "  docker compose -f docker-compose.prod.yml logs -f"
 echo ""
-echo "Your API key (save this!):"
-cat secrets/api_key.txt
-echo ""
+echo "Your API key is stored in .env (ETPHONEHOME_API_KEY)"
 echo ""
 echo "Access your deployment at:"
 echo "  https://$DOMAIN"

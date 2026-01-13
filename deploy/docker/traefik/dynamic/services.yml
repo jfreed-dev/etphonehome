@@ -1,0 +1,81 @@
+# =============================================================================
+# ET Phone Home - Traefik Dynamic Services Configuration
+# Routes and services defined via file provider (bypasses Docker API issues)
+# =============================================================================
+
+http:
+  routers:
+    # Frontend router (Svelte SPA)
+    frontend:
+      rule: "Host(`<PUBLIC_DOMAIN>`)"
+      entryPoints:
+        - websecure
+      service: frontend
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - frontend-chain
+      priority: 1
+
+    # Backend API router
+    backend-api:
+      rule: "Host(`<PUBLIC_DOMAIN>`) && PathPrefix(`/api`)"
+      entryPoints:
+        - websecure
+      service: backend
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - api-chain
+      priority: 10
+
+    # SSE router for MCP protocol
+    backend-sse:
+      rule: "Host(`<PUBLIC_DOMAIN>`) && PathPrefix(`/sse`)"
+      entryPoints:
+        - websecure
+      service: backend
+      tls:
+        certResolver: cloudflare
+      priority: 10
+
+    # Health endpoint router
+    backend-health:
+      rule: "Host(`<PUBLIC_DOMAIN>`) && Path(`/health`)"
+      entryPoints:
+        - websecure
+      service: backend
+      tls:
+        certResolver: cloudflare
+      priority: 10
+
+    # Traefik dashboard
+    dashboard:
+      rule: "Host(`<PUBLIC_DOMAIN>`) && PathPrefix(`/traefik`)"
+      entryPoints:
+        - websecure
+      service: api@internal
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - dashboard-auth
+
+  services:
+    # Frontend service (nginx serving Svelte SPA)
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://etphonehome-frontend:3000"
+
+    # Backend service (Python MCP server)
+    backend:
+      loadBalancer:
+        servers:
+          - url: "http://etphonehome-backend:8765"
+
+  middlewares:
+    # Dashboard basic auth (duplicated from docker labels for file provider)
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "admin:$2y$05$XWUZht.jpBLmww6GrTvQ0enChGlpD8w4rCcOQjo3Rim3V4RQ9W9hG"
