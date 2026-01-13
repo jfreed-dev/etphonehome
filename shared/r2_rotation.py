@@ -1,4 +1,26 @@
-"""Cloudflare R2 API token rotation and management."""
+"""Cloudflare R2 API token rotation and management.
+
+NOTE: This module is currently DISABLED because Cloudflare does not provide a public
+API to create permanent R2 tokens. The /accounts/{id}/r2/credentials endpoint used
+in this implementation does not exist.
+
+R2 tokens must be rotated manually via the Cloudflare Dashboard:
+1. Go to Cloudflare Dashboard > R2 > Overview > Manage R2 API Tokens
+2. Create a new token with read/write permissions
+3. Update GitHub Secrets: ETPHONEHOME_R2_ACCESS_KEY and ETPHONEHOME_R2_SECRET_KEY
+4. Delete the old token from Cloudflare dashboard
+5. Restart ET Phone Home server to use new credentials
+
+TODO: Implement using Cloudflare's general API tokens endpoint (/accounts/{id}/tokens)
+with R2 permission policies. This requires:
+- Creating a token with permission policy targeting R2 resources
+- Resource format: com.cloudflare.edge.r2.bucket.<ACCOUNT_ID>_<JURISDICTION>_<BUCKET_NAME>
+- Permission groups: Workers R2 Storage Write, Workers R2 Storage Read
+- Extracting access_key_id from token.id and secret from SHA-256(token.value)
+
+See: https://developers.cloudflare.com/fundamentals/api/how-to/create-via-api/
+See: https://developers.cloudflare.com/r2/api/tokens/
+"""
 
 import logging
 import os
