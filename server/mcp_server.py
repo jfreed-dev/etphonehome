@@ -1459,65 +1459,66 @@ async def _handle_tool(name: str, args: dict, _registry) -> Any:
         return result
 
     # ===== R2 KEY ROTATION & SECRETS MANAGEMENT =====
+    # NOTE: Automated R2 key rotation is DISABLED because Cloudflare does not provide
+    # a public API to create permanent R2 tokens. The /accounts/{id}/r2/credentials
+    # endpoint does not exist. R2 tokens must be rotated manually via the dashboard.
+    #
+    # TODO: Implement using Cloudflare's general API tokens endpoint (/accounts/{id}/tokens)
+    # with R2 permission policies.
+
     elif name == "r2_rotate_keys":
-        from shared.r2_rotation import R2KeyRotationManager
-
-        rotation_manager = R2KeyRotationManager.from_env()
-        if rotation_manager is None:
-            raise ToolError(
-                code="ROTATION_NOT_CONFIGURED",
-                message="R2 rotation is not configured. Required environment variables: ETPHONEHOME_CLOUDFLARE_API_TOKEN, ETPHONEHOME_R2_ACCOUNT_ID, ETPHONEHOME_GITHUB_REPO",
-                recovery_hint="Set up Cloudflare API token and GitHub repository configuration. See docs/SECRETS_MANAGEMENT.md for setup instructions.",
-            )
-
-        old_access_key_id = args.get("old_access_key_id")
-        keep_old = args.get("keep_old", False)
-
-        result = rotation_manager.rotate_r2_keys(
-            old_access_key_id=old_access_key_id,
-            delete_old=not keep_old,
+        raise ToolError(
+            code="ROTATION_NOT_SUPPORTED",
+            message="Automated R2 key rotation is not supported. Cloudflare does not provide a public API to create permanent R2 tokens.",
+            recovery_hint="Rotate R2 keys manually: 1) Go to Cloudflare Dashboard > R2 > Manage API Tokens, 2) Create new token, 3) Update GitHub Secrets (ETPHONEHOME_R2_ACCESS_KEY, ETPHONEHOME_R2_SECRET_KEY), 4) Delete old token, 5) Restart server.",
         )
 
-        logger.info(f"R2 keys rotated: new key {result['new_access_key_id']}")
-        return result
-
     elif name == "r2_list_tokens":
-        from shared.r2_rotation import R2KeyRotationManager
-
-        rotation_manager = R2KeyRotationManager.from_env()
-        if rotation_manager is None:
-            raise ToolError(
-                code="ROTATION_NOT_CONFIGURED",
-                message="R2 rotation is not configured",
-                recovery_hint="Set required environment variables for rotation manager",
-            )
-
-        tokens = rotation_manager.list_active_tokens()
-        return {
-            "tokens": tokens,
-            "count": len(tokens),
-        }
+        raise ToolError(
+            code="ROTATION_NOT_SUPPORTED",
+            message="Listing R2 tokens via API is not supported. Cloudflare does not provide a public API for R2 token management.",
+            recovery_hint="View R2 tokens in Cloudflare Dashboard > R2 > Overview > Manage R2 API Tokens.",
+        )
 
     elif name == "r2_check_rotation_status":
-        from shared.r2_rotation import R2KeyRotationManager, RotationScheduler
-
-        rotation_manager = R2KeyRotationManager.from_env()
-        if rotation_manager is None:
-            raise ToolError(
-                code="ROTATION_NOT_CONFIGURED",
-                message="R2 rotation is not configured",
-                recovery_hint="Set required environment variables for rotation manager",
-            )
-
+        # This tool can still work - it just checks the local rotation file
         rotation_days = args.get("rotation_days", 90)
-        scheduler = RotationScheduler(rotation_manager, rotation_days=rotation_days)
 
+        # Create a minimal scheduler without the rotation manager
+        class MinimalScheduler:
+            def __init__(self, rotation_days: int):
+                from pathlib import Path
+
+                self.rotation_days = rotation_days
+                self.last_rotation_file = Path.home() / ".etphonehome" / "last_r2_rotation.txt"
+
+            def get_last_rotation_date(self):
+                from datetime import datetime
+
+                if not self.last_rotation_file.exists():
+                    return None
+                try:
+                    return datetime.fromisoformat(self.last_rotation_file.read_text().strip())
+                except Exception:
+                    return None
+
+            def should_rotate(self):
+                from datetime import datetime, timezone
+
+                last = self.get_last_rotation_date()
+                if last is None:
+                    return True
+                days = (datetime.now(timezone.utc) - last).days
+                return days >= self.rotation_days
+
+        scheduler = MinimalScheduler(rotation_days)
         last_rotation = scheduler.get_last_rotation_date()
         should_rotate = scheduler.should_rotate()
 
         result = {
             "rotation_due": should_rotate,
             "rotation_interval_days": rotation_days,
+            "note": "Automated rotation not supported - manual rotation required via Cloudflare Dashboard",
         }
 
         if last_rotation:
@@ -1531,7 +1532,7 @@ async def _handle_tool(name: str, args: dict, _registry) -> Any:
             result["last_rotation"] = None
             result["days_since_rotation"] = None
             result["days_until_next"] = 0
-            result["message"] = "No previous rotation found - rotation recommended"
+            result["message"] = "No previous rotation found - manual rotation recommended"
 
         return result
 
