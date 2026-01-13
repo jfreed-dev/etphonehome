@@ -8,7 +8,7 @@ services:
   # Traefik Reverse Proxy
   # ---------------------------------------------------------------------------
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.3
     container_name: etphonehome-proxy
     restart: unless-stopped
     security_opt:
@@ -16,9 +16,13 @@ services:
     networks:
       - proxy
     ports:
-      # HTTPS only - no port 80 needed with DNS-01 challenge
-      - "443:443"
+      # HTTP on port 80 (redirects to HTTPS)
+      - "80:80"
+      # HTTPS on 8443 (port 443 reserved for SSH client tunnels)
+      - "8443:8443"
     environment:
+      # Docker API version compatibility
+      DOCKER_API_VERSION: "1.44"
       # Cloudflare API token for DNS-01 challenge
       CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN}
       ACME_EMAIL: ${ACME_EMAIL}
@@ -113,21 +117,31 @@ services:
       - proxy
       - web
       - internal
+    # Note: SSH tunnels handled by systemd etphonehome-ssh.service on port 443
     ports:
-      # SSH tunnel port for ET Phone Home clients
-      - "2222:2222"
+      # Expose MCP API to localhost only for register_handler.py
+      - "127.0.0.1:8765:8765"
     environment:
-      ETPHONEHOME_HOST: "0.0.0.0"
-      ETPHONEHOME_PORT: "8765"
-      ETPHONEHOME_SSH_PORT: "2222"
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Server settings
+      ETPHONEHOME_HOST: ${ETPHONEHOME_HOST:-0.0.0.0}
+      ETPHONEHOME_PORT: ${ETPHONEHOME_PORT:-8765}
+      ETPHONEHOME_SSH_PORT: ${ETPHONEHOME_SSH_PORT:-2222}
+      ETPHONEHOME_LOG_LEVEL: ${ETPHONEHOME_LOG_LEVEL:-INFO}
+      # API authentication
+      ETPHONEHOME_API_KEY: ${ETPHONEHOME_API_KEY}
       # R2 configuration (for file exchange)
-      ETPHONEHOME_R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
-      ETPHONEHOME_R2_ACCESS_KEY: ${R2_ACCESS_KEY:-}
-      ETPHONEHOME_R2_SECRET_KEY: ${R2_SECRET_KEY:-}
-      ETPHONEHOME_R2_BUCKET: ${R2_BUCKET:-}
-    secrets:
-      - api_key
+      ETPHONEHOME_R2_ACCOUNT_ID: ${ETPHONEHOME_R2_ACCOUNT_ID:-}
+      ETPHONEHOME_R2_ACCESS_KEY: ${ETPHONEHOME_R2_ACCESS_KEY:-}
+      ETPHONEHOME_R2_SECRET_KEY: ${ETPHONEHOME_R2_SECRET_KEY:-}
+      ETPHONEHOME_R2_BUCKET: ${ETPHONEHOME_R2_BUCKET:-}
+      ETPHONEHOME_R2_REGION: ${ETPHONEHOME_R2_REGION:-auto}
+      # Webhooks
+      ETPHONEHOME_WEBHOOK_URL: ${ETPHONEHOME_WEBHOOK_URL:-}
+      ETPHONEHOME_WEBHOOK_TIMEOUT: ${ETPHONEHOME_WEBHOOK_TIMEOUT:-10.0}
+      ETPHONEHOME_WEBHOOK_MAX_RETRIES: ${ETPHONEHOME_WEBHOOK_MAX_RETRIES:-3}
+      # Rate limiting
+      ETPHONEHOME_RATE_LIMIT_RPM: ${ETPHONEHOME_RATE_LIMIT_RPM:-60}
+      ETPHONEHOME_RATE_LIMIT_CONCURRENT: ${ETPHONEHOME_RATE_LIMIT_CONCURRENT:-10}
     volumes:
       # Persistent data
       - server-data:/var/lib/etphonehome
@@ -205,10 +219,3 @@ volumes:
   # Backend logs
   server-logs:
     driver: local
-
-# -----------------------------------------------------------------------------
-# Secrets
-# -----------------------------------------------------------------------------
-secrets:
-  api_key:
-    file: ./secrets/api_key.txt
