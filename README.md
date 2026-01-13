@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Build Status](https://github.com/jfreed-dev/etphonehome-public/actions/workflows/build.yml/badge.svg)](https://github.com/jfreed-dev/etphonehome-public/actions/workflows/build.yml)
+[![Build Status](https://github.com/jfreed-dev/etphonehome/actions/workflows/build.yml/badge.svg)](https://github.com/jfreed-dev/etphonehome/actions/workflows/build.yml)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io/)
 
 Remote access system enabling Claude CLI to assist machines via reverse SSH tunnels.
@@ -211,13 +211,10 @@ Set-Location phonehome
 
 #### Option C: From Source (Development)
 
-> **Note:** When cloning, use a folder named `etphonehome` (not `etphonehome-public`).
-> Documentation, scripts, and tests assume this folder name.
-
 ```bash
 # Linux
 cd ~
-git clone https://github.com/jfreed-dev/etphonehome-public.git ~/etphonehome
+git clone https://github.com/jfreed-dev/etphonehome.git ~/etphonehome
 cd ~/etphonehome
 pip install -e .
 phonehome --init && phonehome --generate-key
@@ -227,7 +224,7 @@ phonehome -s your-server.example.com -p 443
 ```powershell
 # Windows
 Set-Location $env:USERPROFILE
-git clone https://github.com/jfreed-dev/etphonehome-public.git "$env:USERPROFILE\etphonehome"
+git clone https://github.com/jfreed-dev/etphonehome.git "$env:USERPROFILE\etphonehome"
 Set-Location "$env:USERPROFILE\etphonehome"
 pip install -e .
 phonehome --init
