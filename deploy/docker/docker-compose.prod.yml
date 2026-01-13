@@ -15,6 +15,9 @@ services:
       - no-new-privileges:true
     networks:
       - proxy
+    extra_hosts:
+      # Allow Traefik to reach services on host network
+      - "host.docker.internal:host-gateway"
     ports:
       # HTTP on port 80 (redirects to HTTPS)
       - "80:80"
@@ -113,14 +116,8 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    networks:
-      - proxy
-      - web
-      - internal
-    # Note: SSH tunnels handled by systemd etphonehome-ssh.service on port 443
-    ports:
-      # Expose MCP API to localhost only for register_handler.py
-      - "127.0.0.1:8765:8765"
+    # Use host network so backend can access SSH reverse tunnels on localhost
+    network_mode: host
     environment:
       # Server settings
       ETPHONEHOME_HOST: ${ETPHONEHOME_HOST:-0.0.0.0}
@@ -143,32 +140,14 @@ services:
       ETPHONEHOME_RATE_LIMIT_RPM: ${ETPHONEHOME_RATE_LIMIT_RPM:-60}
       ETPHONEHOME_RATE_LIMIT_CONCURRENT: ${ETPHONEHOME_RATE_LIMIT_CONCURRENT:-10}
     volumes:
-      # Persistent data
-      - server-data:/var/lib/etphonehome
+      # Persistent data (use bind mount for host network compatibility)
+      - /var/lib/etphonehome:/var/lib/etphonehome
       # Logs
-      - server-logs:/var/log/etphonehome
+      - /var/log/etphonehome:/var/log/etphonehome
       # Timezone
       - /etc/localtime:/etc/localtime:ro
-    labels:
-      traefik.enable: "true"
-      # API routes
-      traefik.http.routers.backend-api.rule: "Host(`${DOMAIN}`) && PathPrefix(`/api`)"
-      traefik.http.routers.backend-api.entrypoints: "websecure"
-      traefik.http.routers.backend-api.tls.certresolver: "cloudflare"
-      traefik.http.routers.backend-api.middlewares: "api-chain@file"
-      traefik.http.routers.backend-api.priority: "10"
-      traefik.http.services.backend-api.loadbalancer.server.port: "8765"
-      # SSE routes (for MCP protocol)
-      traefik.http.routers.backend-sse.rule: "Host(`${DOMAIN}`) && PathPrefix(`/sse`)"
-      traefik.http.routers.backend-sse.entrypoints: "websecure"
-      traefik.http.routers.backend-sse.tls.certresolver: "cloudflare"
-      traefik.http.routers.backend-sse.priority: "10"
-      traefik.http.services.backend-sse.loadbalancer.server.port: "8765"
-      # Health endpoint
-      traefik.http.routers.backend-health.rule: "Host(`${DOMAIN}`) && Path(`/health`)"
-      traefik.http.routers.backend-health.entrypoints: "websecure"
-      traefik.http.routers.backend-health.tls.certresolver: "cloudflare"
-      traefik.http.routers.backend-health.priority: "10"
+    # Note: Traefik labels don't work with host network mode
+    # Backend routes are configured via Traefik file provider in traefik/dynamic/backend.yml
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
       interval: 30s

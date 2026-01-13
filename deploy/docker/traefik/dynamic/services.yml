@@ -67,11 +67,11 @@ http:
         servers:
           - url: "http://etphonehome-frontend:3000"
 
-    # Backend service (Python MCP server)
+    # Backend service (Python MCP server on host network)
     backend:
       loadBalancer:
         servers:
-          - url: "http://etphonehome-backend:8765"
+          - url: "http://host.docker.internal:8765"
 
   middlewares:
     # Dashboard basic auth (duplicated from docker labels for file provider)
