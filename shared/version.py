@@ -2,7 +2,7 @@
 
 import os
 
-__version__ = "0.1.10"
+__version__ = "0.1.11"
 
 # Default update URL pointing to R2 releases bucket (via custom domain)
 # Override with PHONEHOME_UPDATE_URL environment variable or client config.yml
