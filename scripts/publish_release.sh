@@ -6,21 +6,24 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+VENV_DIR="${PROJECT_DIR}/.venv"
 
 # Colors
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Load environment from .env if it exists
-ENV_FILE="${PROJECT_DIR}/deploy/docker/.env"
-if [ -f "$ENV_FILE" ]; then
-    echo -e "${YELLOW}Loading R2 configuration from ${ENV_FILE}${NC}"
-    set -a
-    # shellcheck source=/dev/null
-    source "$ENV_FILE"
-    set +a
-fi
+# Load environment from .env (check multiple locations)
+for ENV_FILE in "${PROJECT_DIR}/deploy/docker/.env" "${PROJECT_DIR}/deploy/docker/secrets/.env"; do
+    if [ -f "$ENV_FILE" ]; then
+        echo -e "${YELLOW}Loading R2 configuration from ${ENV_FILE}${NC}"
+        set -a
+        # shellcheck source=/dev/null
+        source "$ENV_FILE"
+        set +a
+        break
+    fi
+done
 
 # Check for required R2 environment variables
 if [ -z "$ETPHONEHOME_R2_ACCOUNT_ID" ] || [ -z "$ETPHONEHOME_R2_ACCESS_KEY" ] || \
@@ -33,8 +36,24 @@ if [ -z "$ETPHONEHOME_R2_ACCOUNT_ID" ] || [ -z "$ETPHONEHOME_R2_ACCESS_KEY" ] ||
     echo "  ETPHONEHOME_R2_SECRET_KEY"
     echo "  ETPHONEHOME_R2_BUCKET"
     echo ""
-    echo "Set these in ${ENV_FILE} or export them before running this script."
+    echo "Set these in deploy/docker/.env, deploy/docker/secrets/.env, or export them."
     exit 1
+fi
+
+# Create virtual environment if it doesn't exist
+if [ ! -d "$VENV_DIR" ]; then
+    echo -e "${YELLOW}Creating virtual environment...${NC}"
+    python3 -m venv "$VENV_DIR"
+fi
+
+# Activate virtual environment
+# shellcheck source=/dev/null
+source "${VENV_DIR}/bin/activate"
+
+# Install boto3 if not present
+if ! python3 -c "import boto3" 2>/dev/null; then
+    echo -e "${YELLOW}Installing boto3...${NC}"
+    pip install -q boto3
 fi
 
 # Run the Python script with all arguments
