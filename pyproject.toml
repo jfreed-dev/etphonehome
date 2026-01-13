@@ -58,14 +58,10 @@ include = ["client*", "server*", "shared*"]
 [tool.black]
 line-length = 100
 target-version = ["py310"]
-extend-exclude = '''
-\.claude/skills/etphonehome-sl1-powerpack/da_snippets/
-'''
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = [".claude/skills/etphonehome-sl1-powerpack/da_snippets/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
