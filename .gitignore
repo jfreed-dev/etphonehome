@@ -92,13 +92,51 @@ logs/
 *.pem
 *.key
 !*.key.example
+*.secret
+*.secrets
+*.credentials
+*.token
+*.enc
 kubeconfig
 talosconfig
 .mcp.json
 
-# Claude Code configuration (personal/local)
+# Internal documentation (private/local only)
+docs/internal/
+docs/private/
+docs/_internal/
+internal/
+notes/
+.notes/
+*.private.md
+
+# Local assistant configuration (never commit)
 .claude/
-CLAUDE.md
+.codex/
+.gemini/
+.agents/
+.skills/
+scripts/skills/
+.assistant/
+.assistants/
+.ai/
+.llm/
+.prompt/
+.prompts/
+.sessions/
+sessions/
+prompts/
+*mcp.json
+*.mcp.json
+*.session
+*.session.json
+*.session.jsonl
+*.history.jsonl
+*.prompt
+*.prompt.json
+*.prompt.jsonl
+*.assistant.json
+*.assistant.jsonl
 
 # Temporary working files
 tmp_*

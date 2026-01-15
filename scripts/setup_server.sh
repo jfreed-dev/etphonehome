@@ -83,9 +83,9 @@ ClientAliveCountMax 3
 EOF
 
 echo
-echo "=== Claude Code MCP Configuration ==="
+echo "=== MCP Client Configuration ==="
 echo
-echo "Add to your Claude Code MCP settings (~/.config/claude-code/mcp.json):"
+echo "Add to your MCP client settings (location varies by client):"
 echo
 cat << EOF
 {
@@ -105,5 +105,5 @@ echo "1. Configure SSH as shown above"
 echo "2. Create the 'etphonehome' user: sudo useradd -m etphonehome"
 echo "3. Add client public keys to $AUTH_KEYS"
 echo "4. Restart SSH: sudo systemctl restart sshd"
-echo "5. Configure Claude Code MCP as shown above"
+echo "5. Configure your MCP client as shown above"
 echo

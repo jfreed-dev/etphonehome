@@ -182,7 +182,7 @@ python3 -m shared.r2_rotation rotate --old-key "current-access-key"
 python3 -m shared.r2_rotation rotate --old-key "key" --keep-old
 ```
 
-### Via MCP Tools (Claude Code)
+### Via MCP Tools (MCP Client)
 
 ```python
 # Check rotation status

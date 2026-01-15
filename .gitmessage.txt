@@ -1,0 +1,6 @@
+# Commit Message Template
+#
+# Use a short, imperative subject line.
+# Include context and rationale in the body when helpful.
+#
+# Do not reference automated assistance in commit messages.

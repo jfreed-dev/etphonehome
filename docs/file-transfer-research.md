@@ -143,7 +143,7 @@ Client (443) --[Reverse SSH Tunnel with SFTP Subsystem]--> Server
 
 ❌ **Documentation/training** - Users must learn SFTP commands
 - MCP tools would need to abstract SFTP operations
-- Not transparent to Claude Code users
+- Not transparent to MCP client users
 
 ❌ **Concurrent access** - SFTP sessions need proper management
 - Multiple file operations could conflict
@@ -200,7 +200,7 @@ Server --[boto3/S3 API]--> R2 Bucket <--[boto3/S3 API]-- Client
                     Lifecycle Policy (auto-delete)
                               |
                               v
-                    Claude Code Skill (file manager)
+                    MCP Client Skill (file manager)
 ```
 
 **Flow:**
@@ -256,7 +256,7 @@ Server --[boto3/S3 API]--> R2 Bucket <--[boto3/S3 API]-- Client
 **Key tasks:**
 1. Add boto3 dependency to project
 2. Implement R2 client wrapper (`shared/r2_client.py`)
-3. Create new Claude Code skill (`etphonehome-file-exchange`)
+3. Create a new MCP client skill (`etphonehome-file-exchange`)
 4. Add presigned URL generation for downloads
 5. Configure lifecycle policy on R2 bucket
 6. Update MCP tools with optional R2 path
@@ -355,13 +355,13 @@ Convert the current limited tunnel into a full SSH server on port 443, using aut
 
 **Proposed tunnel:**
 - Client runs full SSH server on reverse-forwarded port
-- Server authenticates via authorized_keys (Claude Code's public key)
+- Server authenticates via authorized_keys (MCP client's public key)
 - SSH server restrictions: `no-pty,permitopen=...,command="..."`
 - Enables: SFTP, SCP, SSH commands, port forwarding
 
 **Architecture:**
 ```
-Server (with Claude Code SSH key)
+Server (with MCP client SSH key)
     |
     v
 Client's authorized_keys file
@@ -437,7 +437,7 @@ paramiko.ServerInterface (SSH Server)
 **Security restrictions example:**
 ```
 # In client's authorized_keys
-no-pty,no-agent-forwarding,no-X11-forwarding,permitopen="127.0.0.1:*",command="/usr/local/bin/agent-shell" ssh-ed25519 AAAAC3... claude-code@server
+no-pty,no-agent-forwarding,no-X11-forwarding,permitopen="127.0.0.1:*",command="/usr/local/bin/agent-shell" ssh-ed25519 AAAAC3... mcp-client@server
 ```
 
 **Source:** [Restricting SSH Access to Port Forwarding](https://blog.tinned-software.net/restrict-ssh-access-to-port-forwarding-to-one-specific-port/)
@@ -639,11 +639,11 @@ r2:
 #### 2. File Exchange Skill (Days 2-3)
 
 ```bash
-# Create new skill directory
-mkdir -p .claude/skills/etphonehome-file-exchange
+# Create new skill directory (MCP client-specific)
+mkdir -p <MCP_CLIENT_SKILLS_DIR>/etphonehome-file-exchange
 
 # Implement MCP tools
-touch .claude/skills/etphonehome-file-exchange/skill.md
+touch <MCP_CLIENT_SKILLS_DIR>/etphonehome-file-exchange/skill.md
 ```
 
 **Skill tools:**

@@ -35,7 +35,7 @@ C:\etphonehome\venv\Scripts\pip install -e "C:\etphonehome[server]"
 - [Architecture](#architecture)
 - [Linux Setup](#linux-setup)
 - [Windows Setup](#windows-setup)
-- [Claude Code Integration](#claude-code-integration)
+- [MCP Client Integration](#mcp-client-integration)
 - [Adding Clients](#adding-clients)
 - [Troubleshooting](#troubleshooting)
 
@@ -46,7 +46,7 @@ C:\etphonehome\venv\Scripts\pip install -e "C:\etphonehome[server]"
 The ET Phone Home MCP server consists of two components:
 
 1. **SSH Server** - Accepts reverse tunnel connections from clients (port 443 or 2222)
-2. **MCP Server** - Exposes tools to Claude Code for interacting with connected clients
+2. **MCP Server** - Exposes tools to your MCP client for interacting with connected clients
 
 ### Requirements
 
@@ -62,7 +62,7 @@ The ET Phone Home MCP server consists of two components:
                     ┌─────────────────────────────────────┐
                     │         MCP Server Host             │
                     │                                     │
-  Claude Code ──────┤►  MCP Server (HTTP :8765 or stdio)  │
+  MCP Client ───────┤►  MCP Server (HTTP :8765 or stdio)  │
                     │     └─ Communicates via tunnels     │
                     │                                     │
   Client Tunnels ───┤►  SSH Server (Port 443 or 2222)     │
@@ -283,7 +283,7 @@ curl http://localhost:8765/health
 **Option B: Run directly via stdio (for local/development use)**
 
 ```bash
-# Run MCP server in stdio mode (Claude Code launches it directly)
+# Run MCP server in stdio mode (MCP client launches it directly)
 /opt/etphonehome/venv/bin/python -m server.mcp_server
 ```
 
@@ -482,11 +482,11 @@ Get-Content C:\etphonehome\logs\mcp.log -Tail 50
 
 ---
 
-## Claude Code Integration
+## MCP Client Integration
 
 ### Option 1: HTTP/SSE Transport (recommended for remote servers)
 
-Add to Claude Code settings (`~/.claude/settings.json` or project settings):
+Add to your MCP client settings (location varies by client):
 
 ```json
 {

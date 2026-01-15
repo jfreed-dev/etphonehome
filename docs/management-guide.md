@@ -1,6 +1,6 @@
 # ET Phone Home Management Guide
 
-Manage connected clients using Claude CLI with MCP tools.
+Manage connected clients using an MCP client with MCP tools.
 
 ---
 
@@ -34,13 +34,13 @@ find_client {"online_only": true}
 
 ## Overview
 
-ET Phone Home uses MCP (Model Context Protocol) to expose management tools to Claude CLI. You can manage all connected clients from any machine with Claude CLI configured to use the ET Phone Home MCP server.
+ET Phone Home uses MCP (Model Context Protocol) to expose management tools to your MCP client. You can manage all connected clients from any machine with your MCP client configured to use the ET Phone Home MCP server.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         MANAGEMENT WORKFLOW                         │
 │                                                                     │
-│   You ──► Claude CLI ──► MCP Server ──► SSH Tunnel ──► Client      │
+│   You ──► MCP Client ──► MCP Server ──► SSH Tunnel ──► Client      │
 │                                                                     │
 │   "Check disk on prod"                                              │
 │         │                                                           │
@@ -51,17 +51,17 @@ ET Phone Home uses MCP (Model Context Protocol) to expose management tools to Cl
 
 ## Prerequisites
 
-1. Claude CLI installed and configured
-2. ET Phone Home MCP server configured in Claude CLI settings
+1. MCP client installed and configured
+2. ET Phone Home MCP server configured in MCP client settings
 3. SSH access to the server (optional, for direct management)
 
 ---
 
 ## Accessing the Management Interface
 
-### Option 1: Local Claude CLI with MCP
+### Option 1: Local MCP Client with MCP
 
-Configure Claude CLI to invoke MCP remotely via SSH:
+Configure your MCP client to invoke MCP remotely via SSH:
 
 ```json
 {
@@ -79,13 +79,13 @@ Then use natural language:
 - "Run 'uname -a' on the development machine"
 - "Read /var/log/syslog from the production server"
 
-### Option 2: SSH to Server + Claude CLI
+### Option 2: SSH to Server + MCP Client
 
-SSH into the server and run Claude CLI there:
+SSH into the server and run your MCP client there:
 
 ```bash
 ssh root@your-server
-claude
+<mcp-client>
 ```
 
 ---
@@ -148,7 +148,7 @@ claude
 ┌──────────────────────────────────────────────────────────┐
 │ You: "List all connected clients"                        │
 │                                                          │
-│ Claude: [Uses list_clients]                              │
+│ Client: [Uses list_clients]                              │
 │                                                          │
 │ Connected clients:                                       │
 │ ┌────────────────┬─────────────┬────────┬─────────────┐ │
@@ -166,7 +166,7 @@ claude
 ┌──────────────────────────────────────────────────────────┐
 │ You: "Check disk space on the production server"         │
 │                                                          │
-│ Claude: [select_client → run_command "df -h"]            │
+│ Client: [select_client → run_command "df -h"]            │
 │                                                          │
 │ Disk usage on prod-server-01:                            │
 │ Filesystem      Size  Used Avail Use%                    │
@@ -180,7 +180,7 @@ claude
 ┌──────────────────────────────────────────────────────────┐
 │ You: "Run 'apt update' on all Linux clients"             │
 │                                                          │
-│ Claude: [find_client → run_command on each]              │
+│ Client: [find_client → run_command on each]              │
 │                                                          │
 │ Results:                                                 │
 │ - lokipopcosmic: 15 packages can be upgraded             │
@@ -194,7 +194,7 @@ claude
 ┌──────────────────────────────────────────────────────────┐
 │ You: "Download nginx config from production"             │
 │                                                          │
-│ Claude: [download_file]                                  │
+│ Client: [download_file]                                  │
 │                                                          │
 │ Downloaded /etc/nginx/nginx.conf to ./nginx.conf         │
 └──────────────────────────────────────────────────────────┘
@@ -206,7 +206,7 @@ claude
 ┌──────────────────────────────────────────────────────────┐
 │ You: "Mark the dev machine as staging"                   │
 │                                                          │
-│ Claude: [describe_client → update_client]                │
+│ Client: [describe_client → update_client]                │
 │                                                          │
 │ Updated lokipopcosmic:                                   │
 │ - Purpose: Development → Staging                         │
@@ -219,18 +219,18 @@ claude
 ┌──────────────────────────────────────────────────────────┐
 │ You: "List clients"                                      │
 │                                                          │
-│ Claude: [list_clients]                                   │
+│ Client: [list_clients]                                   │
 │ Warning: prod-server-01 has key_mismatch=true            │
 │                                                          │
 │ You: "Why does prod have a key mismatch?"                │
 │                                                          │
-│ Claude: [describe_client]                                │
+│ Client: [describe_client]                                │
 │ The SSH key changed on 2026-01-04. Previous key was      │
 │ registered on 2026-01-01.                                │
 │                                                          │
 │ You: "That was a planned key rotation, accept it"        │
 │                                                          │
-│ Claude: [accept_key]                                     │
+│ Client: [accept_key]                                     │
 │ Key accepted for prod-server-01.                         │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -241,7 +241,7 @@ claude
 ┌──────────────────────────────────────────────────────────┐
 │ You: "Set up webhook notifications for the prod server"  │
 │                                                          │
-│ Claude: [configure_client]                               │
+│ Client: [configure_client]                               │
 │ configure_client {                                       │
 │   "uuid": "...",                                         │
 │   "webhook_url": "https://slack.example.com/webhook"     │
@@ -258,7 +258,7 @@ claude
 ┌──────────────────────────────────────────────────────────┐
 │ You: "Check rate limit stats for the dev client"         │
 │                                                          │
-│ Claude: [get_rate_limit_stats]                           │
+│ Client: [get_rate_limit_stats]                           │
 │                                                          │
 │ Rate limit stats for lokipopcosmic:                      │
 │ - Current RPM: 12/60                                     │
@@ -274,7 +274,7 @@ claude
 ┌──────────────────────────────────────────────────────────┐
 │ You: "Check system health on production"                 │
 │                                                          │
-│ Claude: [get_client_metrics]                             │
+│ Client: [get_client_metrics]                             │
 │                                                          │
 │ System metrics for prod-server-01:                       │
 │ - CPU: 23% (4 cores)                                     │
@@ -292,7 +292,7 @@ Use SSH sessions to connect through an ET Phone Home client to other hosts on th
 ┌──────────────────────────────────────────────────────────┐
 │ You: "Connect to the database server through prod"       │
 │                                                          │
-│ Claude: [ssh_session_open]                               │
+│ Client: [ssh_session_open]                               │
 │ ssh_session_open {                                       │
 │   "host": "db.internal",                                 │
 │   "username": "dbadmin",                                 │
@@ -303,14 +303,14 @@ Use SSH sessions to connect through an ET Phone Home client to other hosts on th
 │                                                          │
 │ You: "Check the PostgreSQL status"                       │
 │                                                          │
-│ Claude: [ssh_session_command]                            │
+│ Client: [ssh_session_command]                            │
 │ Output:                                                  │
 │ ● postgresql.service - PostgreSQL database server        │
 │   Active: active (running) since Mon 2026-01-06          │
 │                                                          │
 │ You: "Done with the database, close the session"         │
 │                                                          │
-│ Claude: [ssh_session_close]                              │
+│ Client: [ssh_session_close]                              │
 │ Session sess_abc123 closed.                              │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -329,7 +329,7 @@ Use R2 exchange for large files (> 100MB), async transfers, or when direct conne
 ┌──────────────────────────────────────────────────────────────┐
 │ You: "Transfer the 500MB backup to the prod server"          │
 │                                                              │
-│ Claude: [exchange_upload]                                    │
+│ Client: [exchange_upload]                                    │
 │ exchange_upload {                                            │
 │   "local_path": "/tmp/backup.tar.gz",                        │
 │   "dest_client": "prod-server-uuid",                         │
@@ -344,14 +344,14 @@ Use R2 exchange for large files (> 100MB), async transfers, or when direct conne
 │                                                              │
 │ You: "Download it on the prod server"                        │
 │                                                              │
-│ Claude: [run_command on prod server]                         │
+│ Client: [run_command on prod server]                         │
 │ curl -o /tmp/backup.tar.gz "https://...download_url..."      │
 │                                                              │
 │ Downloaded 524MB to /tmp/backup.tar.gz                       │
 │                                                              │
 │ You: "Clean up the R2 transfer"                              │
 │                                                              │
-│ Claude: [exchange_delete]                                    │
+│ Client: [exchange_delete]                                    │
 │ Deleted transfer from R2.                                    │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -368,7 +368,7 @@ Handle interactive prompts like sudo passwords or y/n confirmations.
 ┌──────────────────────────────────────────────────────────────┐
 │ You: "Run apt upgrade with sudo on the dev server"           │
 │                                                              │
-│ Claude: [ssh_session_open + ssh_session_command]             │
+│ Client: [ssh_session_open + ssh_session_command]             │
 │ ssh_session_command {                                        │
 │   "session_id": "sess_abc123",                               │
 │   "command": "sudo apt upgrade -y"                           │
@@ -376,13 +376,13 @@ Handle interactive prompts like sudo passwords or y/n confirmations.
 │                                                              │
 │ Output: "[sudo] password for admin:"                         │
 │                                                              │
-│ Claude: [ssh_session_send]                                   │
+│ Client: [ssh_session_send]                                   │
 │ ssh_session_send {                                           │
 │   "session_id": "sess_abc123",                               │
 │   "text": "the-password"                                     │
 │ }                                                            │
 │                                                              │
-│ Claude: [ssh_session_read]                                   │
+│ Client: [ssh_session_read]                                   │
 │ Output: Reading package lists... Done                        │
 │         15 upgraded, 0 newly installed, 0 to remove...       │
 └──────────────────────────────────────────────────────────────┘
@@ -430,7 +430,7 @@ find_client {"tags": ["linux"], "capabilities": ["docker"]}
 | **Path restrictions** | Clients can configure `allowed_paths` to limit access |
 | **Timeouts** | Default 300s; override with `timeout` parameter |
 | **File transfers** | `upload_file`/`download_file` use SFTP (no size limit); R2 for async/very large |
-| **Parallel commands** | Ask Claude to run on "all clients" for bulk ops |
+| **Parallel commands** | Ask your MCP client to run on "all clients" for bulk ops |
 | **SSH sessions** | Use for stateful commands; `cd`, `export` persist between commands |
 
 ---
@@ -485,7 +485,7 @@ run_command {"cmd": "nohup ./script.sh &"}
 ## See Also
 
 - [API Reference](API.md) - Complete tool documentation
-- [SSH + Claude Code Guide](ssh-claude-code-guide.md) - Remote access setup
+- [SSH + MCP Client Guide](ssh-claude-code-guide.md) - Remote access setup
 - [MCP Server Setup](mcp-server-setup-guide.md) - Server configuration
 - [Webhooks Guide](webhooks-guide.md) - Webhook integration examples
 - [R2 Setup Guide](R2_SETUP_GUIDE.md) - Cloudflare R2 storage configuration

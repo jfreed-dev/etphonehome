@@ -240,7 +240,6 @@ sftp -P <tunnel_port> phonehome@localhost
 
 ### 2. Documentation Updates
 - [ ] Update README.md with SFTP section
-- [ ] Update CLAUDE.md with SFTP capabilities
 - [ ] Create docs/SFTP_SUBSYSTEM_GUIDE.md
 - [ ] Update FILE_TRANSFER_IMPROVEMENT_RESEARCH.md
 
@@ -319,5 +318,5 @@ sftp -P <tunnel_port> phonehome@localhost
 
 ---
 
-**Implementation completed by:** Claude Sonnet 4.5
+**Implementation completed by:** Contributor
 **Date:** 2026-01-09

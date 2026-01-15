@@ -183,7 +183,7 @@ def test_run_command_returns_stdout():
 
 - **README.md**: Project overview and quick start
 - **docs/**: Detailed guides and references
-- **CLAUDE.md**: Development guidance (auto-generated context)
+- **Development guidance**: Keep local-only notes outside the repo (see `docs/internal/` conventions).
 
 ### Documentation Style
 

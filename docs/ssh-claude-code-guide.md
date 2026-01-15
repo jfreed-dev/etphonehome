@@ -1,4 +1,4 @@
-# Using Claude Code via SSH
+# Using an MCP Client via SSH
 
 Access ET Phone Home MCP tools remotely through SSH.
 
@@ -7,11 +7,11 @@ Access ET Phone Home MCP tools remotely through SSH.
 ## Quick Reference
 
 ```bash
-# Option 1: SSH to server, run Claude locally
+# Option 1: SSH to server, run your MCP client locally
 ssh root@your-server
-claude
+<mcp-client>
 
-# Option 2: Local Claude with remote MCP (add to ~/.claude/settings.json)
+# Option 2: Local MCP client with remote MCP (add to your client settings)
 {
   "mcpServers": {
     "etphonehome": {
@@ -22,7 +22,7 @@ claude
 }
 ```
 
-**Then ask Claude:**
+**Then ask your MCP client:**
 ```
 "List all clients"
 "Run 'uptime' on the dev machine"
@@ -39,7 +39,7 @@ claude
 │                                                                         │
 │  LOCAL MACHINE                          SERVER                          │
 │  ┌─────────────┐     SSH tunnel     ┌─────────────────────────────────┐ │
-│  │ Claude Code │ ──────────────────►│ run_mcp.sh → MCP Server         │ │
+│  │ MCP Client │ ───────────────────►│ run_mcp.sh → MCP Server          │ │
 │  └─────────────┘                    │              │                  │ │
 │                                     │              ▼                  │ │
 │                                     │        Client Tunnels           │ │
@@ -51,19 +51,19 @@ claude
 
 ---
 
-## Option 1: SSH to Server and Run Claude Code
+## Option 1: SSH to Server and Run Your MCP Client
 
-Connect to the server and run Claude Code directly:
+Connect to the server and run your MCP client directly:
 
 ```bash
 # SSH to the server
 ssh -i ~/.ssh/your_admin_key root@your-server
 
-# Start Claude Code
-claude
+# Start your MCP client
+<mcp-client>
 ```
 
-Once in Claude Code, the ET Phone Home MCP tools are available:
+Once in your MCP client, the ET Phone Home MCP tools are available:
 
 ```
 You: List all connected clients
@@ -74,7 +74,7 @@ You: Download the nginx config from prod-server
 
 ### Server-Side MCP Configuration
 
-Ensure the server has MCP configured in Claude Code settings:
+Ensure the server has MCP configured in your client settings:
 
 ```json
 {
@@ -92,7 +92,7 @@ Ensure the server has MCP configured in Claude Code settings:
 
 ## Option 2: Remote MCP via SSH (Recommended)
 
-Run Claude Code locally and invoke the MCP server remotely via SSH.
+Run your MCP client locally and invoke the MCP server remotely via SSH.
 
 ### Step 1: Create run_mcp.sh on Server
 
@@ -116,9 +116,9 @@ When MCP runs as root via SSH, it needs access to the client store:
 ln -sfn /home/etphonehome/.etphonehome-server /root/.etphonehome-server
 ```
 
-### Step 3: Configure Local Claude Code
+### Step 3: Configure Local MCP Client
 
-Add to `~/.claude/settings.json`:
+Add to your MCP client settings (location varies by client):
 
 ```json
 {
@@ -136,7 +136,7 @@ Add to `~/.claude/settings.json`:
 }
 ```
 
-Now Claude Code on your local machine can manage remote clients without SSHing manually.
+Now your MCP client on the local machine can manage remote clients without SSHing manually.
 
 ---
 
@@ -164,20 +164,20 @@ Now Claude Code on your local machine can manage remote clients without SSHing m
 ┌────────────────────────────────────────────────────────────────────┐
 │ You: "List all connected clients"                                  │
 │                                                                    │
-│ Claude: [Uses list_clients]                                        │
+│ Client: [Uses list_clients]                                        │
 │ Connected clients:                                                 │
 │ - dev-workstation (Development) - Online, Ubuntu 22.04            │
 │ - prod-server-01 (Production) - Online, Debian 12                 │
 ├────────────────────────────────────────────────────────────────────┤
 │ You: "Select the prod server and check disk space"                 │
 │                                                                    │
-│ Claude: [Uses select_client, then run_command]                     │
+│ Client: [Uses select_client, then run_command]                     │
 │ Selected prod-server-01. Disk usage:                               │
 │ /dev/sda1  100G  45G  55G  45%  /                                 │
 ├────────────────────────────────────────────────────────────────────┤
 │ You: "Are there any clients with docker installed?"                │
 │                                                                    │
-│ Claude: [Uses find_client]                                         │
+│ Client: [Uses find_client]                                         │
 │ Found 1 client with docker capability:                             │
 │ - dev-workstation (has docker 24.0.5)                              │
 └────────────────────────────────────────────────────────────────────┘
@@ -187,7 +187,7 @@ Now Claude Code on your local machine can manage remote clients without SSHing m
 
 ## Troubleshooting
 
-### Claude Code Not Finding MCP Server
+### MCP Client Not Finding MCP Server
 
 ```bash
 # Verify the run script exists and works

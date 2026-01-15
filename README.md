@@ -441,7 +441,7 @@ log_level: INFO
 |-------|-------------|
 | [API Reference](docs/API.md) | Complete MCP tool reference, error codes, webhooks |
 | [MCP Server Setup](docs/mcp-server-setup-guide.md) | Complete Linux/Windows server setup |
-| [SSH + Claude Code](docs/ssh-claude-code-guide.md) | Remote MCP access via SSH |
+| [SSH + MCP Client](docs/ssh-claude-code-guide.md) | Remote MCP access via SSH |
 | [Management Guide](docs/management-guide.md) | Client management workflows |
 | [Webhooks Guide](docs/webhooks-guide.md) | Webhook integration examples |
 | [R2 Setup Guide](docs/R2_SETUP_GUIDE.md) | Cloudflare R2 storage configuration |
@@ -450,20 +450,11 @@ log_level: INFO
 | [Download Server](docs/download-server-setup.md) | Client distribution setup |
 | [Roadmap](docs/roadmap.md) | Planned features |
 
-### Claude Code Skills
+### Optional Skills (Private)
 
-ET Phone Home includes specialized Claude Code skills for common workflows:
-
-| Skill | Description |
-|-------|-------------|
-| `etphonehome-remote-access` | Safe remote access best practices |
-| `etphonehome-diagnostics` | Client health monitoring |
-| `etphonehome-infrastructure` | Client management and organization |
-| `etphonehome-build` | Cross-architecture builds and publishing |
-| `etphonehome-file-exchange` | R2 storage file transfers |
-| `etphonehome-windows-server` | Windows Server and PowerShell |
-
-Skills are located in `.claude/skills/` and activate automatically based on context.
+Specialized skills and agent workflows can be maintained privately to avoid
+publishing assistant settings or internal operational guidance. Public
+documentation focuses on setup, usage, and API behavior.
 
 ---
 
