@@ -74,6 +74,9 @@ server/static/index.html
 # Pre-commit
 .pre-commit-cache/
 
+# Act local secrets file
+.secrets
+
 # Logs
 *.log
 logs/
