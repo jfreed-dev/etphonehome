@@ -22,7 +22,7 @@
 		"globals": "^17.1.0",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.0.0",
-		"sass": "^1.80.0",
+		"sass": "^1.97.3",
 		"svelte": "^5.48.2",
 		"svelte-check": "^4.0.0",
 		"typescript": "^5.0.0",
