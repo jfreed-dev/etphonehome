@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import time
+import uuid
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -252,6 +253,12 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
             )
         return Response()
 
+    class _AsgiResponseSent(Response):
+        """No-op Response: the real response was already sent via ASGI by handle_request()."""
+
+        async def __call__(self, scope, receive, send):
+            pass
+
     async def handle_streamable_http(request: Request) -> Response:
         """Handle Streamable HTTP MCP requests (POST/GET/DELETE /sse)."""
         session_id = request.headers.get("mcp-session-id")
@@ -263,15 +270,16 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
             # GET with valid session = SSE stream for that session
             transport = _streamable_sessions[session_id]
             await transport.handle_request(request.scope, request.receive, request._send)
-            return Response()
+            return _AsgiResponseSent()
 
         if request.method == "POST":
             if session_id and session_id in _streamable_sessions:
                 transport = _streamable_sessions[session_id]
             else:
-                # New session — create transport with connect() ready
+                # New session — create transport with a unique session ID
+                new_session_id = uuid.uuid4().hex
                 transport = StreamableHTTPServerTransport(
-                    mcp_session_id=None,
+                    mcp_session_id=new_session_id,
                     is_json_response_enabled=True,
                 )
                 ready_event = asyncio.Event()
@@ -286,7 +294,7 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
                                 mcp_server.create_initialization_options(),
                             )
                     finally:
-                        sid = getattr(t, "_mcp_session_id", None)
+                        sid = t.mcp_session_id
                         if sid and sid in _streamable_sessions:
                             del _streamable_sessions[sid]
 
@@ -295,12 +303,12 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
 
             await transport.handle_request(request.scope, request.receive, request._send)
 
-            # Store transport by its assigned session ID
-            sid = getattr(transport, "_mcp_session_id", None)
+            # Store transport by its session ID
+            sid = transport.mcp_session_id
             if sid and sid not in _streamable_sessions:
                 _streamable_sessions[sid] = transport
 
-            return Response()
+            return _AsgiResponseSent()
 
         if request.method == "DELETE":
             if session_id and session_id in _streamable_sessions:
