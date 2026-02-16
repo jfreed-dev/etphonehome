@@ -190,7 +190,7 @@ class WebhookDispatcher:
                 )
             except Exception as e:
                 logger.warning(
-                    f"Webhook error: {payload.event} -> {url}, " f"error={e}, attempt={attempt + 1}"
+                    f"Webhook error: {payload.event} -> {url}, error={e}, attempt={attempt + 1}"
                 )
 
             if attempt < self.max_retries - 1:

@@ -292,17 +292,17 @@ def backup_policies(cursor):
         backup_data.append(
             {"id": pid, "ename": name, "pcause": desc if desc else "", "eseverity": severity}
         )
-        print("ID: %d | Name: %s" % (pid, name[:60] if name else "NULL"))
+        print(f"ID: {pid} | Name: {name[:60] if name else 'NULL'}")
 
-    print("\nTotal policies: %d" % len(policies))
+    print(f"\nTotal policies: {len(policies)}")
 
     # Save backup to JSON
-    backup_filename = "/tmp/policies_backup_%s.json" % datetime.datetime.now().strftime(
-        "%Y%m%d_%H%M%S"
+    backup_filename = "/tmp/policies_backup_{}.json".format(
+        datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     )
     with open(backup_filename, "w") as f:
         json.dump(backup_data, f, indent=2)
-    print("Backup saved to: %s" % backup_filename)
+    print(f"Backup saved to: {backup_filename}")
 
     return backup_data
 
@@ -327,7 +327,7 @@ def update_policies(cursor, dry_run=False):
 
         result = cursor.fetchone()
         if not result:
-            print("SKIP ID %d: Not found in database" % policy_id)
+            print(f"SKIP ID {policy_id}: Not found in database")
             skipped_count += 1
             continue
 
@@ -346,7 +346,7 @@ def update_policies(cursor, dry_run=False):
             params.append(new_desc)
 
         if not updates:
-            print("SKIP ID %d: No changes needed" % policy_id)
+            print(f"SKIP ID {policy_id}: No changes needed")
             skipped_count += 1
             continue
 
@@ -356,18 +356,17 @@ def update_policies(cursor, dry_run=False):
             params.append(policy_id)
             cursor.execute(query, params)
 
-        print("UPDATE ID %d:" % policy_id)
+        print(f"UPDATE ID {policy_id}:")
         if new_name and current_name != new_name:
-            print("  Name: '%s' -> '%s'" % (current_name[:40], new_name[:40]))  # noqa: UP031
+            print(f"  Name: '{current_name[:40]}' -> '{new_name[:40]}'")
         if new_desc is not None and current_desc != new_desc:
             print(
-                "  Description: %s -> %s chars"  # noqa: UP031
-                % (len(current_desc) if current_desc else 0, len(new_desc))
+                f"  Description: {len(current_desc) if current_desc else 0} -> {len(new_desc)} chars"
             )
 
         updated_count += 1
 
-    print("\nUpdated: %d | Skipped: %d" % (updated_count, skipped_count))
+    print(f"\nUpdated: {updated_count} | Skipped: {skipped_count}")
     return updated_count
 
 
@@ -390,9 +389,9 @@ def verify_updates(cursor):
 
     non_standard = cursor.fetchall()
     if non_standard:
-        print("WARNING: %d policies don't follow naming convention:" % len(non_standard))
+        print(f"WARNING: {len(non_standard)} policies don't follow naming convention:")
         for pid, name in non_standard:
-            print("  ID %d: %s" % (pid, name))
+            print(f"  ID {pid}: {name}")
     else:
         print("OK: All policies follow 'Palo Alto Prisma Cloud:' naming convention")
 
@@ -409,9 +408,9 @@ def verify_updates(cursor):
 
     no_desc = cursor.fetchall()
     if no_desc:
-        print("WARNING: %d policies have no description:" % len(no_desc))
+        print(f"WARNING: {len(no_desc)} policies have no description:")
         for pid, name in no_desc:
-            print("  ID %d: %s" % (pid, name))
+            print(f"  ID {pid}: {name}")
     else:
         print("OK: All policies have descriptions")
 
@@ -423,7 +422,7 @@ def verify_updates(cursor):
         (PPGUID,),
     )
     total = cursor.fetchone()[0]
-    print("\nTotal policies in PowerPack: %d" % total)
+    print(f"\nTotal policies in PowerPack: {total}")
 
     return len(non_standard) == 0 and len(no_desc) == 0
 

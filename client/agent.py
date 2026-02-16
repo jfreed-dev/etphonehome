@@ -430,7 +430,7 @@ class SSHSessionManager:
                 if key_path.exists():
                     connect_kwargs["key_filename"] = str(key_path)
 
-            logger.info(f"Connecting to jump host {i+1}: {jh.username}@{jh.host}:{jh.port}")
+            logger.info(f"Connecting to jump host {i + 1}: {jh.username}@{jh.host}:{jh.port}")
             jump_client.connect(**connect_kwargs)
 
         # Final connection to target through the jump chain

@@ -51,9 +51,9 @@ def main():
 
         non_standard = cursor.fetchall()
         if non_standard:
-            print("\nFAIL: %d policies don't follow naming convention:" % len(non_standard))
+            print(f"\nFAIL: {len(non_standard)} policies don't follow naming convention:")
             for pid, name in non_standard:
-                print("  ID %d: %s" % (pid, name))
+                print(f"  ID {pid}: {name}")
         else:
             print("\nPASS: All policies follow 'Palo Alto Prisma Cloud:' naming convention")
 
@@ -70,9 +70,9 @@ def main():
 
         no_desc = cursor.fetchall()
         if no_desc:
-            print("\nFAIL: %d policies have no description:" % len(no_desc))
+            print(f"\nFAIL: {len(no_desc)} policies have no description:")
             for pid, name in no_desc:
-                print("  ID %d: %s" % (pid, name))
+                print(f"  ID {pid}: {name}")
         else:
             print("PASS: All policies have descriptions")
 
@@ -96,7 +96,7 @@ def main():
             sev_map = {0: "Healthy", 1: "Notice", 2: "Minor", 3: "Major", 4: "Critical"}
             sev_str = sev_map.get(sev, str(sev))
             desc_str = "[DESC]" if has_desc == "YES" else "[NO DESC]"
-            print("%4d | %-8s | %s %s" % (pid, sev_str, name[:50], desc_str))
+            print(f"{pid:4d} | {sev_str:<8s} | {name[:50]} {desc_str}")
 
         # Final count
         cursor.execute(
@@ -110,9 +110,9 @@ def main():
         print("\n" + "=" * 70)
         print("SUMMARY")
         print("=" * 70)
-        print("Total policies: %d" % total)
-        print("Non-standard names: %d" % len(non_standard))
-        print("Missing descriptions: %d" % len(no_desc))
+        print(f"Total policies: {total}")
+        print(f"Non-standard names: {len(non_standard)}")
+        print(f"Missing descriptions: {len(no_desc)}")
 
         if len(non_standard) == 0 and len(no_desc) == 0:
             print("\nSTATUS: ALL POLICIES STANDARDIZED SUCCESSFULLY")

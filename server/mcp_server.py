@@ -110,7 +110,7 @@ async def recover_active_clients():
                     "client_info": sc.last_client_info,
                 }
                 await registry.register(registration)
-                logger.info(f"Recovered client: {sc.identity.display_name} " f"(port {port})")
+                logger.info(f"Recovered client: {sc.identity.display_name} (port {port})")
                 recovered += 1
         except Exception as e:
             # Tunnel not responding - client likely disconnected
