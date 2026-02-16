@@ -113,7 +113,12 @@ notes/
 .notes/
 *.private.md
 
-# Local assistant configuration (never commit)
+# AI coding assistants
+CLAUDE.md
+AGENT.md
+AGENTS.md
+GEMINI.md
+CODEX.md
 .claude/
 .codex/
 .gemini/
