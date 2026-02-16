@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from mcp.server.sse import SseServerTransport
+from mcp.server.streamable_http import StreamableHTTPServerTransport
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
@@ -228,15 +229,18 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
     # Create MCP server instance, passing registry explicitly to avoid __main__ import issues
     mcp_server = create_server(registry_override=registry)
 
-    # Create SSE transport
+    # Create SSE transport (legacy, for GET /sse)
     sse_transport = SseServerTransport("/messages/")
 
+    # Track Streamable HTTP sessions: session_id -> transport
+    _streamable_sessions: dict[str, StreamableHTTPServerTransport] = {}
+
     # =========================================================================
-    # MCP SSE Endpoints
+    # MCP Endpoints (SSE legacy + Streamable HTTP)
     # =========================================================================
 
-    async def handle_sse(request: Request) -> Response:
-        """Handle SSE connection requests."""
+    async def handle_sse_get(request: Request) -> Response:
+        """Handle legacy SSE connection requests (GET /sse)."""
         async with sse_transport.connect_sse(request.scope, request.receive, request._send) as (
             read_stream,
             write_stream,
@@ -247,6 +251,64 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
                 mcp_server.create_initialization_options(),
             )
         return Response()
+
+    async def handle_streamable_http(request: Request) -> Response:
+        """Handle Streamable HTTP MCP requests (POST/GET/DELETE /sse)."""
+        session_id = request.headers.get("mcp-session-id")
+
+        if request.method == "GET":
+            # GET without session = legacy SSE, delegate
+            if not session_id or session_id not in _streamable_sessions:
+                return await handle_sse_get(request)
+            # GET with valid session = SSE stream for that session
+            transport = _streamable_sessions[session_id]
+            await transport.handle_request(request.scope, request.receive, request._send)
+            return Response()
+
+        if request.method == "POST":
+            if session_id and session_id in _streamable_sessions:
+                transport = _streamable_sessions[session_id]
+            else:
+                # New session — create transport with connect() ready
+                transport = StreamableHTTPServerTransport(
+                    mcp_session_id=None,
+                    is_json_response_enabled=True,
+                )
+                ready_event = asyncio.Event()
+
+                async def _run_mcp(t: StreamableHTTPServerTransport, evt: asyncio.Event):
+                    try:
+                        async with t.connect() as (read_stream, write_stream):
+                            evt.set()
+                            await mcp_server.run(
+                                read_stream,
+                                write_stream,
+                                mcp_server.create_initialization_options(),
+                            )
+                    finally:
+                        sid = getattr(t, "_mcp_session_id", None)
+                        if sid and sid in _streamable_sessions:
+                            del _streamable_sessions[sid]
+
+                asyncio.create_task(_run_mcp(transport, ready_event))
+                await ready_event.wait()
+
+            await transport.handle_request(request.scope, request.receive, request._send)
+
+            # Store transport by its assigned session ID
+            sid = getattr(transport, "_mcp_session_id", None)
+            if sid and sid not in _streamable_sessions:
+                _streamable_sessions[sid] = transport
+
+            return Response()
+
+        if request.method == "DELETE":
+            if session_id and session_id in _streamable_sessions:
+                transport = _streamable_sessions.pop(session_id)
+                transport.terminate()
+            return Response(status_code=200)
+
+        return Response(status_code=405)
 
     # =========================================================================
     # Health & Legacy Endpoints
@@ -760,8 +822,8 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
     # =========================================================================
 
     routes = [
-        # MCP SSE endpoints
-        Route("/sse", endpoint=handle_sse, methods=["GET"]),
+        # MCP endpoints: Streamable HTTP (POST/GET/DELETE) + legacy SSE (GET)
+        Route("/sse", endpoint=handle_streamable_http, methods=["GET", "POST", "DELETE"]),
         Mount("/messages/", app=sse_transport.handle_post_message),
         # Health & legacy
         Route("/health", endpoint=health_check, methods=["GET"]),
