@@ -4,7 +4,7 @@ Planned features and improvements for ET Phone Home.
 
 ---
 
-## Current Version: 0.1.10
+## Current Version: 0.1.13
 
 ### Completed Features
 
@@ -45,6 +45,9 @@ Planned features and improvements for ET Phone Home.
 | SSH session management (Phase 2-3) | Done | 0.1.9 |
 | Web management interface (Phase 1-3) | Done | 0.1.10 |
 | Docker production deployment with Traefik | Done | 0.1.10 |
+| Streamable HTTP MCP transport | Done | 0.1.11 |
+| R2-based release publishing | Done | 0.1.13 |
+| Published aarch64 builds to update server | Done | 0.1.13 |
 
 ---
 
@@ -185,6 +188,8 @@ Svelte + TypeScript + SCSS frontend with real-time client management.
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.1.13 | 2026-02-17 | Bump version, fix default update URL, publish aarch64 builds to R2 update server |
+| 0.1.11 | 2026-02-16 | Streamable HTTP MCP transport alongside legacy SSE |
 | 0.1.10 | 2026-01-11 | Web management interface: Svelte dashboard, xterm.js terminal, file browser with preview. Docker production deployment with Traefik and Let's Encrypt SSL |
 | 0.1.9 | 2026-01-08 | SSH session Phase 2-3: `ssh_session_send/read/restore`, jump host support, prompt detection, idle cleanup, session persistence |
 | 0.1.8 | 2026-01-07 | Startup recovery for active tunnels, module duplication fix |

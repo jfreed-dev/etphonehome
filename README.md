@@ -192,6 +192,7 @@ Invoke-WebRequest -Uri "http://your-server/latest/phonehome-windows.exe" -OutFil
 
 ```bash
 # Linux - install to ~/phonehome/
+# Use phonehome-linux-aarch64.tar.gz for ARM64 systems (e.g. DGX Spark, Raspberry Pi)
 cd ~
 curl -LO http://your-server/latest/phonehome-linux-x86_64.tar.gz
 tar xzf phonehome-linux-x86_64.tar.gz
@@ -466,7 +467,8 @@ documentation focuses on setup, usage, and API behavior.
 .\build\pyinstaller\build_windows.bat
 
 # Portable archive (bundled Python)
-./build/portable/package_linux.sh
+./build/portable/package_linux.sh              # x86_64
+./build/portable/package_linux.sh aarch64      # ARM64
 .\build\portable\package_windows.ps1
 ```
 
