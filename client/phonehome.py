@@ -27,6 +27,29 @@ from shared.logging_config import setup_logging as configure_logging
 logger = logging.getLogger("phonehome")
 
 
+def _wait_for_network(host, port, log, is_shutdown, max_wait=60):
+    """Wait for network connectivity before the first connection attempt.
+
+    Probes the server with a TCP connect to avoid noisy 'Network is unreachable'
+    errors at boot when the service starts before the network is ready.
+    """
+    deadline = time.monotonic() + max_wait
+    attempt = 0
+    while not is_shutdown():
+        try:
+            sock = socket.create_connection((host, port), timeout=5)
+            sock.close()
+            return  # Network is reachable
+        except OSError:
+            attempt += 1
+            if attempt == 1:
+                log.info("Waiting for network connectivity...")
+            if time.monotonic() >= deadline:
+                log.warning("Network wait timeout, proceeding with connection attempt")
+                return
+            time.sleep(2)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="ET Phone Home - Connect to remote Claude CLI instance"
@@ -308,6 +331,9 @@ def main():
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+
+    # Wait for network to be reachable before first connection attempt
+    _wait_for_network(config.server_host, config.server_port, logger, lambda: shutdown_requested)
 
     # Connection loop with reconnect
     reconnect_delay = config.reconnect_delay
