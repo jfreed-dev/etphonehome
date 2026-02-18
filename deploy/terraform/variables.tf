@@ -1,4 +1,4 @@
-# ET Phone Home - Terraform Variables
+# Reach - Terraform Variables
 
 # AWS Configuration
 variable "aws_region" {
@@ -57,7 +57,7 @@ variable "create_key_pair" {
   default     = true
 }
 
-# ET Phone Home Configuration
+# Reach Configuration
 variable "ssh_port" {
   description = "Port for client SSH connections"
   type        = number

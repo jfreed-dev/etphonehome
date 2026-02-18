@@ -1,10 +1,10 @@
 # Webhooks and Rate Limiting Guide
 
-This guide covers the webhook notification system and per-client rate limiting features in ET Phone Home.
+This guide covers the webhook notification system and per-client rate limiting features in Reach.
 
 ## Overview
 
-ET Phone Home can send HTTP webhooks when events occur, allowing you to:
+Reach can send HTTP webhooks when events occur, allowing you to:
 - Monitor client connections in real-time
 - Track command execution and file access
 - Alert on security-related events (key mismatches)
@@ -106,21 +106,21 @@ All webhooks use this JSON structure:
 
 ### Environment Variables
 
-Set in `/etc/etphonehome/server.env`:
+Set in `/etc/reach/server.env`:
 
 ```bash
 # Global webhook URL (all events)
-ETPHONEHOME_WEBHOOK_URL=https://your-server.com/webhook
+REACH_WEBHOOK_URL=https://your-server.com/webhook
 
 # HTTP timeout for webhook requests (seconds)
-ETPHONEHOME_WEBHOOK_TIMEOUT=10.0
+REACH_WEBHOOK_TIMEOUT=10.0
 
 # Maximum retry attempts for failed webhooks
-ETPHONEHOME_WEBHOOK_MAX_RETRIES=3
+REACH_WEBHOOK_MAX_RETRIES=3
 
 # Rate limiting (warn-only mode)
-ETPHONEHOME_RATE_LIMIT_RPM=60        # Requests per minute
-ETPHONEHOME_RATE_LIMIT_CONCURRENT=10  # Max concurrent requests
+REACH_RATE_LIMIT_RPM=60        # Requests per minute
+REACH_RATE_LIMIT_CONCURRENT=10  # Max concurrent requests
 ```
 
 ### Per-Client Configuration
@@ -269,7 +269,7 @@ def webhook():
         "routing_key": PAGERDUTY_KEY,
         "event_action": "trigger",
         "payload": {
-            "summary": f"ET Phone Home: {event}",
+            "summary": f"Reach: {event}",
             "source": data.get("client_display_name", "Unknown"),
             "severity": "critical" if event == "client.key_mismatch" else "warning",
             "custom_details": {
@@ -410,7 +410,7 @@ configure_client(
 
 1. Check the global webhook URL is set:
    ```bash
-   grep WEBHOOK /etc/etphonehome/server.env
+   grep WEBHOOK /etc/reach/server.env
    ```
 
 2. Verify the URL is reachable from the server:
@@ -422,7 +422,7 @@ configure_client(
 
 3. Check server logs for errors:
    ```bash
-   journalctl -u etphonehome-mcp -f
+   journalctl -u reach-mcp -f
    ```
 
 ### Rate Limit Warnings
@@ -442,7 +442,7 @@ If webhooks are timing out:
 
 1. Increase the timeout:
    ```bash
-   ETPHONEHOME_WEBHOOK_TIMEOUT=30.0
+   REACH_WEBHOOK_TIMEOUT=30.0
    ```
 
 2. Ensure your webhook endpoint responds quickly

@@ -1,6 +1,6 @@
 #!/bin/bash
-# ET Phone Home - Linux Runner
-# This script runs the phone home client using the bundled Python
+# Reach - Linux Runner
+# This script runs the reach client using the bundled Python
 
 set -e
 
@@ -22,7 +22,7 @@ export PATH="$SCRIPT_DIR/python/bin:$PATH"
 export PYTHONNOUSERSITE=1
 
 # Config directory (in user's home)
-export ETPHONEHOME_CONFIG_DIR="${ETPHONEHOME_CONFIG_DIR:-$HOME/.etphonehome}"
+export REACH_CONFIG_DIR="${REACH_CONFIG_DIR:-$HOME/.reach}"
 
 # Run the client
-exec "$SCRIPT_DIR/python/bin/python3" -m client.phonehome "$@"
+exec "$SCRIPT_DIR/python/bin/python3" -m client.reach "$@"

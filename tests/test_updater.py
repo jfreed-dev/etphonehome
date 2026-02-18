@@ -185,7 +185,7 @@ class TestIsPortableInstallation:
     @patch("client.updater.Path")
     def test_returns_false_for_pip_install(self, mock_path, mock_install_dir):
         """Should return False for pip/dev installations."""
-        mock_install_dir.return_value = Path("/home/user/.local/share/phonehome")
+        mock_install_dir.return_value = Path("/home/user/.local/share/reach")
         # Simulate running from site-packages
         mock_path.return_value.resolve.return_value.parent = Path(
             "/usr/lib/python3/site-packages/client"

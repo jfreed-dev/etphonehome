@@ -5,7 +5,7 @@
 
 ## Overview
 
-Phase 2 adds SFTP subsystem support to ET Phone Home's reverse SSH tunnel, enabling direct streaming file transfers without the 10MB limit and 37% base64 overhead.
+Phase 2 adds SFTP subsystem support to Reach's reverse SSH tunnel, enabling direct streaming file transfers without the 10MB limit and 37% base64 overhead.
 
 ## What Was Implemented
 
@@ -40,7 +40,7 @@ Phase 2 adds SFTP subsystem support to ET Phone Home's reverse SSH tunnel, enabl
 self.transport.set_subsystem_handler("sftp", CustomSFTPServer)
 ```
 
-#### 3. Modified `client/phonehome.py` (+1 line)
+#### 3. Modified `client/reach.py` (+1 line)
 **Changes:**
 - Pass allowed_paths from config to ReverseTunnel (line 294)
 
@@ -160,7 +160,7 @@ Reverse Port Forward (127.0.0.1:random_port)
 1. **client/tunnel.py** (+24 lines)
    - Register SFTP subsystem
 
-2. **client/phonehome.py** (+1 line)
+2. **client/reach.py** (+1 line)
    - Pass allowed_paths to ReverseTunnel
 
 3. **server/client_connection.py** (+62 lines)
@@ -227,7 +227,7 @@ Reverse Port Forward (127.0.0.1:random_port)
 Run comprehensive tests:
 ```bash
 # Start test client and server
-phonehome &
+reach reach &
 python -m server.mcp_server --transport http --port 8765 &
 
 # Test large file transfer
@@ -235,7 +235,7 @@ dd if=/dev/urandom of=/tmp/test_50mb.bin bs=1M count=50
 # Use upload_file MCP tool to transfer 50MB file
 
 # Test with standard SFTP tool
-sftp -P <tunnel_port> phonehome@localhost
+sftp -P <tunnel_port> reach@localhost
 ```
 
 ### 2. Documentation Updates
@@ -264,7 +264,7 @@ sftp -P <tunnel_port> phonehome@localhost
 
 ### Risk: SFTP connection authentication
 **Status:** ✅ Resolved
-**Solution:** Use fixed username "phonehome" for all tunnel connections (line 57 in sftp_connection.py)
+**Solution:** Use fixed username "reach" for all tunnel connections (line 57 in sftp_connection.py)
 
 ### Risk: Async/sync bridge complexity
 **Status:** ✅ Resolved
@@ -306,12 +306,12 @@ sftp -P <tunnel_port> phonehome@localhost
 
 4. **Standard SFTP Tools:** Clients can be accessed with standard SFTP tools:
    ```bash
-   sftp -P <tunnel_port> phonehome@localhost
+   sftp -P <tunnel_port> reach@localhost
    ```
 
 ## See Also
 
-- Implementation Plan: `/home/etphonehome/.claude/plans/composed-foraging-llama.md`
+- Implementation Plan: `/home/reach/.claude/plans/composed-foraging-llama.md`
 - Research: `FILE_TRANSFER_IMPROVEMENT_RESEARCH.md`
 - Phase 1 Status: `SETUP_STATUS.md`
 - Commit: Ready for commit and testing

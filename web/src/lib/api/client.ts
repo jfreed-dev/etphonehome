@@ -1,5 +1,5 @@
 // =============================================================================
-// ET Phone Home - TypeScript API Client
+// Reach - TypeScript API Client
 // =============================================================================
 
 import type {
@@ -24,7 +24,7 @@ import type {
 const API_BASE = '/api/v1';
 
 // Storage key for API token
-const TOKEN_KEY = 'etphonehome_api_key';
+const TOKEN_KEY = 'reach_api_key';
 
 // -----------------------------------------------------------------------------
 // Token Management

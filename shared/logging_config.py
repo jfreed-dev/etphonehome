@@ -6,6 +6,8 @@ import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from shared.compat import migrate_config_dir
+
 # Default settings
 DEFAULT_LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -27,7 +29,7 @@ def setup_logging(
     Configure logging with optional file rotation.
 
     Args:
-        name: Logger name (e.g., 'phonehome', 'etphonehome')
+        name: Logger name (e.g., 'reach', 'reach.http')
         level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         log_file: Path to log file. If None, only console logging.
         max_bytes: Maximum size of each log file before rotation (default: 10MB)
@@ -85,14 +87,21 @@ def get_default_log_dir(component: str = "client") -> Path:
         Path to log directory
     """
     if component == "server":
-        # Server logs go to /var/log if running as service, else ~/.etphonehome/logs
-        var_log = Path("/var/log/etphonehome")
+        # Server logs go to /var/log if running as service, else ~/.reach/logs
+        var_log = Path("/var/log/reach")
         if var_log.exists() or os.geteuid() == 0:
             return var_log
-        return Path.home() / ".etphonehome" / "logs"
+        # Migrate legacy dir
+        new_dir = Path.home() / ".reach"
+        old_dir = Path.home() / ".etphonehome"
+        migrate_config_dir(new_dir, old_dir)
+        return new_dir / "logs"
     else:
-        # Client logs go to ~/.etphonehome/logs
-        return Path.home() / ".etphonehome" / "logs"
+        # Client logs go to ~/.reach/logs
+        new_dir = Path.home() / ".reach"
+        old_dir = Path.home() / ".etphonehome"
+        migrate_config_dir(new_dir, old_dir)
+        return new_dir / "logs"
 
 
 def get_logger(name: str) -> logging.Logger:

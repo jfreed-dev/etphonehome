@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Publish ET Phone Home release to Cloudflare R2.
+Publish Reach release to Cloudflare R2.
 
 This script uploads build artifacts to R2 and creates the version.json manifest
 for client auto-updates.
@@ -9,13 +9,13 @@ Usage:
     python scripts/publish_release_r2.py [--version VERSION] [--changelog TEXT]
 
 Environment variables required:
-    ETPHONEHOME_R2_ACCOUNT_ID
-    ETPHONEHOME_R2_ACCESS_KEY
-    ETPHONEHOME_R2_SECRET_KEY
-    ETPHONEHOME_R2_BUCKET
+    REACH_R2_ACCOUNT_ID
+    REACH_R2_ACCESS_KEY
+    REACH_R2_SECRET_KEY
+    REACH_R2_BUCKET
 
 Optional:
-    ETPHONEHOME_R2_PUBLIC_URL - Custom public URL base (default: R2 public bucket URL)
+    REACH_R2_PUBLIC_URL - Custom public URL base (default: R2 public bucket URL)
 """
 
 import argparse
@@ -37,11 +37,11 @@ def get_artifacts(dist_dir: Path) -> dict[str, Path]:
 
     # Define expected artifact patterns
     patterns = {
-        "linux-x86_64": "phonehome-linux-x86_64.tar.gz",
-        "linux-aarch64": "phonehome-linux-aarch64.tar.gz",
-        "windows-amd64": "phonehome-windows-amd64.zip",
-        "darwin-x86_64": "phonehome-darwin-x86_64.tar.gz",
-        "darwin-aarch64": "phonehome-darwin-aarch64.tar.gz",
+        "linux-x86_64": "reach-linux-x86_64.tar.gz",
+        "linux-aarch64": "reach-linux-aarch64.tar.gz",
+        "windows-amd64": "reach-windows-amd64.zip",
+        "darwin-x86_64": "reach-darwin-x86_64.tar.gz",
+        "darwin-aarch64": "reach-darwin-aarch64.tar.gz",
     }
 
     for platform, filename in patterns.items():
@@ -57,7 +57,7 @@ def get_artifacts(dist_dir: Path) -> dict[str, Path]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Publish ET Phone Home release to R2",
+        description="Publish Reach release to R2",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -102,10 +102,10 @@ def main():
 
     # Check R2 configuration
     required_vars = [
-        "ETPHONEHOME_R2_ACCOUNT_ID",
-        "ETPHONEHOME_R2_ACCESS_KEY",
-        "ETPHONEHOME_R2_SECRET_KEY",
-        "ETPHONEHOME_R2_BUCKET",
+        "REACH_R2_ACCOUNT_ID",
+        "REACH_R2_ACCESS_KEY",
+        "REACH_R2_SECRET_KEY",
+        "REACH_R2_BUCKET",
     ]
 
     missing = [v for v in required_vars if not os.getenv(v)]
@@ -188,7 +188,7 @@ def main():
 
         print("\n" + "-" * 60)
         print("To configure clients to use this update server, set:")
-        print(f"  PHONEHOME_UPDATE_URL={result['version_json_url']}")
+        print(f"  REACH_UPDATE_URL={result['version_json_url']}")
         print("-" * 60)
 
     except Exception as e:

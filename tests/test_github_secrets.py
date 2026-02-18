@@ -12,17 +12,17 @@ import pytest
 # Required secrets for deployment
 REQUIRED_SECRETS = [
     # Cloudflare R2 Storage
-    "ETPHONEHOME_R2_ACCOUNT_ID",
-    "ETPHONEHOME_R2_ACCESS_KEY",
-    "ETPHONEHOME_R2_SECRET_KEY",
-    "ETPHONEHOME_R2_BUCKET",
-    "ETPHONEHOME_R2_REGION",
+    "REACH_R2_ACCOUNT_ID",
+    "REACH_R2_ACCESS_KEY",
+    "REACH_R2_SECRET_KEY",
+    "REACH_R2_BUCKET",
+    "REACH_R2_REGION",
     # Infrastructure
     "CF_DNS_API_TOKEN",
-    "ETPHONEHOME_API_KEY",
-    "ETPHONEHOME_R2_API_TOKEN",
+    "REACH_API_KEY",
+    "REACH_R2_API_TOKEN",
     "TRAEFIK_DASHBOARD_AUTH",
-    "ETPHONEHOME_GH_TOKEN",
+    "REACH_GH_TOKEN",
     # Hostinger deployment
     "HOSTINGER_API_KEY",
     "HOSTINGER_SERVER_IP",
@@ -30,7 +30,7 @@ REQUIRED_SECRETS = [
     "SSH_PUBLIC_KEY",
 ]
 
-GITHUB_REPO = "jfreed-dev/etphonehome"
+GITHUB_REPO = "jfreed-dev/reach"
 
 
 def get_github_secrets():
@@ -91,10 +91,10 @@ class TestEnvironmentSecrets:
             pytest.skip("Not running in CI environment")
 
         r2_secrets = [
-            "ETPHONEHOME_R2_ACCOUNT_ID",
-            "ETPHONEHOME_R2_ACCESS_KEY",
-            "ETPHONEHOME_R2_SECRET_KEY",
-            "ETPHONEHOME_R2_BUCKET",
+            "REACH_R2_ACCOUNT_ID",
+            "REACH_R2_ACCESS_KEY",
+            "REACH_R2_SECRET_KEY",
+            "REACH_R2_BUCKET",
         ]
         for secret in r2_secrets:
             assert os.environ.get(secret), f"{secret} not set in environment"
@@ -104,4 +104,4 @@ class TestEnvironmentSecrets:
         if not is_ci:
             pytest.skip("Not running in CI environment")
 
-        assert os.environ.get("ETPHONEHOME_API_KEY"), "API key not set"
+        assert os.environ.get("REACH_API_KEY"), "API key not set"

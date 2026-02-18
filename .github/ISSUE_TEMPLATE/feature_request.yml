@@ -39,7 +39,7 @@ body:
       label: Component
       description: Which component would this affect?
       options:
-        - Client (phonehome)
+        - Client (reach)
         - Server (MCP)
         - Both
         - Documentation

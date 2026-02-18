@@ -1,4 +1,4 @@
-# ET Phone Home - PowerShell Lint Script
+# Reach - PowerShell Lint Script
 # Runs PSScriptAnalyzer on all PowerShell scripts
 
 param(
@@ -11,7 +11,7 @@ $ProjectDir = Split-Path -Parent (Split-Path -Parent $ScriptDir)
 
 Set-Location $ProjectDir
 
-Write-Host "=== ET Phone Home PowerShell Linting ===" -ForegroundColor Cyan
+Write-Host "=== Reach PowerShell Linting ===" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if PSScriptAnalyzer is installed

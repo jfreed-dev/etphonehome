@@ -7,9 +7,9 @@ in this implementation does not exist.
 R2 tokens must be rotated manually via the Cloudflare Dashboard:
 1. Go to Cloudflare Dashboard > R2 > Overview > Manage R2 API Tokens
 2. Create a new token with read/write permissions
-3. Update GitHub Secrets: ETPHONEHOME_R2_ACCESS_KEY and ETPHONEHOME_R2_SECRET_KEY
+3. Update GitHub Secrets: REACH_R2_ACCESS_KEY and REACH_R2_SECRET_KEY (old ETPHONEHOME_R2_* names still work)
 4. Delete the old token from Cloudflare dashboard
-5. Restart ET Phone Home server to use new credentials
+5. Restart Reach server to use new credentials
 
 TODO: Implement using Cloudflare's general API tokens endpoint (/accounts/{id}/tokens)
 with R2 permission policies. This requires:
@@ -23,13 +23,13 @@ See: https://developers.cloudflare.com/r2/api/tokens/
 """
 
 import logging
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 import httpx
 
+from shared.compat import env as _env
 from shared.secrets_manager import GitHubSecretsManager, R2SecretsManager
 
 logger = logging.getLogger(__name__)
@@ -167,26 +167,26 @@ class R2KeyRotationManager:
         """
         Create rotation manager from environment variables.
 
-        Environment variables:
-            ETPHONEHOME_CLOUDFLARE_API_TOKEN: Cloudflare API token
-            ETPHONEHOME_R2_ACCOUNT_ID: Cloudflare account ID
-            ETPHONEHOME_GITHUB_REPO: GitHub repository (owner/repo)
+        Environment variables (old names still accepted):
+            REACH_CLOUDFLARE_API_TOKEN: Cloudflare API token
+            REACH_R2_ACCOUNT_ID: Cloudflare account ID
+            REACH_GITHUB_REPO: GitHub repository (owner/repo)
 
         Returns:
             R2KeyRotationManager or None if not configured
         """
-        cf_token = os.getenv("ETPHONEHOME_CLOUDFLARE_API_TOKEN")
-        account_id = os.getenv("ETPHONEHOME_R2_ACCOUNT_ID")
-        github_repo = os.getenv("ETPHONEHOME_GITHUB_REPO")
+        cf_token = _env("REACH_CLOUDFLARE_API_TOKEN", "ETPHONEHOME_CLOUDFLARE_API_TOKEN")
+        account_id = _env("REACH_R2_ACCOUNT_ID", "ETPHONEHOME_R2_ACCOUNT_ID")
+        github_repo = _env("REACH_GITHUB_REPO", "ETPHONEHOME_GITHUB_REPO")
 
         if not all([cf_token, account_id, github_repo]):
             missing = []
             if not cf_token:
-                missing.append("ETPHONEHOME_CLOUDFLARE_API_TOKEN")
+                missing.append("REACH_CLOUDFLARE_API_TOKEN")
             if not account_id:
-                missing.append("ETPHONEHOME_R2_ACCOUNT_ID")
+                missing.append("REACH_R2_ACCOUNT_ID")
             if not github_repo:
-                missing.append("ETPHONEHOME_GITHUB_REPO")
+                missing.append("REACH_GITHUB_REPO")
 
             logger.error(f"Missing required environment variables: {', '.join(missing)}")
             return None
@@ -213,7 +213,7 @@ class R2KeyRotationManager:
             Dict with new credentials and rotation info
         """
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        token_name = f"etphonehome-r2-{timestamp}"
+        token_name = f"reach-r2-{timestamp}"
 
         logger.info("Starting R2 key rotation...")
 
@@ -341,7 +341,7 @@ class RotationScheduler:
         """
         self.rotation_manager = rotation_manager
         self.rotation_days = rotation_days
-        self.last_rotation_file = Path.home() / ".etphonehome" / "last_r2_rotation.txt"
+        self.last_rotation_file = Path.home() / ".reach" / "last_r2_rotation.txt"
         self.last_rotation_file.parent.mkdir(parents=True, exist_ok=True)
 
     def get_last_rotation_date(self) -> datetime | None:
@@ -419,7 +419,7 @@ def main():
     """CLI for R2 key rotation."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="ET Phone Home R2 Key Rotation CLI")
+    parser = argparse.ArgumentParser(description="Reach R2 Key Rotation CLI")
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
     # Rotate keys
@@ -475,8 +475,8 @@ def main():
     if rotation_manager is None:
         print("✗ Failed to initialize R2 rotation manager")
         print(
-            "  Check environment variables: ETPHONEHOME_CLOUDFLARE_API_TOKEN, "
-            "ETPHONEHOME_R2_ACCOUNT_ID, ETPHONEHOME_GITHUB_REPO"
+            "  Check environment variables: REACH_CLOUDFLARE_API_TOKEN, "
+            "REACH_R2_ACCOUNT_ID, REACH_GITHUB_REPO"
         )
         exit(1)
 

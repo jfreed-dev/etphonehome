@@ -1,4 +1,4 @@
-# ET Phone Home - Terraform Outputs
+# Reach - Terraform Outputs
 
 output "server_public_ip" {
   description = "Public IP address of the server"
@@ -17,7 +17,7 @@ output "server_instance_id" {
 
 output "ssh_connection_string" {
   description = "SSH connection string for clients"
-  value       = "ssh -p ${var.ssh_port} etphonehome@${aws_eip.server.public_ip}"
+  value       = "ssh -p ${var.ssh_port} reach@${aws_eip.server.public_ip}"
 }
 
 output "admin_ssh_connection" {
@@ -53,6 +53,6 @@ output "client_config_example" {
     # Client config.yaml
     server_host: ${aws_eip.server.public_ip}
     server_port: ${var.ssh_port}
-    server_user: etphonehome
+    server_user: reach
   EOT
 }

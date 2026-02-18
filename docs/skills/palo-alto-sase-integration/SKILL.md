@@ -1,7 +1,7 @@
 ---
 name: palo-alto-sase-integration
 description: Palo Alto SASE/Prisma SD-WAN integration with ScienceLogic SL1. Use when working on the Prisma Cloud PowerPack, event processing, alerting improvements, or API development.
-allowed-tools: mcp__etphonehome__*, Bash, Read, Write, Edit, WebFetch, WebSearch
+allowed-tools: mcp__reach__*, Bash, Read, Write, Edit, WebFetch, WebSearch
 ---
 
 # Palo Alto SASE / Prisma SD-WAN Integration
@@ -14,11 +14,11 @@ This skill provides context for developing the Palo Alto Networks Prisma SD-WAN 
 
 | From | To | Method | Credentials |
 |------|-----|--------|-------------|
-| ET Phone Home Server | Windows Client | MCP/Phone Home | Tunnel port (dynamic) |
+| Reach Server | Windows Client | MCP/Reach | Tunnel port (dynamic) |
 | Windows Client (ep-dev-ts) | SL1 Dev | SSH (key auth) | `~\.ssh\id_ed25519` → em7admin@108.174.225.156 |
 | Windows Client | SL1 Dev | SSH (password) | em7admin / em7admin |
 | Windows Client | SL1 Staging | SSH (key auth) | em7admin @ 108.174.225.142 |
-| Windows Client | ET Phone Home | SSH (key auth) | `~\.ssh\id_ed25519` → etphonehome@techki.ai |
+| Windows Client | Reach | SSH (key auth) | `~\.ssh\id_ed25519` → reach@techki.ai |
 
 ### SL1 Servers
 
@@ -62,12 +62,12 @@ This skill provides context for developing the Palo Alto Networks Prisma SD-WAN 
 
 1. **Purpose** - Staging is used to migrate PowerPacks from Python 2.7 to 3.6
 2. **Consistency** - Staging PowerPacks match Production - keep versions consistent
-3. **ALWAYS BACKUP DAs** - Before making ANY changes, export the DA to the PhoneHome shared folder
+3. **ALWAYS BACKUP DAs** - Before making ANY changes, export the DA to the Reach shared folder
 4. **CLEAN UP** - Remove ALL temp files, scripts, and documents from Staging once task is completed:
    ```bash
    # Backup DA before modifying (example for DA 2298)
    mysql master -N -e "SELECT request FROM dynamic_app_requests WHERE app_id = 2298;" > /tmp/backup_da_2298_$(date +%Y%m%d_%H%M%S).py
-   # Then SCP to PhoneHome shared folder
+   # Then SCP to Reach shared folder
    ```
 
 **MySQL Connection (from SL1 server):**
@@ -86,7 +86,7 @@ db = MySQLdb.connect(
 |----------|----------|
 | Windows Code Folder | `C:\Users\jfreed\Documents\Code\Palo_Alto-SD_WAN` |
 | Migration Project Folder | `C:\Users\jfreed\Documents\Code\SL1-Prisma-P36` |
-| PhoneHome Shared Folder | `/home/etphonehome/appdata/phonehome/shared/` |
+| Reach Shared Folder | `/home/reach/appdata/reach/shared/` |
 | PowerPack GUID | `21D9648A7D551E5F84294B72C86000C9` | <!-- pragma: allowlist secret -->
 | PowerPack Name | ePlus: Palo Alto Networks Prisma Cloud |
 
@@ -1633,11 +1633,11 @@ The PowerPack needs to be migrated from Python 2.7 (Development server) to Pytho
 
 | File | Location | Purpose |
 |------|----------|---------|
-| Migration Guide | `/home/etphonehome/appdata/phonehome/shared/SL1_Prisma_PowerPack_Migration_Guide.md` | Comprehensive comparison and migration steps |
+| Migration Guide | `/home/reach/appdata/reach/shared/SL1_Prisma_PowerPack_Migration_Guide.md` | Comprehensive comparison and migration steps |
 | Migration Guide (Windows) | `C:\Users\jfreed\Documents\Code\SL1-Prisma-P36\SL1_Prisma_PowerPack_Migration_Guide.md` | Windows backup |
 | Dev Export | `C:\Users\jfreed\Documents\Code\SL1-Prisma-P36\powerpack_dev_export.txt` | Development server PowerPack export |
 | Staging Export | `C:\Users\jfreed\Documents\Code\SL1-Prisma-P36\powerpack_staging_export.txt` | Staging server PowerPack export |
-| Export Script | `/home/etphonehome/appdata/phonehome/shared/export_powerpack_details.py` | Script to export PowerPack details |
+| Export Script | `/home/reach/appdata/reach/shared/export_powerpack_details.py` | Script to export PowerPack details |
 
 ### Environment Comparison
 
@@ -1718,8 +1718,8 @@ Before ANY change on Staging:
 # 1. Backup DA before modifying
 mysql master -N -e "SELECT request FROM dynamic_app_requests WHERE app_id = <AID>;" > /tmp/backup_da_<AID>_$(date +%Y%m%d_%H%M%S).py
 
-# 2. SCP backup to PhoneHome shared folder
-scp /tmp/backup_da_<AID>_*.py em7admin@108.174.225.156:/home/etphonehome/appdata/phonehome/shared/backups/
+# 2. SCP backup to Reach shared folder
+scp /tmp/backup_da_<AID>_*.py em7admin@108.174.225.156:/home/reach/appdata/reach/shared/backups/
 
 # 3. Make changes (staged approach - review before proceeding)
 

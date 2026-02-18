@@ -1,6 +1,6 @@
-# ET Phone Home Style Guide
+# Reach Style Guide
 
-![ET Phone Home logo](assets/etphonehome/logos/etphonehome_logo_horizontal.svg)
+![Reach logo](assets/reach/logos/reach_logo_horizontal.svg)
 
 ## Palette
 
@@ -27,8 +27,8 @@
 
 ## Icon set
 
-- Server: `assets/etphonehome/icons/icon_server.svg`
-- Client: `assets/etphonehome/icons/icon_client.svg`
-- Tunnel: `assets/etphonehome/icons/icon_tunnel.svg`
-- Webhook: `assets/etphonehome/icons/icon_webhook.svg`
-- Security: `assets/etphonehome/icons/icon_security.svg`
+- Server: `assets/reach/icons/icon_server.svg`
+- Client: `assets/reach/icons/icon_client.svg`
+- Tunnel: `assets/reach/icons/icon_tunnel.svg`
+- Webhook: `assets/reach/icons/icon_webhook.svg`
+- Security: `assets/reach/icons/icon_security.svg`

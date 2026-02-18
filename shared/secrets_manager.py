@@ -2,7 +2,6 @@
 
 import base64
 import logging
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -11,6 +10,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from github import Github, GithubException
 from nacl import encoding, public
+
+from shared.compat import env as _env
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +24,10 @@ class SecureLocalStorage:
         Initialize secure storage.
 
         Args:
-            storage_path: Path to encrypted storage file (default: ~/.etphonehome/github_token.enc)
+            storage_path: Path to encrypted storage file (default: ~/.reach/github_token.enc)
         """
         if storage_path is None:
-            storage_path = Path.home() / ".etphonehome" / "github_token.enc"
+            storage_path = Path.home() / ".reach" / "github_token.enc"
 
         self.storage_path = Path(storage_path)
         self.storage_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -50,7 +51,7 @@ class SecureLocalStorage:
             salt=machine_id.encode(),
             iterations=100000,
         )
-        password = b"etphonehome-github-token"  # Static password, security is in machine_id salt
+        password = b"reach-github-token"  # Static password, security is in machine_id salt
         key = base64.urlsafe_b64encode(kdf.derive(password))
         return key
 
@@ -142,7 +143,7 @@ class GitHubSecretsManager:
         if github_token is None:
             raise ValueError(
                 "GitHub token not provided and not found in local storage. "
-                "Set via ETPHONEHOME_GITHUB_TOKEN or store with: "
+                "Set via REACH_GITHUB_TOKEN or store with: "
                 "python -m shared.secrets_manager store-token <token>"
             )
 
@@ -157,19 +158,19 @@ class GitHubSecretsManager:
         """
         Create manager from environment variables.
 
-        Environment variables:
-            ETPHONEHOME_GITHUB_REPO: Repository name (owner/repo)
-            ETPHONEHOME_GITHUB_TOKEN: GitHub token (optional if stored locally)
+        Environment variables (old names still accepted):
+            REACH_GITHUB_REPO: Repository name (owner/repo)
+            REACH_GITHUB_TOKEN: GitHub token (optional if stored locally)
 
         Returns:
             GitHubSecretsManager or None if not configured
         """
-        repo_name = os.getenv("ETPHONEHOME_GITHUB_REPO")
+        repo_name = _env("REACH_GITHUB_REPO", "ETPHONEHOME_GITHUB_REPO")
         if not repo_name:
-            logger.warning("ETPHONEHOME_GITHUB_REPO not set")
+            logger.warning("REACH_GITHUB_REPO not set")
             return None
 
-        github_token = os.getenv("ETPHONEHOME_GITHUB_TOKEN")
+        github_token = _env("REACH_GITHUB_TOKEN", "ETPHONEHOME_GITHUB_TOKEN")
 
         try:
             return cls(repo_name, github_token, use_local_storage)
@@ -298,11 +299,11 @@ class R2SecretsManager:
     """High-level manager for R2 credentials in GitHub Secrets."""
 
     # Secret names used in GitHub  # pragma: allowlist secret
-    SECRET_ACCOUNT_ID = "ETPHONEHOME_R2_ACCOUNT_ID"  # pragma: allowlist secret
-    SECRET_ACCESS_KEY = "ETPHONEHOME_R2_ACCESS_KEY"  # pragma: allowlist secret
-    SECRET_SECRET_KEY = "ETPHONEHOME_R2_SECRET_KEY"  # pragma: allowlist secret
-    SECRET_BUCKET = "ETPHONEHOME_R2_BUCKET"  # pragma: allowlist secret
-    SECRET_REGION = "ETPHONEHOME_R2_REGION"  # pragma: allowlist secret
+    SECRET_ACCOUNT_ID = "REACH_R2_ACCOUNT_ID"  # pragma: allowlist secret
+    SECRET_ACCESS_KEY = "REACH_R2_ACCESS_KEY"  # pragma: allowlist secret
+    SECRET_SECRET_KEY = "REACH_R2_SECRET_KEY"  # pragma: allowlist secret
+    SECRET_BUCKET = "REACH_R2_BUCKET"  # pragma: allowlist secret
+    SECRET_REGION = "REACH_R2_REGION"  # pragma: allowlist secret
 
     def __init__(self, github_manager: GitHubSecretsManager):  # pragma: allowlist secret
         """
@@ -415,7 +416,7 @@ def main():
     """CLI for secrets management."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="ET Phone Home Secrets Manager CLI")
+    parser = argparse.ArgumentParser(description="Reach Secrets Manager CLI")
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
     # Store GitHub token

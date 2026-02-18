@@ -1,5 +1,5 @@
 // =============================================================================
-// ET Phone Home - Command History Store
+// Reach - Command History Store
 // =============================================================================
 
 import { writable, derived, get } from 'svelte/store';

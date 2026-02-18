@@ -1,5 +1,5 @@
 #!/bin/bash
-# Package ET Phone Home for Linux with portable Python
+# Package Reach for Linux with portable Python
 # Creates a self-contained archive that runs from any directory
 
 set -e
@@ -34,17 +34,17 @@ esac
 # python-build-standalone release URL
 PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/${PYTHON_BUILD}/cpython-${PYTHON_VERSION}+${PYTHON_BUILD}-${ARCH}-unknown-linux-gnu-install_only_stripped.tar.gz"
 
-echo "=== Packaging ET Phone Home for Linux ==="
+echo "=== Packaging Reach for Linux ==="
 echo "Python: $PYTHON_VERSION"
 echo "Architecture: $ARCH"
 echo
 
 # Clean and create build directory
 rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR/phonehome"
+mkdir -p "$BUILD_DIR/reach"
 mkdir -p "$OUTPUT_DIR"
 
-cd "$BUILD_DIR/phonehome"
+cd "$BUILD_DIR/reach"
 
 # Download portable Python
 echo "Downloading portable Python..."
@@ -96,8 +96,8 @@ date -u +"%Y-%m-%dT%H:%M:%SZ" > build_time.txt
 # Create the archive
 echo "Creating archive..."
 cd "$BUILD_DIR"
-ARCHIVE_NAME="phonehome-linux-${ARCH}.tar.gz"
-tar czf "$OUTPUT_DIR/$ARCHIVE_NAME" phonehome
+ARCHIVE_NAME="reach-linux-${ARCH}.tar.gz"
+tar czf "$OUTPUT_DIR/$ARCHIVE_NAME" reach
 
 # Cleanup
 rm -rf "$BUILD_DIR"
@@ -108,7 +108,7 @@ ls -lh "$OUTPUT_DIR/$ARCHIVE_NAME"
 echo
 echo "To deploy:"
 echo "  tar xzf $ARCHIVE_NAME"
-echo "  cd phonehome"
+echo "  cd reach"
 echo "  ./install.sh              # Install to ~/.local/bin (recommended)"
 echo
 echo "Or run directly without installing:"

@@ -13,7 +13,7 @@
 	});
 </script>
 
-<div class="dashboard et-container">
+<div class="dashboard reach-container">
 	<!-- Stats Row -->
 	<section class="dashboard__stats">
 		<StatsCard label="Online Clients" value={$onlineCount} variant="green" icon="🟢" />
@@ -36,7 +36,7 @@
 			{:else if $clients.length === 0}
 				<div class="dashboard__empty">
 					<p>No clients registered yet.</p>
-					<p>Run the phone home client to connect.</p>
+					<p>Run the Reach client to connect.</p>
 				</div>
 			{:else}
 				<div class="dashboard__client-grid">

@@ -1,6 +1,6 @@
-# Docker Deployment Best Practices for ET Phone Home
+# Docker Deployment Best Practices for Reach
 
-This document outlines best practices for containerizing and deploying the ET Phone Home server and web frontend using Docker, Traefik reverse proxy, and Let's Encrypt SSL certificates.
+This document outlines best practices for containerizing and deploying the Reach server and web frontend using Docker, Traefik reverse proxy, and Let's Encrypt SSL certificates.
 
 ## Table of Contents
 
@@ -38,7 +38,7 @@ This document outlines best practices for containerizing and deploying the ET Ph
                         │
             ┌───────────▼───────────┐
             │   SSH Tunnel (2222)   │
-            │   ET Phone Home       │
+            │   Reach       │
             │   Client Connections  │
             └───────────────────────┘
 ```
@@ -420,7 +420,7 @@ services:
       - db_password
     environment:
       # Reference secret file, not value
-      ETPHONEHOME_API_KEY_FILE: /run/secrets/api_key
+      REACH_API_KEY_FILE: /run/secrets/api_key
 ```
 
 ### Application Code
@@ -439,7 +439,7 @@ def get_secret(name: str) -> str:
     # Fall back to environment variable
     return os.environ.get(name, "")
 
-API_KEY = get_secret("ETPHONEHOME_API_KEY")
+API_KEY = get_secret("REACH_API_KEY")
 ```
 
 ### Secret File Permissions
@@ -662,10 +662,10 @@ docker compose -f docker-compose.prod.yml down
 docker system prune -f
 
 # Debug container
-docker exec -it etphonehome-backend sh
+docker exec -it reach-backend sh
 
 # Check certificate status
-docker exec etphonehome-proxy cat /letsencrypt/acme.json | jq
+docker exec reach-proxy cat /letsencrypt/acme.json | jq
 ```
 
 ---

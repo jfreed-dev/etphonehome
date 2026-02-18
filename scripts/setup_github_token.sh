@@ -8,15 +8,15 @@ echo "  GitHub Personal Access Token Setup"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "This wizard will help you create and securely store a"
-echo "GitHub Personal Access Token for ET Phone Home."
+echo "GitHub Personal Access Token for Reach."
 echo ""
 echo "The token will be encrypted and stored locally with"
 echo "machine-specific encryption."
 echo ""
 
 # Check if token already exists
-if [ -f "$HOME/.etphonehome/github_token.enc" ]; then
-    echo "⚠️  Existing token found at: $HOME/.etphonehome/github_token.enc"
+if [ -f "$HOME/.reach/github_token.enc" ]; then
+    echo "⚠️  Existing token found at: $HOME/.reach/github_token.enc"
     echo ""
     read -p "Do you want to replace it? [y/N]: " -n 1 -r
     echo ""
@@ -34,7 +34,7 @@ echo ""
 echo "1. Visit: https://github.com/settings/tokens/new"
 echo ""
 echo "2. Configure the token:"
-echo "   • Note: ET Phone Home Secrets Management"
+echo "   • Note: Reach Secrets Management"
 echo "   • Expiration: No expiration (or your preference)"
 echo "   • Scopes: Check 'repo' (Full control of private repositories)"
 echo ""

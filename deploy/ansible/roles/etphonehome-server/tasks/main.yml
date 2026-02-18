@@ -1,17 +1,17 @@
-# ET Phone Home Server Role
+# Reach Server Role
 ---
-- name: Create etphonehome group
+- name: Create reach group
   become: true
   ansible.builtin.group:
-    name: "{{ etphonehome_group }}"
+    name: "{{ reach_group }}"
     state: present
 
-- name: Create etphonehome user
+- name: Create reach user
   become: true
   ansible.builtin.user:
-    name: "{{ etphonehome_user }}"
-    group: "{{ etphonehome_group }}"
-    home: "{{ etphonehome_home }}"
+    name: "{{ reach_user }}"
+    group: "{{ reach_group }}"
+    home: "{{ reach_home }}"
     shell: /bin/bash
     system: true
     create_home: true
@@ -21,14 +21,14 @@
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    owner: "{{ etphonehome_user }}"
-    group: "{{ etphonehome_group }}"
+    owner: "{{ reach_user }}"
+    group: "{{ reach_group }}"
     mode: "0755"
   loop:
-    - "{{ etphonehome_config_dir }}"
-    - "{{ etphonehome_data_dir }}"
-    - "{{ etphonehome_log_dir }}"
-    - "{{ etphonehome_home }}"
+    - "{{ reach_config_dir }}"
+    - "{{ reach_data_dir }}"
+    - "{{ reach_log_dir }}"
+    - "{{ reach_home }}"
 
 - name: Install system dependencies
   become: true
@@ -44,25 +44,25 @@
 
 - name: Create Python virtual environment
   become: true
-  become_user: "{{ etphonehome_user }}"
+  become_user: "{{ reach_user }}"
   ansible.builtin.command:
-    cmd: python3 -m venv {{ etphonehome_home }}/venv
-    creates: "{{ etphonehome_home }}/venv/bin/python"
+    cmd: python3 -m venv {{ reach_home }}/venv
+    creates: "{{ reach_home }}/venv/bin/python"
 
-- name: Install etphonehome package
+- name: Install reach package
   become: true
-  become_user: "{{ etphonehome_user }}"
+  become_user: "{{ reach_user }}"
   ansible.builtin.pip:
-    name: "etphonehome[server]{% if etphonehome_version != 'latest' %}=={{ etphonehome_version }}{% endif %}"
-    virtualenv: "{{ etphonehome_home }}/venv"
-    state: "{{ 'latest' if etphonehome_version == 'latest' else 'present' }}"
-  when: etphonehome_install_method == "pip"
+    name: "reach[server]{% if reach_version != 'latest' %}=={{ reach_version }}{% endif %}"
+    virtualenv: "{{ reach_home }}/venv"
+    state: "{{ 'latest' if reach_version == 'latest' else 'present' }}"
+  when: reach_install_method == "pip"
 
-- name: Configure SSH for etphonehome
+- name: Configure SSH for reach
   become: true
   ansible.builtin.template:
     src: sshd_config.j2
-    dest: /etc/ssh/sshd_config.d/etphonehome.conf
+    dest: /etc/ssh/sshd_config.d/reach.conf
     owner: root
     group: root
     mode: "0644"
@@ -72,30 +72,30 @@
   become: true
   ansible.builtin.template:
     src: server.env.j2
-    dest: "{{ etphonehome_config_dir }}/server.env"
-    owner: "{{ etphonehome_user }}"
-    group: "{{ etphonehome_group }}"
+    dest: "{{ reach_config_dir }}/server.env"
+    owner: "{{ reach_user }}"
+    group: "{{ reach_group }}"
     mode: "0600"
-  notify: Restart etphonehome-server
+  notify: Restart reach-server
 
 - name: Create systemd service for MCP server
   become: true
   ansible.builtin.template:
     src: etphonehome-mcp.service.j2
-    dest: /etc/systemd/system/etphonehome-mcp.service
+    dest: /etc/systemd/system/reach-mcp.service
     owner: root
     group: root
     mode: "0644"
   notify:
     - Reload systemd
-    - Restart etphonehome-server
+    - Restart reach-server
 
-- name: Enable and start etphonehome-mcp service
+- name: Enable and start reach-mcp service
   become: true
   ansible.builtin.systemd:
-    name: etphonehome-mcp
-    enabled: "{{ etphonehome_enable_service }}"
-    state: "{{ 'started' if etphonehome_start_service else 'stopped' }}"
+    name: reach-mcp
+    enabled: "{{ reach_enable_service }}"
+    state: "{{ 'started' if reach_start_service else 'stopped' }}"
     daemon_reload: true
 
 - name: Configure UFW firewall
@@ -105,5 +105,5 @@
     port: "{{ item }}"
     proto: tcp
   loop:
-    - "{{ etphonehome_ssh_port }}"
-  when: etphonehome_configure_firewall | bool
+    - "{{ reach_ssh_port }}"
+  when: reach_configure_firewall | bool

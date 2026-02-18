@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install ET Phone Home as a systemd service
+# Install Reach as a systemd service
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,26 +15,26 @@ usage() {
 }
 
 install_user_service() {
-    echo "Installing phonehome as user service..."
+    echo "Installing reach as user service..."
 
     mkdir -p ~/.config/systemd/user
-    cp "$SCRIPT_DIR/phonehome-user.service" ~/.config/systemd/user/phonehome.service
+    cp "$SCRIPT_DIR/phonehome-user.service" ~/.config/systemd/user/reach.service
 
-    # Update ExecStart path if phonehome is elsewhere
-    if command -v phonehome &> /dev/null; then
-        PHONEHOME_PATH=$(command -v phonehome)
-        sed -i "s|%h/.local/bin/phonehome|$PHONEHOME_PATH|g" ~/.config/systemd/user/phonehome.service
+    # Update ExecStart path if reach is elsewhere
+    if command -v reach &> /dev/null; then
+        REACH_PATH=$(command -v reach)
+        sed -i "s|%h/.local/bin/reach|$REACH_PATH|g" ~/.config/systemd/user/reach.service
     fi
 
     systemctl --user daemon-reload
-    systemctl --user enable phonehome.service
+    systemctl --user enable reach.service
 
     echo ""
     echo "User service installed. Commands:"
-    echo "  systemctl --user start phonehome    # Start service"
-    echo "  systemctl --user stop phonehome     # Stop service"
-    echo "  systemctl --user status phonehome   # Check status"
-    echo "  journalctl --user -u phonehome -f   # View logs"
+    echo "  systemctl --user start reach    # Start service"
+    echo "  systemctl --user stop reach     # Stop service"
+    echo "  systemctl --user status reach   # Check status"
+    echo "  journalctl --user -u reach -f   # View logs"
     echo ""
     echo "To start on boot (requires lingering):"
     echo "  loginctl enable-linger $USER"
@@ -47,18 +47,18 @@ install_system_service() {
         exit 1
     fi
 
-    echo "Installing phonehome as system service..."
+    echo "Installing reach as system service..."
 
-    cp "$SCRIPT_DIR/phonehome.service" /etc/systemd/system/phonehome@.service
+    cp "$SCRIPT_DIR/phonehome.service" /etc/systemd/system/reach@.service
     systemctl daemon-reload
 
     echo ""
     echo "System service installed. Commands (replace USER with username):"
-    echo "  systemctl enable phonehome@USER     # Enable for user"
-    echo "  systemctl start phonehome@USER      # Start service"
-    echo "  systemctl stop phonehome@USER       # Stop service"
-    echo "  systemctl status phonehome@USER     # Check status"
-    echo "  journalctl -u phonehome@USER -f     # View logs"
+    echo "  systemctl enable reach@USER     # Enable for user"
+    echo "  systemctl start reach@USER      # Start service"
+    echo "  systemctl stop reach@USER       # Stop service"
+    echo "  systemctl status reach@USER     # Check status"
+    echo "  journalctl -u reach@USER -f     # View logs"
 }
 
 MODE="--user"

@@ -26,13 +26,13 @@ class SecretSyncManager:
         Args:
             github_manager: GitHubSecretsManager instance
             sync_interval: Seconds between sync attempts (default: 3600 = 1 hour)
-            cache_file: Path to cache file (default: ~/.etphonehome/secret_cache.env)
+            cache_file: Path to cache file (default: ~/.reach/secret_cache.env)
         """
         self.github_manager = github_manager
         self.sync_interval = sync_interval
 
         if cache_file is None:
-            cache_file = Path.home() / ".etphonehome" / "secret_cache.env"
+            cache_file = Path.home() / ".reach" / "secret_cache.env"
 
         self.cache_file = Path(cache_file)
         self.cache_file.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -71,7 +71,7 @@ class SecretSyncManager:
         """
         try:
             lines = [
-                "# ET Phone Home Secret Cache",
+                "# Reach Secret Cache",
                 f"# Updated: {datetime.now(timezone.utc).isoformat()}",
                 "# DO NOT COMMIT THIS FILE",
                 "",
@@ -147,11 +147,11 @@ class SecretSyncManager:
 
         # Priority 1: Current environment
         r2_vars = [
-            "ETPHONEHOME_R2_ACCOUNT_ID",
-            "ETPHONEHOME_R2_ACCESS_KEY",
-            "ETPHONEHOME_R2_SECRET_KEY",
-            "ETPHONEHOME_R2_BUCKET",
-            "ETPHONEHOME_R2_REGION",
+            "REACH_R2_ACCOUNT_ID",
+            "REACH_R2_ACCESS_KEY",
+            "REACH_R2_SECRET_KEY",
+            "REACH_R2_BUCKET",
+            "REACH_R2_REGION",
         ]
 
         for var in r2_vars:
@@ -171,8 +171,8 @@ class SecretSyncManager:
 
         # Priority 3: server.env file
         env_files = [
-            Path("/etc/etphonehome/server.env"),
-            Path.home() / ".etphonehome" / "server.env",
+            Path("/etc/reach/server.env"),
+            Path.home() / ".reach" / "server.env",
         ]
 
         for env_file in env_files:
@@ -314,11 +314,11 @@ def load_secrets_synchronously() -> dict[str, str]:
     """
     # Try environment first
     r2_vars = [
-        "ETPHONEHOME_R2_ACCOUNT_ID",
-        "ETPHONEHOME_R2_ACCESS_KEY",
-        "ETPHONEHOME_R2_SECRET_KEY",
-        "ETPHONEHOME_R2_BUCKET",
-        "ETPHONEHOME_R2_REGION",
+        "REACH_R2_ACCOUNT_ID",
+        "REACH_R2_ACCESS_KEY",
+        "REACH_R2_SECRET_KEY",
+        "REACH_R2_BUCKET",
+        "REACH_R2_REGION",
     ]
 
     secrets = {}
@@ -331,7 +331,7 @@ def load_secrets_synchronously() -> dict[str, str]:
         return secrets
 
     # Try cache file
-    cache_file = Path.home() / ".etphonehome" / "secret_cache.env"
+    cache_file = Path.home() / ".reach" / "secret_cache.env"
     if cache_file.exists():
         try:
             for line in cache_file.read_text().splitlines():

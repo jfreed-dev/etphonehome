@@ -1,28 +1,28 @@
 #!/bin/bash
-# ET Phone Home - Linux Uninstaller
-# Removes phonehome from ~/.local
+# Reach - Linux Uninstaller
+# Removes reach from ~/.local
 
 set -e
 
-INSTALL_DIR="${PHONEHOME_INSTALL_DIR:-$HOME/.local/share/phonehome}"
-BIN_DIR="${PHONEHOME_BIN_DIR:-$HOME/.local/bin}"
-CONFIG_DIR="${ETPHONEHOME_CONFIG_DIR:-$HOME/.etphonehome}"
+INSTALL_DIR="${REACH_INSTALL_DIR:-$HOME/.local/share/reach}"
+BIN_DIR="${REACH_BIN_DIR:-$HOME/.local/bin}"
+CONFIG_DIR="${REACH_CONFIG_DIR:-$HOME/.reach}"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo "=== ET Phone Home Uninstaller ==="
+echo "=== Reach Uninstaller ==="
 echo
 
-if [ ! -d "$INSTALL_DIR" ] && [ ! -L "$BIN_DIR/phonehome" ]; then
-    echo "phonehome does not appear to be installed."
+if [ ! -d "$INSTALL_DIR" ] && [ ! -L "$BIN_DIR/reach" ]; then
+    echo "reach does not appear to be installed."
     exit 0
 fi
 
 echo "This will remove:"
 [ -d "$INSTALL_DIR" ] && echo "  - $INSTALL_DIR"
-[ -L "$BIN_DIR/phonehome" ] && echo "  - $BIN_DIR/phonehome"
+[ -L "$BIN_DIR/reach" ] && echo "  - $BIN_DIR/reach"
 echo
 echo -e "${YELLOW}Note: Config directory $CONFIG_DIR will NOT be removed${NC}"
 echo
@@ -35,12 +35,12 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 0
 fi
 
-echo "Removing phonehome..."
+echo "Removing reach..."
 
 # Remove symlink
-if [ -L "$BIN_DIR/phonehome" ]; then
-    rm "$BIN_DIR/phonehome"
-    echo "  Removed $BIN_DIR/phonehome"
+if [ -L "$BIN_DIR/reach" ]; then
+    rm "$BIN_DIR/reach"
+    echo "  Removed $BIN_DIR/reach"
 fi
 
 # Remove installation directory

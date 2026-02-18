@@ -1,4 +1,4 @@
-# ET Phone Home - Terraform Variables Example
+# Reach - Terraform Variables Example
 # Copy to terraform.tfvars and customize
 
 # AWS Configuration
@@ -18,7 +18,7 @@ instance_type = "t3.micro"
 create_key_pair = true
 # key_name      = "my-existing-key"  # Use if create_key_pair = false
 
-# ET Phone Home Configuration
+# Reach Configuration
 ssh_port       = 2222
 http_port      = 8765
 enable_api_key = true

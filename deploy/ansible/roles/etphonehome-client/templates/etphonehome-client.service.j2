@@ -1,14 +1,14 @@
-# ET Phone Home Client Service
+# Reach Client Service
 # Managed by Ansible
 
 [Unit]
-Description=ET Phone Home Client
+Description=Reach Client
 After=network.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart={{ _etphonehome_home }}/.etphonehome/venv/bin/phonehome
+ExecStart={{ _reach_home }}/.reach/venv/bin/reach
 Restart=always
 RestartSec=5
 StandardOutput=journal

@@ -269,9 +269,9 @@ class TestR2KeyRotationManagerFromEnv:
         """Test from_env returns None when variables are missing."""
         # Clear any existing env vars
         for var in [
-            "ETPHONEHOME_CLOUDFLARE_API_TOKEN",
-            "ETPHONEHOME_R2_ACCOUNT_ID",
-            "ETPHONEHOME_GITHUB_REPO",
+            "REACH_CLOUDFLARE_API_TOKEN",
+            "REACH_R2_ACCOUNT_ID",
+            "REACH_GITHUB_REPO",
         ]:
             os.environ.pop(var, None)
 
@@ -283,8 +283,8 @@ class TestR2KeyRotationManagerFromEnv:
 @pytest.mark.skipif(
     not all(
         [
-            os.getenv("ETPHONEHOME_CLOUDFLARE_API_TOKEN"),
-            os.getenv("ETPHONEHOME_R2_ACCOUNT_ID"),
+            os.getenv("REACH_CLOUDFLARE_API_TOKEN"),
+            os.getenv("REACH_R2_ACCOUNT_ID"),
         ]
     ),
     reason="Cloudflare credentials not available",
@@ -295,8 +295,8 @@ class TestR2RotationIntegration:
     def test_list_tokens(self):
         """Test listing R2 tokens with real credentials."""
         client = CloudflareAPIClient(
-            api_token=os.environ["ETPHONEHOME_CLOUDFLARE_API_TOKEN"],
-            account_id=os.environ["ETPHONEHOME_R2_ACCOUNT_ID"],
+            api_token=os.environ["REACH_CLOUDFLARE_API_TOKEN"],
+            account_id=os.environ["REACH_R2_ACCOUNT_ID"],
         )
         tokens = client.list_r2_tokens()
         assert isinstance(tokens, list)
@@ -307,13 +307,13 @@ class TestR2RotationIntegration:
     def test_create_and_delete_token(self):
         """Test creating and deleting an R2 token."""
         client = CloudflareAPIClient(
-            api_token=os.environ["ETPHONEHOME_CLOUDFLARE_API_TOKEN"],
-            account_id=os.environ["ETPHONEHOME_R2_ACCOUNT_ID"],
+            api_token=os.environ["REACH_CLOUDFLARE_API_TOKEN"],
+            account_id=os.environ["REACH_R2_ACCOUNT_ID"],
         )
 
         # Create a test token
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        token_name = f"etphonehome-test-{timestamp}"
+        token_name = f"reach-test-{timestamp}"
 
         result = client.create_r2_token(token_name)
         assert "access_key_id" in result
@@ -329,8 +329,8 @@ class TestR2RotationIntegration:
         """Test verifying a token can access R2."""
         if not all(
             [
-                os.getenv("ETPHONEHOME_R2_ACCESS_KEY"),
-                os.getenv("ETPHONEHOME_R2_SECRET_KEY"),
+                os.getenv("REACH_R2_ACCESS_KEY"),
+                os.getenv("REACH_R2_SECRET_KEY"),
             ]
         ):
             pytest.skip("R2 access keys not available")
@@ -339,14 +339,14 @@ class TestR2RotationIntegration:
 
         with patch("shared.r2_rotation.R2SecretsManager"):
             manager = R2KeyRotationManager(
-                cloudflare_api_token=os.environ["ETPHONEHOME_CLOUDFLARE_API_TOKEN"],
-                account_id=os.environ["ETPHONEHOME_R2_ACCOUNT_ID"],
+                cloudflare_api_token=os.environ["REACH_CLOUDFLARE_API_TOKEN"],
+                account_id=os.environ["REACH_R2_ACCOUNT_ID"],
                 github_manager=mock_github,
             )
 
             result = manager.verify_new_token_works(
-                access_key_id=os.environ["ETPHONEHOME_R2_ACCESS_KEY"],
-                secret_access_key=os.environ["ETPHONEHOME_R2_SECRET_KEY"],
+                access_key_id=os.environ["REACH_R2_ACCESS_KEY"],
+                secret_access_key=os.environ["REACH_R2_SECRET_KEY"],
             )
 
             assert result is True

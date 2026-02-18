@@ -1,17 +1,17 @@
-# ET Phone Home Client Role
+# Reach Client Role
 ---
 - name: Set client user
   ansible.builtin.set_fact:
-    _etphonehome_user: "{{ etphonehome_user | default(ansible_user) }}"
+    _reach_user: "{{ reach_user | default(ansible_user) }}"
 
 - name: Get user home directory
-  ansible.builtin.shell: "echo ~{{ _etphonehome_user }}"
+  ansible.builtin.shell: "echo ~{{ _reach_user }}"
   register: user_home
   changed_when: false
 
 - name: Set home directory fact
   ansible.builtin.set_fact:
-    _etphonehome_home: "{{ user_home.stdout }}"
+    _reach_home: "{{ user_home.stdout }}"
 
 - name: Install system dependencies
   become: true
@@ -26,48 +26,48 @@
 
 - name: Create config directory
   become: true
-  become_user: "{{ _etphonehome_user }}"
+  become_user: "{{ _reach_user }}"
   ansible.builtin.file:
-    path: "{{ _etphonehome_home }}/.etphonehome/logs"
+    path: "{{ _reach_home }}/.reach/logs"
     state: directory
     mode: "0700"
 
 - name: Create Python virtual environment
   become: true
-  become_user: "{{ _etphonehome_user }}"
+  become_user: "{{ _reach_user }}"
   ansible.builtin.command:
-    cmd: python3 -m venv {{ _etphonehome_home }}/.etphonehome/venv
-    creates: "{{ _etphonehome_home }}/.etphonehome/venv/bin/python"
+    cmd: python3 -m venv {{ _reach_home }}/.reach/venv
+    creates: "{{ _reach_home }}/.reach/venv/bin/python"
 
-- name: Install etphonehome package
+- name: Install reach package
   become: true
-  become_user: "{{ _etphonehome_user }}"
+  become_user: "{{ _reach_user }}"
   ansible.builtin.pip:
-    name: "etphonehome{% if etphonehome_version != 'latest' %}=={{ etphonehome_version }}{% endif %}"
-    virtualenv: "{{ _etphonehome_home }}/.etphonehome/venv"
-    state: "{{ 'latest' if etphonehome_version == 'latest' else 'present' }}"
-  when: etphonehome_install_method == "pip"
+    name: "reach{% if reach_version != 'latest' %}=={{ reach_version }}{% endif %}"
+    virtualenv: "{{ _reach_home }}/.reach/venv"
+    state: "{{ 'latest' if reach_version == 'latest' else 'present' }}"
+  when: reach_install_method == "pip"
 
 - name: Check if SSH key exists
   become: true
-  become_user: "{{ _etphonehome_user }}"
+  become_user: "{{ _reach_user }}"
   ansible.builtin.stat:
-    path: "{{ _etphonehome_home }}/.etphonehome/id_ed25519"
+    path: "{{ _reach_home }}/.reach/id_ed25519"
   register: ssh_key
 
 - name: Generate SSH key
   become: true
-  become_user: "{{ _etphonehome_user }}"
+  become_user: "{{ _reach_user }}"
   ansible.builtin.command:
-    cmd: "{{ _etphonehome_home }}/.etphonehome/venv/bin/phonehome --generate-key"
+    cmd: "{{ _reach_home }}/.reach/venv/bin/reach --generate-key"
   when: not ssh_key.stat.exists
   register: keygen_result
 
 - name: Read public key
   become: true
-  become_user: "{{ _etphonehome_user }}"
+  become_user: "{{ _reach_user }}"
   ansible.builtin.slurp:
-    src: "{{ _etphonehome_home }}/.etphonehome/id_ed25519.pub"
+    src: "{{ _reach_home }}/.reach/id_ed25519.pub"
   register: public_key
   when: ssh_key.stat.exists or keygen_result is changed
 
@@ -78,44 +78,44 @@
 
 - name: Create client configuration
   become: true
-  become_user: "{{ _etphonehome_user }}"
+  become_user: "{{ _reach_user }}"
   ansible.builtin.template:
     src: config.yaml.j2
-    dest: "{{ _etphonehome_home }}/.etphonehome/config.yaml"
+    dest: "{{ _reach_home }}/.reach/config.yaml"
     mode: "0600"
-  notify: Restart etphonehome-client
+  notify: Restart reach-client
 
 - name: Create systemd user service directory
   become: true
-  become_user: "{{ _etphonehome_user }}"
+  become_user: "{{ _reach_user }}"
   ansible.builtin.file:
-    path: "{{ _etphonehome_home }}/.config/systemd/user"
+    path: "{{ _reach_home }}/.config/systemd/user"
     state: directory
     mode: "0755"
 
 - name: Create systemd user service
   become: true
-  become_user: "{{ _etphonehome_user }}"
+  become_user: "{{ _reach_user }}"
   ansible.builtin.template:
     src: etphonehome-client.service.j2
-    dest: "{{ _etphonehome_home }}/.config/systemd/user/etphonehome-client.service"
+    dest: "{{ _reach_home }}/.config/systemd/user/reach-client.service"
     mode: "0644"
   notify:
     - Reload user systemd
-    - Restart etphonehome-client
+    - Restart reach-client
 
 - name: Enable lingering for user
   become: true
   ansible.builtin.command:
-    cmd: "loginctl enable-linger {{ _etphonehome_user }}"
+    cmd: "loginctl enable-linger {{ _reach_user }}"
   changed_when: false
 
 - name: Enable and start client service
   become: true
-  become_user: "{{ _etphonehome_user }}"
+  become_user: "{{ _reach_user }}"
   ansible.builtin.systemd:
-    name: etphonehome-client
-    enabled: "{{ etphonehome_enable_service }}"
-    state: "{{ 'started' if etphonehome_start_service else 'stopped' }}"
+    name: reach-client
+    enabled: "{{ reach_enable_service }}"
+    state: "{{ 'started' if reach_start_service else 'stopped' }}"
     scope: user
     daemon_reload: true

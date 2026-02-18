@@ -1,16 +1,16 @@
-# ET Phone Home - Windows User Installation
-# Installs phonehome to user profile (no admin required)
+# Reach - Windows User Installation
+# Installs reach to user profile (no admin required)
 
 param(
-    [string]$InstallDir = "$env:LOCALAPPDATA\Programs\phonehome",
-    [string]$ConfigDir = "$env:USERPROFILE\.etphonehome",
+    [string]$InstallDir = "$env:LOCALAPPDATA\Programs\reach",
+    [string]$ConfigDir = "$env:USERPROFILE\.reach",
     [switch]$Force  # Overwrite without prompting
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-Write-Host "=== ET Phone Home Installer ===" -ForegroundColor Cyan
+Write-Host "=== Reach Installer ===" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Installation directory: $InstallDir"
 Write-Host "Config directory: $ConfigDir"
@@ -19,7 +19,7 @@ Write-Host ""
 # Check if already installed
 if (Test-Path $InstallDir) {
     if (-not $Force) {
-        Write-Host "Warning: phonehome is already installed at $InstallDir" -ForegroundColor Yellow
+        Write-Host "Warning: reach is already installed at $InstallDir" -ForegroundColor Yellow
         $response = Read-Host "Overwrite existing installation? [y/N]"
         if ($response -notmatch '^[Yy]') {
             Write-Host "Installation cancelled."
@@ -36,7 +36,7 @@ New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 New-Item -ItemType Directory -Path $ConfigDir -Force | Out-Null
 
 # Copy files
-Write-Host "Installing phonehome..."
+Write-Host "Installing reach..."
 $filesToCopy = @(
     "python",
     "app",
@@ -62,12 +62,12 @@ foreach ($item in $filesToCopy) {
 # Copy uninstaller
 Copy-Item -Path (Join-Path $ScriptDir "uninstall.ps1") -Destination $InstallDir -Force
 
-# Create phonehome.cmd wrapper for easy execution
+# Create reach.cmd wrapper for easy execution
 $wrapperContent = @"
 @echo off
 "%~dp0run.bat" %*
 "@
-$wrapperPath = Join-Path $InstallDir "phonehome.cmd"
+$wrapperPath = Join-Path $InstallDir "reach.cmd"
 Set-Content -Path $wrapperPath -Value $wrapperContent
 
 # Add to user PATH if not already present
@@ -94,9 +94,9 @@ try {
 Write-Host ""
 Write-Host "=== Installation Complete ===" -ForegroundColor Green
 Write-Host ""
-Write-Host "You can now run phonehome from any terminal:"
-Write-Host "  phonehome --help"
-Write-Host "  phonehome -s your-server.com -p 443"
+Write-Host "You can now run reach from any terminal:"
+Write-Host "  reach --help"
+Write-Host "  reach -s your-server.com -p 443"
 Write-Host ""
 Write-Host "Configuration: $ConfigDir\config.yaml"
 Write-Host "Uninstall: Run uninstall.ps1 from $InstallDir"

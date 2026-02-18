@@ -11,7 +11,7 @@
 <header class="header">
 	<div class="header__left">
 		<a href="/" class="header__logo">
-			<img src="/logos/logo-horizontal.svg" alt="ET Phone Home" class="header__logo-img" />
+			<img src="/logos/logo-horizontal.svg" alt="Reach" class="header__logo-img" />
 		</a>
 	</div>
 

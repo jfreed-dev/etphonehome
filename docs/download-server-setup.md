@@ -1,6 +1,6 @@
 # Download Server Setup
 
-This document describes how to set up the HTTP download server for distributing ET Phone Home client builds.
+This document describes how to set up the HTTP download server for distributing Reach client builds.
 
 ## Overview
 
@@ -29,20 +29,20 @@ apt-get install -y nginx
 ### 2. Create Directory Structure
 
 ```bash
-mkdir -p /var/www/phonehome/latest
-chown -R www-data:www-data /var/www/phonehome
+mkdir -p /var/www/reach/latest
+chown -R www-data:www-data /var/www/reach
 ```
 
 ### 3. Configure nginx
 
-Create `/etc/nginx/sites-available/phonehome-downloads`:
+Create `/etc/nginx/sites-available/reach-downloads`:
 
 ```nginx
 server {
     listen 80;
     server_name YOUR_SERVER_IP;
 
-    root /var/www/phonehome;
+    root /var/www/reach;
     autoindex on;
     autoindex_exact_size off;
     autoindex_localtime on;
@@ -68,7 +68,7 @@ server {
 Enable the site:
 
 ```bash
-ln -s /etc/nginx/sites-available/phonehome-downloads /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/reach-downloads /etc/nginx/sites-enabled/
 nginx -t
 systemctl reload nginx
 ```
@@ -99,14 +99,14 @@ Use the deploy script after building:
 ## Directory Structure
 
 ```
-/var/www/phonehome/
+/var/www/reach/
 ├── latest/                           # Always points to latest release
-│   ├── phonehome-linux-x86_64.tar.gz
-│   ├── phonehome-linux-aarch64.tar.gz
-│   ├── phonehome-windows-amd64.zip
+│   ├── reach-linux-x86_64.tar.gz
+│   ├── reach-linux-aarch64.tar.gz
+│   ├── reach-windows-amd64.zip
 │   └── version.json
 ├── 0.1.0/                            # Versioned directories
-│   ├── phonehome-linux-x86_64.tar.gz
+│   ├── reach-linux-x86_64.tar.gz
 │   └── version.json
 └── 0.1.1/
     └── ...
@@ -120,17 +120,17 @@ Use the deploy script after building:
   "release_date": "2026-01-04T12:00:00Z",
   "downloads": {
     "linux-x86_64": {
-      "url": "http://YOUR_SERVER_IP/latest/phonehome-linux-x86_64.tar.gz",
+      "url": "http://YOUR_SERVER_IP/latest/reach-linux-x86_64.tar.gz",
       "sha256": "abc123...",
       "size": 45000000
     },
     "linux-aarch64": {
-      "url": "http://YOUR_SERVER_IP/latest/phonehome-linux-aarch64.tar.gz",
+      "url": "http://YOUR_SERVER_IP/latest/reach-linux-aarch64.tar.gz",
       "sha256": "def456...",
       "size": 44000000
     },
     "windows-amd64": {
-      "url": "http://YOUR_SERVER_IP/latest/phonehome-windows-amd64.zip",
+      "url": "http://YOUR_SERVER_IP/latest/reach-windows-amd64.zip",
       "sha256": "ghi789...",
       "size": 50000000
     }
@@ -144,21 +144,21 @@ Use the deploy script after building:
 ### Linux (curl/wget)
 
 ```bash
-# Download to ~/phonehome/
-mkdir -p ~/phonehome && cd ~/phonehome
-curl -LO http://YOUR_SERVER_IP/latest/phonehome-linux-x86_64.tar.gz
-tar xzf phonehome-linux-x86_64.tar.gz
-cd phonehome && ./setup.sh
+# Download to ~/reach/
+mkdir -p ~/reach reach && cd ~/reach
+curl -LO http://YOUR_SERVER_IP/latest/reach-linux-x86_64.tar.gz
+tar xzf reach-linux-x86_64.tar.gz
+cd reach reach && ./setup.sh
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-# Download to %USERPROFILE%\phonehome\
-New-Item -ItemType Directory -Path "$env:USERPROFILE\phonehome" -Force
-Set-Location "$env:USERPROFILE\phonehome"
-Invoke-WebRequest -Uri "http://YOUR_SERVER_IP/latest/phonehome-windows-amd64.zip" -OutFile "phonehome.zip"
-Expand-Archive -Path "phonehome.zip" -DestinationPath "."
+# Download to %USERPROFILE%\reach\
+New-Item -ItemType Directory -Path "$env:USERPROFILE\reach" -Force
+Set-Location "$env:USERPROFILE\reach"
+Invoke-WebRequest -Uri "http://YOUR_SERVER_IP/latest/reach-windows-amd64.zip" -OutFile "reach.zip"
+Expand-Archive -Path "reach.zip" -DestinationPath "."
 .\setup.bat
 ```
 
@@ -173,8 +173,8 @@ curl http://YOUR_SERVER_IP/latest/version.json
 ### 403 Forbidden
 Check directory permissions:
 ```bash
-chown -R www-data:www-data /var/www/phonehome
-chmod -R 755 /var/www/phonehome
+chown -R www-data:www-data /var/www/reach
+chmod -R 755 /var/www/reach
 ```
 
 ### Connection Refused

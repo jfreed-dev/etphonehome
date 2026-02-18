@@ -1,6 +1,6 @@
 # Using an MCP Client via SSH
 
-Access ET Phone Home MCP tools remotely through SSH.
+Access Reach MCP tools remotely through SSH.
 
 ---
 
@@ -14,9 +14,9 @@ ssh root@your-server
 # Option 2: Local MCP client with remote MCP (add to your client settings)
 {
   "mcpServers": {
-    "etphonehome": {
+    "reach": {
       "command": "ssh",
-      "args": ["-i", "~/.ssh/key", "root@your-server", "/opt/etphonehome/run_mcp.sh"]
+      "args": ["-i", "~/.ssh/key", "root@your-server", "/opt/reach/run_mcp.sh"]
     }
   }
 }
@@ -63,7 +63,7 @@ ssh -i ~/.ssh/your_admin_key root@your-server
 <mcp-client>
 ```
 
-Once in your MCP client, the ET Phone Home MCP tools are available:
+Once in your MCP client, the Reach MCP tools are available:
 
 ```
 You: List all connected clients
@@ -79,10 +79,10 @@ Ensure the server has MCP configured in your client settings:
 ```json
 {
   "mcpServers": {
-    "etphonehome": {
-      "command": "/opt/etphonehome/venv/bin/python",
+    "reach": {
+      "command": "/opt/reach/venv/bin/python",
       "args": ["-m", "server.mcp_server"],
-      "cwd": "/opt/etphonehome"
+      "cwd": "/opt/reach"
     }
   }
 }
@@ -98,13 +98,13 @@ Run your MCP client locally and invoke the MCP server remotely via SSH.
 
 ```bash
 # On the server
-cat > /opt/etphonehome/run_mcp.sh << 'EOF'
+cat > /opt/reach/run_mcp.sh << 'EOF'
 #!/bin/bash
-cd /opt/etphonehome
+cd /opt/reach
 exec venv/bin/python -m server.mcp_server
 EOF
 
-chmod +x /opt/etphonehome/run_mcp.sh
+chmod +x /opt/reach/run_mcp.sh
 ```
 
 ### Step 2: Create Client Store Symlink
@@ -113,7 +113,7 @@ When MCP runs as root via SSH, it needs access to the client store:
 
 ```bash
 # On the server (as root)
-ln -sfn /home/etphonehome/.etphonehome-server /root/.etphonehome-server
+ln -sfn /home/reach/.reach-server /root/.reach-server
 ```
 
 ### Step 3: Configure Local MCP Client
@@ -123,13 +123,13 @@ Add to your MCP client settings (location varies by client):
 ```json
 {
   "mcpServers": {
-    "etphonehome": {
+    "reach": {
       "command": "ssh",
       "args": [
         "-i", "/path/to/your/ssh/key",
         "-o", "StrictHostKeyChecking=no",
         "root@your-server",
-        "/opt/etphonehome/run_mcp.sh"
+        "/opt/reach/run_mcp.sh"
       ]
     }
   }
@@ -191,11 +191,11 @@ Now your MCP client on the local machine can manage remote clients without SSHin
 
 ```bash
 # Verify the run script exists and works
-ssh root@your-server '/opt/etphonehome/run_mcp.sh'
+ssh root@your-server '/opt/reach/run_mcp.sh'
 # Should wait for input (Ctrl+C to exit)
 
 # Check MCP server runs manually
-ssh root@your-server 'cd /opt/etphonehome && venv/bin/python -m server.mcp_server'
+ssh root@your-server 'cd /opt/reach && venv/bin/python -m server.mcp_server'
 ```
 
 ### SSH Connection Timeout
@@ -203,7 +203,7 @@ ssh root@your-server 'cd /opt/etphonehome && venv/bin/python -m server.mcp_serve
 Add keepalive settings to `~/.ssh/config`:
 
 ```
-Host etphonehome-server
+Host reach-server
     HostName your-server
     User root
     IdentityFile ~/.ssh/your_key
@@ -215,11 +215,11 @@ Host etphonehome-server
 
 ```bash
 # On client machine
-ps aux | grep phonehome              # Check if running
-cat ~/.etphonehome/phonehome.log     # Check logs
+ps aux | grep reach              # Check if running
+cat ~/.reach/reach.log     # Check logs
 
 # On server
-cat /home/etphonehome/.etphonehome-server/authorized_keys  # Verify key
+cat /home/reach/.reach-server/authorized_keys  # Verify key
 ```
 
 ### Permission Denied on SSH

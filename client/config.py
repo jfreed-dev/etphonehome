@@ -1,11 +1,18 @@
-"""Configuration management for the phone home client."""
+"""Configuration management for the Reach client."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
 
-DEFAULT_CONFIG_DIR = Path.home() / ".etphonehome"
+from shared.compat import migrate_config_dir
+
+_OLD_CONFIG_DIR = Path.home() / ".etphonehome"
+DEFAULT_CONFIG_DIR = Path.home() / ".reach"
+
+# Migrate legacy config directory on import
+migrate_config_dir(DEFAULT_CONFIG_DIR, _OLD_CONFIG_DIR)
+
 DEFAULT_CONFIG_FILE = DEFAULT_CONFIG_DIR / "config.yaml"
 DEFAULT_KEY_FILE = DEFAULT_CONFIG_DIR / "id_ed25519"
 DEFAULT_LOG_DIR = DEFAULT_CONFIG_DIR / "logs"
@@ -19,7 +26,7 @@ class Config:
     # Server connection
     server_host: str = "localhost"
     server_port: int = 443
-    server_user: str = "etphonehome"
+    server_user: str = "reach"
     key_file: str = str(DEFAULT_KEY_FILE)
 
     # Client identity (persistent across reconnects)
@@ -58,7 +65,7 @@ class Config:
             # Server connection
             server_host=data.get("server_host", "localhost"),
             server_port=data.get("server_port", 443),
-            server_user=data.get("server_user", "etphonehome"),
+            server_user=data.get("server_user", "reach"),
             key_file=data.get("key_file", str(DEFAULT_KEY_FILE)),
             # Client identity
             uuid=data.get("uuid"),

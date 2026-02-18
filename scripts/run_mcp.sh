@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run the ET Phone Home MCP server
+# Run the Reach MCP server
 # This script is invoked remotely via SSH by Claude Code
 
 # Resolve symlinks to get the real script location

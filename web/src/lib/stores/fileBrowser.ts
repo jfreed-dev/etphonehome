@@ -1,5 +1,5 @@
 // =============================================================================
-// ET Phone Home - File Browser Store
+// Reach - File Browser Store
 // =============================================================================
 
 import { writable, derived, get } from 'svelte/store';

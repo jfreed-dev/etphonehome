@@ -12,7 +12,7 @@ class TestConfig:
         config = Config()
         assert config.server_host == "localhost"
         assert config.server_port == 443
-        assert config.server_user == "etphonehome"
+        assert config.server_user == "reach"
         assert config.uuid is None
         assert config.display_name is None
         assert config.purpose == ""
@@ -65,7 +65,7 @@ class TestConfigLoad:
         assert config.server_host == "myserver.com"
         assert config.server_port == 8080
         # Defaults should still apply
-        assert config.server_user == "etphonehome"
+        assert config.server_user == "reach"
         assert config.log_level == "INFO"
 
     def test_load_full_config(self, tmp_path):
@@ -164,7 +164,7 @@ class TestEnsureConfigDir:
 
     def test_creates_directory(self, tmp_path, monkeypatch):
         # Patch the default config dir
-        test_dir = tmp_path / ".etphonehome"
+        test_dir = tmp_path / ".reach"
         monkeypatch.setattr("client.config.DEFAULT_CONFIG_DIR", test_dir)
 
         result = ensure_config_dir()
@@ -173,7 +173,7 @@ class TestEnsureConfigDir:
         assert test_dir.is_dir()
 
     def test_idempotent(self, tmp_path, monkeypatch):
-        test_dir = tmp_path / ".etphonehome"
+        test_dir = tmp_path / ".reach"
         monkeypatch.setattr("client.config.DEFAULT_CONFIG_DIR", test_dir)
 
         # Call twice

@@ -1,5 +1,5 @@
 # =============================================================================
-# ET Phone Home - Production Docker Compose
+# Reach - Production Docker Compose
 # Traefik reverse proxy with Let's Encrypt SSL via Cloudflare DNS
 # =============================================================================
 
@@ -9,7 +9,7 @@ services:
   # ---------------------------------------------------------------------------
   traefik:
     image: traefik:v3.3
-    container_name: etphonehome-proxy
+    container_name: reach-proxy
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -68,7 +68,7 @@ services:
     build:
       context: ../../web
       dockerfile: Dockerfile
-    container_name: etphonehome-frontend
+    container_name: reach-frontend
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -112,7 +112,7 @@ services:
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile.server
-    container_name: etphonehome-backend
+    container_name: reach-backend
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -120,30 +120,30 @@ services:
     network_mode: host
     environment:
       # Server settings
-      ETPHONEHOME_HOST: ${ETPHONEHOME_HOST:-0.0.0.0}
-      ETPHONEHOME_PORT: ${ETPHONEHOME_PORT:-8765}
-      ETPHONEHOME_SSH_PORT: ${ETPHONEHOME_SSH_PORT:-2222}
-      ETPHONEHOME_LOG_LEVEL: ${ETPHONEHOME_LOG_LEVEL:-INFO}
+      REACH_HOST: ${REACH_HOST:-0.0.0.0}
+      REACH_PORT: ${REACH_PORT:-8765}
+      REACH_SSH_PORT: ${REACH_SSH_PORT:-2222}
+      REACH_LOG_LEVEL: ${REACH_LOG_LEVEL:-INFO}
       # API authentication
-      ETPHONEHOME_API_KEY: ${ETPHONEHOME_API_KEY}
+      REACH_API_KEY: ${REACH_API_KEY}
       # R2 configuration (for file exchange)
-      ETPHONEHOME_R2_ACCOUNT_ID: ${ETPHONEHOME_R2_ACCOUNT_ID:-}
-      ETPHONEHOME_R2_ACCESS_KEY: ${ETPHONEHOME_R2_ACCESS_KEY:-}
-      ETPHONEHOME_R2_SECRET_KEY: ${ETPHONEHOME_R2_SECRET_KEY:-}
-      ETPHONEHOME_R2_BUCKET: ${ETPHONEHOME_R2_BUCKET:-}
-      ETPHONEHOME_R2_REGION: ${ETPHONEHOME_R2_REGION:-auto}
+      REACH_R2_ACCOUNT_ID: ${REACH_R2_ACCOUNT_ID:-}
+      REACH_R2_ACCESS_KEY: ${REACH_R2_ACCESS_KEY:-}
+      REACH_R2_SECRET_KEY: ${REACH_R2_SECRET_KEY:-}
+      REACH_R2_BUCKET: ${REACH_R2_BUCKET:-}
+      REACH_R2_REGION: ${REACH_R2_REGION:-auto}
       # Webhooks
-      ETPHONEHOME_WEBHOOK_URL: ${ETPHONEHOME_WEBHOOK_URL:-}
-      ETPHONEHOME_WEBHOOK_TIMEOUT: ${ETPHONEHOME_WEBHOOK_TIMEOUT:-10.0}
-      ETPHONEHOME_WEBHOOK_MAX_RETRIES: ${ETPHONEHOME_WEBHOOK_MAX_RETRIES:-3}
+      REACH_WEBHOOK_URL: ${REACH_WEBHOOK_URL:-}
+      REACH_WEBHOOK_TIMEOUT: ${REACH_WEBHOOK_TIMEOUT:-10.0}
+      REACH_WEBHOOK_MAX_RETRIES: ${REACH_WEBHOOK_MAX_RETRIES:-3}
       # Rate limiting
-      ETPHONEHOME_RATE_LIMIT_RPM: ${ETPHONEHOME_RATE_LIMIT_RPM:-60}
-      ETPHONEHOME_RATE_LIMIT_CONCURRENT: ${ETPHONEHOME_RATE_LIMIT_CONCURRENT:-10}
+      REACH_RATE_LIMIT_RPM: ${REACH_RATE_LIMIT_RPM:-60}
+      REACH_RATE_LIMIT_CONCURRENT: ${REACH_RATE_LIMIT_CONCURRENT:-10}
     volumes:
       # Persistent data (use bind mount for host network compatibility)
-      - /var/lib/etphonehome:/var/lib/etphonehome
+      - /var/lib/reach:/var/lib/reach
       # Logs
-      - /var/log/etphonehome:/var/log/etphonehome
+      - /var/log/reach:/var/log/reach
       # Timezone
       - /etc/localtime:/etc/localtime:ro
     # Note: Traefik labels don't work with host network mode

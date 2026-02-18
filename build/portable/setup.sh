@@ -1,13 +1,13 @@
 #!/bin/bash
-# ET Phone Home - First-time Setup (Linux)
+# Reach - First-time Setup (Linux)
 # Generates SSH keys and creates initial configuration
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="${ETPHONEHOME_CONFIG_DIR:-$HOME/.etphonehome}"
+CONFIG_DIR="${REACH_CONFIG_DIR:-$HOME/.reach}"
 
-echo "=== ET Phone Home Setup ==="
+echo "=== Reach Setup ==="
 echo
 
 # Create config directory
@@ -43,5 +43,5 @@ echo "   $(cat "$KEY_FILE.pub" 2>/dev/null || echo '   (run setup again after fi
 echo "3. Run: ./run.sh"
 echo
 echo "Quick connect (bypassing config file):"
-echo "  ./run.sh -s YOUR_SERVER -p 2222 -u etphonehome"
+echo "  ./run.sh -s YOUR_SERVER -p 2222 -u reach"
 echo

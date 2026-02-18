@@ -322,8 +322,8 @@ class TestEnvironmentVariables:
         with patch.dict(
             "os.environ",
             {
-                "ETPHONEHOME_RATE_LIMIT_RPM": "120",
-                "ETPHONEHOME_RATE_LIMIT_CONCURRENT": "25",
+                "REACH_RATE_LIMIT_RPM": "120",
+                "REACH_RATE_LIMIT_CONCURRENT": "25",
             },
         ):
             # Reimport to pick up new env vars

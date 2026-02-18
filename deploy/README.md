@@ -1,4 +1,4 @@
-# ET Phone Home Deployment
+# Reach Deployment
 
 This directory contains deployment configurations for Docker, Ansible, and Terraform.
 
@@ -81,9 +81,9 @@ docker-compose build
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ETPHONEHOME_PORT` | HTTP server port | 8765 |
-| `ETPHONEHOME_API_KEY` | API authentication key | (none) |
-| `ETPHONEHOME_LOG_LEVEL` | Log level | INFO |
+| `REACH_PORT` | HTTP server port | 8765 |
+| `REACH_API_KEY` | API authentication key | (none) |
+| `REACH_LOG_LEVEL` | Log level | INFO |
 | `SSH_PORT` | SSH port for clients | 2222 |
 
 ---
@@ -106,13 +106,13 @@ docker-compose build
 ### Server Deployment
 
 1. Configure inventory with server hosts
-2. Customize `group_vars/etphonehome_servers.yml`
+2. Customize `group_vars/reach_servers.yml`
 3. Run: `ansible-playbook -i inventory.yml deploy-server.yml`
 
 ### Client Deployment
 
 1. Configure inventory with client hosts
-2. Set `etphonehome_server_host` in inventory
+2. Set `reach_server_host` in inventory
 3. Customize per-host variables (display_name, purpose, tags)
 4. Run: `ansible-playbook -i inventory.yml deploy-client.yml`
 5. Copy displayed public keys to server's authorized_keys
@@ -120,15 +120,15 @@ docker-compose build
 ### Key Variables
 
 **Server:**
-- `etphonehome_ssh_port` - SSH port (default: 2222)
-- `etphonehome_http_port` - HTTP port (default: 8765)
-- `etphonehome_api_key` - API key (optional)
+- `reach_ssh_port` - SSH port (default: 2222)
+- `reach_http_port` - HTTP port (default: 8765)
+- `reach_api_key` - API key (optional)
 
 **Client:**
-- `etphonehome_server_host` - Server hostname/IP (required)
-- `etphonehome_display_name` - Client display name
-- `etphonehome_purpose` - Client purpose
-- `etphonehome_tags` - Client tags
+- `reach_server_host` - Server hostname/IP (required)
+- `reach_display_name` - Client display name
+- `reach_purpose` - Client purpose
+- `reach_tags` - Client tags
 
 ---
 
@@ -202,7 +202,7 @@ After deploying clients, add their public keys to the server:
 
 ```bash
 # On server
-cat >> /home/etphonehome/.ssh/authorized_keys << 'EOF'
+cat >> /home/reach/.ssh/authorized_keys << 'EOF'
 <paste client public key here>
 EOF
 ```
@@ -214,7 +214,7 @@ Add to Claude Code settings:
 ```json
 {
   "mcpServers": {
-    "etphonehome": {
+    "reach": {
       "url": "http://localhost:8765/sse",
       "transport": "sse"
     }
@@ -226,8 +226,8 @@ Or for stdio mode (local):
 ```json
 {
   "mcpServers": {
-    "etphonehome": {
-      "command": "etphonehome-server"
+    "reach": {
+      "command": "reach-server"
     }
   }
 }

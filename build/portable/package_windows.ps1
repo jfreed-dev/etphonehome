@@ -1,4 +1,4 @@
-# Package ET Phone Home for Windows with embedded Python
+# Package Reach for Windows with embedded Python
 # Creates a self-contained archive that runs from any directory
 
 param(
@@ -17,7 +17,7 @@ $OutputDir = Join-Path $ProjectDir "dist"
 $PythonShort = $PythonVersion -replace '\.', ''
 $PythonUrl = "https://www.python.org/ftp/python/$PythonVersion/python-$PythonVersion-embed-$Arch.zip"
 
-Write-Host "=== Packaging ET Phone Home for Windows ===" -ForegroundColor Cyan
+Write-Host "=== Packaging Reach for Windows ===" -ForegroundColor Cyan
 Write-Host "Python: $PythonVersion"
 Write-Host "Architecture: $Arch"
 Write-Host ""
@@ -26,10 +26,10 @@ Write-Host ""
 if (Test-Path $BuildDir) {
     Remove-Item -Recurse -Force $BuildDir
 }
-New-Item -ItemType Directory -Path "$BuildDir\phonehome" -Force | Out-Null
+New-Item -ItemType Directory -Path "$BuildDir\reach" -Force | Out-Null
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 
-Set-Location "$BuildDir\phonehome"
+Set-Location "$BuildDir\reach"
 
 # Download embedded Python
 Write-Host "Downloading embedded Python..."
@@ -100,7 +100,7 @@ WINDOWS SECURITY NOTES
 1. Windows Defender / Antivirus
    This package contains Python and cryptography libraries which may trigger
    false positive detections. If blocked:
-   - Add the phonehome folder to your AV exclusions
+   - Add the reach folder to your AV exclusions
    - Or use the portable archive instead of the single executable
 
 2. SmartScreen Warning
@@ -120,8 +120,8 @@ WINDOWS SECURITY NOTES
 # Create the archive
 Write-Host "Creating archive..."
 Set-Location $BuildDir
-$ArchiveName = "phonehome-windows-$Arch.zip"
-Compress-Archive -Path "phonehome" -DestinationPath "$OutputDir\$ArchiveName" -Force
+$ArchiveName = "reach-windows-$Arch.zip"
+Compress-Archive -Path "reach" -DestinationPath "$OutputDir\$ArchiveName" -Force
 
 # Cleanup
 Set-Location $ProjectDir
@@ -133,7 +133,7 @@ Get-Item "$OutputDir\$ArchiveName" | Format-Table Name, Length -AutoSize
 Write-Host ""
 Write-Host "To deploy:"
 Write-Host "  Expand-Archive $ArchiveName -DestinationPath ."
-Write-Host "  cd phonehome"
+Write-Host "  cd reach"
 Write-Host "  .\install.ps1              # Install to user profile (recommended)"
 Write-Host ""
 Write-Host "Or run directly without installing:"

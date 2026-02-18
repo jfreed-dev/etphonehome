@@ -1,5 +1,5 @@
 #!/bin/bash
-# ET Phone Home - Master Lint Script
+# Reach - Master Lint Script
 # Runs all linting tools for Python and shell scripts
 
 set -e
@@ -17,7 +17,7 @@ NC='\033[0m'
 
 ERRORS=0
 
-echo "=== ET Phone Home Linting ==="
+echo "=== Reach Linting ==="
 echo
 
 # Python linting with ruff

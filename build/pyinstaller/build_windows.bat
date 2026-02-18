@@ -6,7 +6,7 @@ set SCRIPT_DIR=%~dp0
 set PROJECT_DIR=%SCRIPT_DIR%..\..
 set BUILD_DIR=%PROJECT_DIR%\dist
 
-echo === Building ET Phone Home for Windows ===
+echo === Building Reach for Windows ===
 echo Project: %PROJECT_DIR%
 echo.
 
@@ -35,15 +35,15 @@ pip install -e "%PROJECT_DIR%"
 REM Build
 echo Building executable...
 cd /d "%PROJECT_DIR%"
-pyinstaller --clean --noconfirm build\pyinstaller\phonehome.spec
+pyinstaller --clean --noconfirm build\pyinstaller\reach.spec
 
 REM Verify
-if exist "%BUILD_DIR%\phonehome.exe" (
+if exist "%BUILD_DIR%\reach.exe" (
     echo.
     echo === Build Successful ===
-    dir "%BUILD_DIR%\phonehome.exe"
+    dir "%BUILD_DIR%\reach.exe"
     echo.
-    echo Test with: %BUILD_DIR%\phonehome.exe --help
+    echo Test with: %BUILD_DIR%\reach.exe --help
 ) else (
     echo Error: Build failed
     exit /b 1

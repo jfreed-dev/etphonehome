@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 BUILD_DIR="$PROJECT_DIR/dist"
 
-echo "=== Building ET Phone Home for Linux ==="
+echo "=== Building Reach for Linux ==="
 echo "Project: $PROJECT_DIR"
 echo
 
@@ -35,15 +35,15 @@ pip install -e "$PROJECT_DIR"
 # Build
 echo "Building executable..."
 cd "$PROJECT_DIR"
-pyinstaller --clean --noconfirm build/pyinstaller/phonehome.spec
+pyinstaller --clean --noconfirm build/pyinstaller/reach.spec
 
 # Verify
-if [ -f "$BUILD_DIR/phonehome" ]; then
+if [ -f "$BUILD_DIR/reach" ]; then
     echo
     echo "=== Build Successful ==="
-    ls -lh "$BUILD_DIR/phonehome"
+    ls -lh "$BUILD_DIR/reach"
     echo
-    echo "Test with: $BUILD_DIR/phonehome --help"
+    echo "Test with: $BUILD_DIR/reach --help"
 else
     echo "Error: Build failed"
     exit 1

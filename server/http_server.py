@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ET Phone Home - HTTP/SSE Transport for MCP Server
+Reach - HTTP/SSE Transport for MCP Server
 
 Provides HTTP/SSE transport so the MCP server can run as a persistent daemon.
 Includes web management interface with real-time updates.
@@ -9,7 +9,6 @@ Includes web management interface with real-time updates.
 import asyncio
 import json
 import logging
-import os
 import time
 import uuid
 from collections import deque
@@ -31,7 +30,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from server.command_history import get_history_store, record_command
 from shared.version import __version__
 
-logger = logging.getLogger("etphonehome.http")
+logger = logging.getLogger("reach.http")
 
 # Default configuration
 DEFAULT_HOST = "127.0.0.1"
@@ -161,7 +160,9 @@ class AuthMiddleware:
 
     def __init__(self, app, api_key: str | None = None):
         self.app = app
-        self.api_key = api_key or os.environ.get("ETPHONEHOME_API_KEY")
+        from shared.compat import env as _env
+
+        self.api_key = api_key or _env("REACH_API_KEY", "ETPHONEHOME_API_KEY")
 
     def _is_public_path(self, path: str) -> bool:
         """Check if a path is publicly accessible."""
@@ -327,7 +328,7 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
         return JSONResponse(
             {
                 "status": "healthy",
-                "service": "etphonehome-mcp",
+                "service": "reach-mcp",
                 "online_clients": registry.online_count,
                 "total_clients": registry.total_count,
             }
@@ -404,7 +405,7 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
             return FileResponse(index_path, media_type="text/html")
         # Fallback if static files not found
         return HTMLResponse(
-            "<html><body><h1>ET Phone Home</h1>"
+            "<html><body><h1>Reach</h1>"
             "<p>Static files not found. Build the web UI first.</p></body></html>",
             status_code=500,
         )
@@ -917,7 +918,9 @@ def create_http_app(api_key: str | None = None, registry=None) -> Starlette:
     app = Starlette(routes=routes, middleware=middleware)
 
     # Wrap with auth if API key is configured
-    effective_api_key = api_key or os.environ.get("ETPHONEHOME_API_KEY")
+    from shared.compat import env as _env
+
+    effective_api_key = api_key or _env("REACH_API_KEY", "ETPHONEHOME_API_KEY")
     if effective_api_key:
         logger.info("API key authentication enabled")
         return AuthMiddleware(app, effective_api_key)

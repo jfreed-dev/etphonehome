@@ -80,7 +80,7 @@ class TestReverseTunnelInit:
         config = MagicMock()
         config.server_host = "example.com"
         config.server_port = 2222
-        config.server_user = "etphonehome"
+        config.server_user = "reach"
         config.key_file = "/path/to/key"
 
         handler = MagicMock()
@@ -89,7 +89,7 @@ class TestReverseTunnelInit:
 
         assert tunnel.server_host == "example.com"
         assert tunnel.server_port == 2222
-        assert tunnel.server_user == "etphonehome"
+        assert tunnel.server_user == "reach"
         assert tunnel.client_id == "client-123"
         assert tunnel.request_handler is handler
 

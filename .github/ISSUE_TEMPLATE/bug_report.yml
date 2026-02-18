@@ -53,7 +53,7 @@ body:
       label: Component
       description: Which component is affected?
       options:
-        - Client (phonehome)
+        - Client (reach)
         - Server (MCP)
         - Both
         - Documentation
@@ -78,7 +78,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: What version are you running? (run `phonehome --version` or check pyproject.toml)
+      description: What version are you running? (run `reach --version` or check pyproject.toml)
       placeholder: "0.1.4"
     validations:
       required: true

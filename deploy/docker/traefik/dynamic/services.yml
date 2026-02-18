@@ -1,5 +1,5 @@
 # =============================================================================
-# ET Phone Home - Traefik Dynamic Services Configuration
+# Reach - Traefik Dynamic Services Configuration
 # Routes and services defined via file provider (bypasses Docker API issues)
 # =============================================================================
 
@@ -65,7 +65,7 @@ http:
     frontend:
       loadBalancer:
         servers:
-          - url: "http://etphonehome-frontend:3000"
+          - url: "http://reach-frontend:3000"
 
     # Backend service (Python MCP server on host network)
     backend:

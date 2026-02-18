@@ -1,23 +1,23 @@
-# Cloudflare R2 Setup Guide for ET Phone Home
+# Cloudflare R2 Setup Guide for Reach
 
-This guide walks you through setting up Cloudflare R2 storage for file transfers in ET Phone Home.
+This guide walks you through setting up Cloudflare R2 storage for file transfers in Reach.
 
 ## Overview
 
-Cloudflare R2 provides S3-compatible object storage with zero egress fees, making it ideal for file transfers between the MCP server and clients. ET Phone Home uses R2 as an intermediary storage layer with automatic file cleanup.
+Cloudflare R2 provides S3-compatible object storage with zero egress fees, making it ideal for file transfers between the MCP server and clients. Reach uses R2 as an intermediary storage layer with automatic file cleanup.
 
 ## Prerequisites
 
 - Cloudflare account (free tier available)
 - Access to Cloudflare Dashboard
-- ET Phone Home server with admin access
+- Reach server with admin access
 
 ## Step 1: Create R2 Bucket
 
 1. Log in to [Cloudflare Dashboard](https://dash.cloudflare.com/)
 2. Navigate to **R2 Object Storage** in the left sidebar
 3. Click **Create bucket**
-4. Enter bucket name: `etphonehome-transfers` (or your preferred name)
+4. Enter bucket name: `reach-transfers` (or your preferred name)
 5. Select location: **Automatic** (recommended)
 6. Click **Create bucket**
 
@@ -26,39 +26,39 @@ Cloudflare R2 provides S3-compatible object storage with zero egress fees, makin
 1. In the R2 dashboard, click **Manage R2 API Tokens**
 2. Click **Create API Token**
 3. Configure the token:
-   - **Token name**: `etphonehome-server`
+   - **Token name**: `reach-server`
    - **Permissions**:
      - Object Read & Write
-   - **Specify bucket**: Select `etphonehome-transfers` (or your bucket name)
+   - **Specify bucket**: Select `reach-transfers` (or your bucket name)
    - **TTL**: No expiration (or set according to your security policy)
 4. Click **Create API Token**
 5. **IMPORTANT**: Copy and save these credentials (you won't see them again):
-   - **Access Key ID** - Use this for `ETPHONEHOME_R2_ACCESS_KEY`
-   - **Secret Access Key** (also labeled "Secret Key ID" in some views) - Use this for `ETPHONEHOME_R2_SECRET_KEY`
+   - **Access Key ID** - Use this for `REACH_R2_ACCESS_KEY`
+   - **Secret Access Key** (also labeled "Secret Key ID" in some views) - Use this for `REACH_R2_SECRET_KEY`
    - **API Key** - NOT used for S3-compatible access, ignore this field
    - Jurisdiction-specific endpoint (optional, for compliance)
 
 **⚠️ Credential Mapping Note:**
 When viewing token details in Cloudflare dashboard, you'll see multiple key fields:
-- `Access Key ID` → Use for `ETPHONEHOME_R2_ACCESS_KEY`
-- `Secret Key ID` (64 hex characters) → Use for `ETPHONEHOME_R2_SECRET_KEY`
+- `Access Key ID` → Use for `REACH_R2_ACCESS_KEY`
+- `Secret Key ID` (64 hex characters) → Use for `REACH_R2_SECRET_KEY`
 - `API Key` (shorter, ends with underscore) → NOT used, ignore
 
 The correct secret key is the long 64-character hex string, NOT the shorter "API Key" field.
 
-## Step 3: Configure ET Phone Home Server
+## Step 3: Configure Reach Server
 
 ### Option A: Environment Variables (Recommended for Production)
 
-Add to your server environment configuration (e.g., `/etc/etphonehome/server.env`):
+Add to your server environment configuration (e.g., `/etc/reach/server.env`):
 
 ```bash
 # Cloudflare R2 Storage Configuration
-ETPHONEHOME_R2_ACCOUNT_ID=your-cloudflare-account-id
-ETPHONEHOME_R2_ACCESS_KEY=your-r2-access-key-id
-ETPHONEHOME_R2_SECRET_KEY=your-r2-secret-access-key
-ETPHONEHOME_R2_BUCKET=etphonehome-transfers
-ETPHONEHOME_R2_REGION=auto
+REACH_R2_ACCOUNT_ID=your-cloudflare-account-id
+REACH_R2_ACCESS_KEY=your-r2-access-key-id
+REACH_R2_SECRET_KEY=your-r2-secret-access-key
+REACH_R2_BUCKET=reach-transfers
+REACH_R2_REGION=auto
 ```
 
 **Finding your Account ID:**
@@ -68,17 +68,17 @@ ETPHONEHOME_R2_REGION=auto
 ### Option B: Shell Export (Development/Testing)
 
 ```bash
-export ETPHONEHOME_R2_ACCOUNT_ID="your-cloudflare-account-id"
-export ETPHONEHOME_R2_ACCESS_KEY="your-r2-access-key-id"
-export ETPHONEHOME_R2_SECRET_KEY="your-r2-secret-access-key"  # pragma: allowlist secret
-export ETPHONEHOME_R2_BUCKET="etphonehome-transfers"
+export REACH_R2_ACCOUNT_ID="your-cloudflare-account-id"
+export REACH_R2_ACCESS_KEY="your-r2-access-key-id"
+export REACH_R2_SECRET_KEY="your-r2-secret-access-key"  # pragma: allowlist secret
+export REACH_R2_BUCKET="reach-transfers"
 ```
 
 ### Restart the Server
 
 ```bash
 # If running as systemd service
-sudo systemctl restart etphonehome-server
+sudo systemctl restart reach-server
 
 # If running manually
 # Stop the current instance and restart
@@ -91,7 +91,7 @@ To automatically delete old transfers, configure R2 lifecycle rules:
 
 ### Via Cloudflare Dashboard
 
-1. Go to R2 → Your bucket (`etphonehome-transfers`)
+1. Go to R2 → Your bucket (`reach-transfers`)
 2. Click **Settings** tab
 3. Scroll to **Lifecycle rules**
 4. Click **Add rule**
@@ -140,7 +140,7 @@ Apply the policy:
 ```bash
 aws s3api put-bucket-lifecycle-configuration \
   --endpoint-url https://YOUR-ACCOUNT-ID.r2.cloudflarestorage.com \
-  --bucket etphonehome-transfers \
+  --bucket reach-transfers \
   --lifecycle-configuration file://lifecycle-policy.json
 ```
 
@@ -156,10 +156,10 @@ import os
 from pathlib import Path
 
 # Set environment variables (if not already set)
-os.environ["ETPHONEHOME_R2_ACCOUNT_ID"] = "your-account-id"
-os.environ["ETPHONEHOME_R2_ACCESS_KEY"] = "your-access-key"
-os.environ["ETPHONEHOME_R2_SECRET_KEY"] = "your-secret-key"  # pragma: allowlist secret
-os.environ["ETPHONEHOME_R2_BUCKET"] = "etphonehome-transfers"
+os.environ["REACH_R2_ACCOUNT_ID"] = "your-account-id"
+os.environ["REACH_R2_ACCESS_KEY"] = "your-access-key"
+os.environ["REACH_R2_SECRET_KEY"] = "your-secret-key"  # pragma: allowlist secret
+os.environ["REACH_R2_BUCKET"] = "reach-transfers"
 
 from shared.r2_client import create_r2_client, TransferManager
 
@@ -177,7 +177,7 @@ print("✓ R2 client initialized successfully")
 # Test file upload
 print("\nTesting file upload...")
 test_file = Path("/tmp/r2_test.txt")
-test_file.write_text("ET Phone Home R2 test file")
+test_file.write_text("Reach R2 test file")
 
 manager = TransferManager(r2_client)
 result = manager.upload_for_transfer(
@@ -215,7 +215,7 @@ print("\n✓ All tests passed! R2 is configured correctly.")
 Run the test:
 
 ```bash
-cd /home/etphonehome/etphonehome
+cd /home/reach/reach
 python3 -c "$(cat docs/r2_test.py)"
 ```
 
@@ -244,7 +244,7 @@ On the client machine:
 curl -o /tmp/config.yaml "PRESIGNED_URL_HERE"
 ```
 
-Or via ET Phone Home command:
+Or via Reach command:
 
 ```bash
 # Run command on client
@@ -277,7 +277,7 @@ for transfer in transfers['transfers']:
 **Problem**: R2 environment variables are not set or incorrect.
 
 **Solution**:
-1. Verify environment variables are set: `env | grep ETPHONEHOME_R2`
+1. Verify environment variables are set: `env | grep REACH_R2`
 2. Check that values match your R2 credentials
 3. Restart the server after setting variables
 
@@ -306,7 +306,7 @@ for transfer in transfers['transfers']:
 
 **Solution**:
 1. Verify bucket exists in R2 dashboard
-2. Check `ETPHONEHOME_R2_BUCKET` matches exact bucket name (case-sensitive)
+2. Check `REACH_R2_BUCKET` matches exact bucket name (case-sensitive)
 3. Verify account ID is correct
 
 ### Presigned URL Expired
@@ -334,7 +334,7 @@ for transfer in transfers['transfers']:
    - Set up billing alerts
 
 4. **Secure Environment Variables**
-   - Restrict file permissions: `chmod 600 /etc/etphonehome/server.env`
+   - Restrict file permissions: `chmod 600 /etc/reach/server.env`
    - Never commit credentials to git
 
 5. **Use Short Expiration Times**
@@ -422,7 +422,7 @@ Apply via:
 ```bash
 aws s3api put-bucket-cors \
   --endpoint-url https://YOUR-ACCOUNT-ID.r2.cloudflarestorage.com \
-  --bucket etphonehome-transfers \
+  --bucket reach-transfers \
   --cors-configuration file://cors-config.json
 ```
 
@@ -432,15 +432,15 @@ aws s3api put-bucket-cors \
 - [R2 Pricing](https://developers.cloudflare.com/r2/pricing/)
 - [R2 API Reference](https://developers.cloudflare.com/api/resources/r2/)
 - [Boto3 S3 Documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html)
-- [ET Phone Home File Transfer Research](FILE_TRANSFER_IMPROVEMENT_RESEARCH.md)
+- [Reach File Transfer Research](FILE_TRANSFER_IMPROVEMENT_RESEARCH.md)
 
 ## Getting Help
 
 If you encounter issues:
 1. Check the [troubleshooting section](#troubleshooting) above
 2. Review Cloudflare R2 status: https://www.cloudflarestatus.com/
-3. Check ET Phone Home logs: `/var/log/etphonehome/server.log`
-4. Open an issue: https://github.com/anthropics/etphonehome/issues
+3. Check Reach logs: `/var/log/reach/server.log`
+4. Open an issue: https://github.com/anthropics/reach/issues
 
 ---
 

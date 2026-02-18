@@ -1,22 +1,22 @@
 [Unit]
-Description=ET Phone Home Webhook Test Receiver
-Documentation=https://github.com/jfreed-dev/etphonehome
+Description=Reach Webhook Test Receiver
+Documentation=https://github.com/jfreed-dev/reach
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=etphonehome
-Group=etphonehome
+User=reach
+Group=reach
 
 # Working directory
-WorkingDirectory=/opt/etphonehome
+WorkingDirectory=/opt/reach
 
 # Environment
 Environment=PYTHONUNBUFFERED=1
 
 # Start command
-ExecStart=/opt/etphonehome/venv/bin/python /opt/etphonehome/webhook_test.py
+ExecStart=/opt/reach/venv/bin/python /opt/reach/webhook_test.py
 
 # Restart policy
 Restart=always
@@ -28,7 +28,7 @@ StartLimitBurst=3
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/var/log/etphonehome
+ReadWritePaths=/var/log/reach
 PrivateTmp=true
 PrivateDevices=true
 ProtectKernelTunables=true
@@ -38,7 +38,7 @@ ProtectControlGroups=true
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=etphonehome-webhook
+SyslogIdentifier=reach-webhook
 
 [Install]
 WantedBy=multi-user.target

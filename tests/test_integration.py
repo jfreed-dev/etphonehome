@@ -1,4 +1,4 @@
-"""Integration tests for ET Phone Home components."""
+"""Integration tests for Reach components."""
 
 import json
 from datetime import datetime, timezone
