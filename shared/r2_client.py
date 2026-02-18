@@ -1,7 +1,6 @@
 """Cloudflare R2 storage client for file transfers."""
 
 import logging
-import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -9,6 +8,8 @@ from typing import Optional
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError, NoCredentialsError
+
+from shared.compat import env as _env
 
 logger = logging.getLogger(__name__)
 
@@ -45,21 +46,21 @@ class R2Config:
         """
         Load R2 configuration from environment variables.
 
-        Environment variables:
-            ETPHONEHOME_R2_ACCOUNT_ID
-            ETPHONEHOME_R2_ACCESS_KEY
-            ETPHONEHOME_R2_SECRET_KEY
-            ETPHONEHOME_R2_BUCKET
-            ETPHONEHOME_R2_REGION (optional, default: auto)
+        Environment variables (old names still accepted):
+            REACH_R2_ACCOUNT_ID
+            REACH_R2_ACCESS_KEY
+            REACH_R2_SECRET_KEY
+            REACH_R2_BUCKET
+            REACH_R2_REGION (optional, default: auto)
 
         Returns:
             R2Config if all required env vars are set, None otherwise
         """
-        account_id = os.getenv("ETPHONEHOME_R2_ACCOUNT_ID")
-        access_key = os.getenv("ETPHONEHOME_R2_ACCESS_KEY")
-        secret_key = os.getenv("ETPHONEHOME_R2_SECRET_KEY")
-        bucket = os.getenv("ETPHONEHOME_R2_BUCKET")
-        region = os.getenv("ETPHONEHOME_R2_REGION", "auto")
+        account_id = _env("REACH_R2_ACCOUNT_ID", "ETPHONEHOME_R2_ACCOUNT_ID")
+        access_key = _env("REACH_R2_ACCESS_KEY", "ETPHONEHOME_R2_ACCESS_KEY")
+        secret_key = _env("REACH_R2_SECRET_KEY", "ETPHONEHOME_R2_SECRET_KEY")
+        bucket = _env("REACH_R2_BUCKET", "ETPHONEHOME_R2_BUCKET")
+        region = _env("REACH_R2_REGION", "ETPHONEHOME_R2_REGION", "auto")
 
         if not all([account_id, access_key, secret_key, bucket]):
             return None

@@ -1,23 +1,23 @@
 [Unit]
-Description=ET Phone Home MCP Server (HTTP/SSE)
-Documentation=https://github.com/jfreed-dev/etphonehome
-After=network-online.target etphonehome-ssh.service
+Description=Reach MCP Server (HTTP/SSE)
+Documentation=https://github.com/jfreed-dev/reach
+After=network-online.target reach-ssh.service
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=etphonehome
-Group=etphonehome
+User=reach
+Group=reach
 
 # Working directory
-WorkingDirectory=/opt/etphonehome
+WorkingDirectory=/opt/reach
 
 # Environment
 Environment=PYTHONUNBUFFERED=1
-EnvironmentFile=-/etc/etphonehome/server.env
+EnvironmentFile=-/etc/reach/server.env
 
 # Start command
-ExecStart=/opt/etphonehome/venv/bin/python -m server.mcp_server \
+ExecStart=/opt/reach/venv/bin/python -m server.mcp_server \
     --transport http \
     --host 127.0.0.1 \
     --port 8765
@@ -32,7 +32,7 @@ StartLimitBurst=3
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/etphonehome/.etphonehome-server
+ReadWritePaths=/home/reach/.reach-server
 PrivateTmp=true
 PrivateDevices=true
 ProtectKernelTunables=true
@@ -42,7 +42,7 @@ ProtectControlGroups=true
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=etphonehome-mcp
+SyslogIdentifier=reach-mcp
 
 [Install]
 WantedBy=multi-user.target

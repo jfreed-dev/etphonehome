@@ -56,7 +56,7 @@
 	}
 </script>
 
-<div class="client-detail et-container">
+<div class="client-detail reach-container">
 	<div class="client-detail__back">
 		<a href="/" class="client-detail__back-link">← Back to Dashboard</a>
 	</div>

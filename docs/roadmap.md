@@ -1,6 +1,6 @@
-# ET Phone Home Roadmap
+# Reach Roadmap
 
-Planned features and improvements for ET Phone Home.
+Planned features and improvements for Reach.
 
 ---
 
@@ -69,11 +69,11 @@ Planned features and improvements for ET Phone Home.
 
 #### Interactive SSH Session Management
 
-Persistent SSH sessions through ET Phone Home clients for stateful remote access.
+Persistent SSH sessions through Reach clients for stateful remote access.
 
 **Problem**: Current `run_command` executes each command in a new SSH session - state (working directory, environment variables) isn't preserved between commands.
 
-**Solution**: New MCP tools for managing persistent SSH sessions on remote hosts accessed through ET Phone Home clients.
+**Solution**: New MCP tools for managing persistent SSH sessions on remote hosts accessed through Reach clients.
 
 **Tools**:
 | Tool | Description |
@@ -116,7 +116,7 @@ Svelte + TypeScript + SCSS frontend with real-time client management.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  ET Phone Home Dashboard                        [user@admin]│
+│  Reach Dashboard                        [user@admin]│
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
 │  │ 5 Online    │  │ 2 Offline   │  │ 0 Alerts    │         │

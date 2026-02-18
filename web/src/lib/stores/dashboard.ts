@@ -1,5 +1,5 @@
 // =============================================================================
-// ET Phone Home - Dashboard Store
+// Reach - Dashboard Store
 // =============================================================================
 
 import { writable, derived } from 'svelte/store';

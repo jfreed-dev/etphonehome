@@ -1,19 +1,21 @@
-"""R2-based release management for ET Phone Home client updates."""
+"""R2-based release management for Reach client updates."""
 
 import hashlib
 import json
 import logging
-import os
 from datetime import datetime, timezone
 from pathlib import Path
+
+from shared.compat import env as _env
 
 from .r2_client import R2Client, R2Config
 
 logger = logging.getLogger(__name__)
 
 # R2 public URL - uses custom domain for cleaner URLs
-# Override with ETPHONEHOME_R2_PUBLIC_URL environment variable if needed
-R2_PUBLIC_URL_TEMPLATE = os.getenv(
+# Override with REACH_R2_PUBLIC_URL environment variable if needed
+R2_PUBLIC_URL_TEMPLATE = _env(
+    "REACH_R2_PUBLIC_URL",
     "ETPHONEHOME_R2_PUBLIC_URL",
     "https://<UPDATE_DOMAIN>",
 )

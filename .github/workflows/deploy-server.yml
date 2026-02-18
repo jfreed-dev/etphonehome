@@ -1,4 +1,4 @@
-name: Deploy ET Phone Home Server
+name: Deploy Reach Server
 
 on:
   push:
@@ -73,9 +73,9 @@ jobs:
           python3 -c "
           import os
           required = [
-              'ETPHONEHOME_R2_ACCOUNT_ID', 'ETPHONEHOME_R2_ACCESS_KEY',
-              'ETPHONEHOME_R2_SECRET_KEY', 'ETPHONEHOME_R2_BUCKET',
-              'ETPHONEHOME_API_KEY', 'CF_DNS_API_TOKEN'
+              'REACH_R2_ACCOUNT_ID', 'REACH_R2_ACCESS_KEY',
+              'REACH_R2_SECRET_KEY', 'REACH_R2_BUCKET',
+              'REACH_API_KEY', 'CF_DNS_API_TOKEN'
           ]
           missing = [v for v in required if not os.getenv(v)]
           if missing:
@@ -84,11 +84,11 @@ jobs:
           print('✅ All required secrets configured')
           "
         env:
-          ETPHONEHOME_R2_ACCOUNT_ID: ${{ secrets.ETPHONEHOME_R2_ACCOUNT_ID }}
-          ETPHONEHOME_R2_ACCESS_KEY: ${{ secrets.ETPHONEHOME_R2_ACCESS_KEY }}
-          ETPHONEHOME_R2_SECRET_KEY: ${{ secrets.ETPHONEHOME_R2_SECRET_KEY }}
-          ETPHONEHOME_R2_BUCKET: ${{ secrets.ETPHONEHOME_R2_BUCKET }}
-          ETPHONEHOME_API_KEY: ${{ secrets.ETPHONEHOME_API_KEY }}
+          REACH_R2_ACCOUNT_ID: ${{ secrets.REACH_R2_ACCOUNT_ID }}
+          REACH_R2_ACCESS_KEY: ${{ secrets.REACH_R2_ACCESS_KEY }}
+          REACH_R2_SECRET_KEY: ${{ secrets.REACH_R2_SECRET_KEY }}
+          REACH_R2_BUCKET: ${{ secrets.REACH_R2_BUCKET }}
+          REACH_API_KEY: ${{ secrets.REACH_API_KEY }}
           CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
 
       - name: Test R2 connectivity
@@ -102,10 +102,10 @@ jobs:
           print('✅ R2 client initialized successfully')
           "
         env:
-          ETPHONEHOME_R2_ACCOUNT_ID: ${{ secrets.ETPHONEHOME_R2_ACCOUNT_ID }}
-          ETPHONEHOME_R2_ACCESS_KEY: ${{ secrets.ETPHONEHOME_R2_ACCESS_KEY }}
-          ETPHONEHOME_R2_SECRET_KEY: ${{ secrets.ETPHONEHOME_R2_SECRET_KEY }}
-          ETPHONEHOME_R2_BUCKET: ${{ secrets.ETPHONEHOME_R2_BUCKET }}
+          REACH_R2_ACCOUNT_ID: ${{ secrets.REACH_R2_ACCOUNT_ID }}
+          REACH_R2_ACCESS_KEY: ${{ secrets.REACH_R2_ACCESS_KEY }}
+          REACH_R2_SECRET_KEY: ${{ secrets.REACH_R2_SECRET_KEY }}
+          REACH_R2_BUCKET: ${{ secrets.REACH_R2_BUCKET }}
 
       - name: Build deployment package
         run: |
@@ -121,20 +121,20 @@ jobs:
 
           # Create environment template without secrets
           cat > deploy_package/.env.example << EOF
-          # ET Phone Home Server Configuration
+          # Reach Server Configuration
           # Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           # Environment: ${{ github.event.inputs.environment || 'production' }}
 
           # API Authentication
-          ETPHONEHOME_API_KEY=
+          REACH_API_KEY=
 
           # R2 Storage
-          ETPHONEHOME_R2_ACCOUNT_ID=
-          ETPHONEHOME_R2_ACCESS_KEY=
-          ETPHONEHOME_R2_SECRET_KEY=
-          ETPHONEHOME_R2_BUCKET=
-          ETPHONEHOME_R2_REGION=auto
-          ETPHONEHOME_R2_API_TOKEN=
+          REACH_R2_ACCOUNT_ID=
+          REACH_R2_ACCESS_KEY=
+          REACH_R2_SECRET_KEY=
+          REACH_R2_BUCKET=
+          REACH_R2_REGION=auto
+          REACH_R2_API_TOKEN=
 
           # Cloudflare DNS
           CF_DNS_API_TOKEN=
@@ -143,23 +143,23 @@ jobs:
           TRAEFIK_DASHBOARD_AUTH=
 
           # GitHub Configuration
-          ETPHONEHOME_GITHUB_REPO=${{ github.repository }}
-          ETPHONEHOME_GH_TOKEN=
+          REACH_GITHUB_REPO=${{ github.repository }}
+          REACH_GH_TOKEN=
 
           # Server Configuration
-          ETPHONEHOME_HOST=0.0.0.0
-          ETPHONEHOME_PORT=8765
-          ETPHONEHOME_LOG_LEVEL=INFO
+          REACH_HOST=0.0.0.0
+          REACH_PORT=8765
+          REACH_LOG_LEVEL=INFO
           EOF
 
           # Create deployment archive
-          tar -czf etphonehome-server.tar.gz -C deploy_package .
+          tar -czf reach-server.tar.gz -C deploy_package .
 
       - name: Upload deployment artifact
         uses: actions/upload-artifact@v4
         with:
-          name: etphonehome-server-${{ github.sha }}
-          path: etphonehome-server.tar.gz
+          name: reach-server-${{ github.sha }}
+          path: reach-server.tar.gz
           retention-days: 30
 
       - name: Deployment summary
@@ -179,6 +179,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Download artifact from Actions tab" >> $GITHUB_STEP_SUMMARY
-          echo "2. Extract: \`tar -xzf etphonehome-server.tar.gz\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Extract: \`tar -xzf reach-server.tar.gz\`" >> $GITHUB_STEP_SUMMARY
           echo "3. Source environment: \`source .env\`" >> $GITHUB_STEP_SUMMARY
           echo "4. Start server: \`python -m server.mcp_server --transport http\`" >> $GITHUB_STEP_SUMMARY

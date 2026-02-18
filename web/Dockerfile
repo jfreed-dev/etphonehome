@@ -1,5 +1,5 @@
 # =============================================================================
-# ET Phone Home - Frontend Dockerfile
+# Reach - Frontend Dockerfile
 # Multi-stage build for SvelteKit static site with nginx
 # =============================================================================
 

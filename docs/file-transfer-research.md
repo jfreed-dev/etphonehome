@@ -1,4 +1,4 @@
-# File Transfer Improvement Research for ET Phone Home
+# File Transfer Improvement Research for Reach
 
 **Date:** 2026-01-08
 **Objective:** Deep research on improving file transfer between server, client, and proxied connections, especially addressing formatting issues between Windows and Linux.
@@ -256,7 +256,7 @@ Server --[boto3/S3 API]--> R2 Bucket <--[boto3/S3 API]-- Client
 **Key tasks:**
 1. Add boto3 dependency to project
 2. Implement R2 client wrapper (`shared/r2_client.py`)
-3. Create a new MCP client skill (`etphonehome-file-exchange`)
+3. Create a new MCP client skill (`reach-file-exchange`)
 4. Add presigned URL generation for downloads
 5. Configure lifecycle policy on R2 bucket
 6. Update MCP tools with optional R2 path
@@ -324,7 +324,7 @@ url = r2.generate_presigned_url(
 - ✅ Asynchronous transfers (offline clients)
 - ⚠️  SSH session file transfers (requires R2 credentials on remote host)
 
-### New Skill Design: `etphonehome-file-exchange`
+### New Skill Design: `reach-file-exchange`
 
 **MCP Tools:**
 - `exchange_upload` - Upload file to R2, return presigned download URL
@@ -632,7 +632,7 @@ r2:
   account_id: "your-account-id"
   access_key: "your-access-key"
   secret_key: "your-secret-key"  # pragma: allowlist secret
-  bucket: "etphonehome-transfers"
+  bucket: "reach-transfers"
   region: "auto"
 ```
 
@@ -640,10 +640,10 @@ r2:
 
 ```bash
 # Create new skill directory (MCP client-specific)
-mkdir -p <MCP_CLIENT_SKILLS_DIR>/etphonehome-file-exchange
+mkdir -p <MCP_CLIENT_SKILLS_DIR>/reach-file-exchange
 
 # Implement MCP tools
-touch <MCP_CLIENT_SKILLS_DIR>/etphonehome-file-exchange/skill.md
+touch <MCP_CLIENT_SKILLS_DIR>/reach-file-exchange/skill.md
 ```
 
 **Skill tools:**

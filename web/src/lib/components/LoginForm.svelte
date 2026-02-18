@@ -16,7 +16,7 @@
 
 <div class="login-form">
 	<div class="login-form__header">
-		<img src="/logos/logo-stacked.svg" alt="ET Phone Home" class="login-form__logo" />
+		<img src="/logos/logo-stacked.svg" alt="Reach" class="login-form__logo" />
 		<h1 class="login-form__title">Welcome Back</h1>
 		<p class="login-form__subtitle">Enter your API key to access the dashboard</p>
 	</div>

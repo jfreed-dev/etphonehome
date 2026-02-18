@@ -1,5 +1,5 @@
 // =============================================================================
-// ET Phone Home - Connection Store (WebSocket management)
+// Reach - Connection Store (WebSocket management)
 // =============================================================================
 
 import { writable, get } from 'svelte/store';

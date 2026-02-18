@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec file for ET Phone Home client.
+PyInstaller spec file for Reach client.
 
 Build with:
-    pyinstaller build/pyinstaller/phonehome.spec
+    pyinstaller build/pyinstaller/reach.spec
 """
 
 import sys
@@ -82,7 +82,7 @@ excludes = [
 ]
 
 a = Analysis(
-    [str(PROJECT_ROOT / 'client' / 'phonehome.py')],
+    [str(PROJECT_ROOT / 'client' / 'reach.py')],
     pathex=[str(PROJECT_ROOT)],
     binaries=[],
     datas=[],
@@ -110,7 +110,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='phonehome',
+    name='reach',
     debug=False,
     bootloader_ignore_signals=False,
     strip=True,   # Strip symbols to reduce size

@@ -1,6 +1,6 @@
-# ET Phone Home API Reference
+# Reach API Reference
 
-Complete reference for all MCP tools exposed by the ET Phone Home server.
+Complete reference for all MCP tools exposed by the Reach server.
 
 ---
 
@@ -547,7 +547,7 @@ List all active R2 API tokens for the Cloudflare account.
   "tokens": [
     {
       "id": "token-id-123",
-      "name": "etphonehome-r2-token",
+      "name": "reach-r2-token",
       "created_on": "2026-01-01T00:00:00Z"
     }
   ],
@@ -690,11 +690,11 @@ Configure per-client operational settings.
 
 ## SSH Session Management
 
-Persistent SSH sessions allow you to connect to remote hosts through ET Phone Home clients and maintain state (working directory, environment variables) across multiple commands.
+Persistent SSH sessions allow you to connect to remote hosts through Reach clients and maintain state (working directory, environment variables) across multiple commands.
 
 ### ssh_session_open
 
-Open a persistent SSH session to a remote host through the ET Phone Home client.
+Open a persistent SSH session to a remote host through the Reach client.
 
 **Parameters**:
 | Name | Type | Required | Description |
@@ -705,7 +705,7 @@ Open a persistent SSH session to a remote host through the ET Phone Home client.
 | `key_file` | string | No | Path to SSH private key on the client |
 | `port` | integer | No | SSH port (default: 22) |
 | `jump_hosts` | array | No | List of jump/bastion hosts to connect through |
-| `client_id` | string | No | ET Phone Home client to use |
+| `client_id` | string | No | Reach client to use |
 
 **Jump Host Format**:
 ```json
@@ -749,7 +749,7 @@ ssh_session_open with host="private-server" username="admin" key_file="~/.ssh/id
 **Notes**:
 - Sessions persist until explicitly closed or client disconnects
 - Use password OR key_file, not both
-- Key file path is on the ET Phone Home client, not the MCP server
+- Key file path is on the Reach client, not the MCP server
 - Jump hosts are connected in order (first in list is closest to client)
 - Key-authenticated sessions can be restored after client reconnects
 
@@ -765,7 +765,7 @@ Execute a command in an existing SSH session. State is preserved between command
 | `session_id` | string | Yes | Session ID from ssh_session_open |
 | `command` | string | Yes | Command to execute |
 | `timeout` | integer | No | Timeout in seconds (default: 300, max: 3600) |
-| `client_id` | string | No | ET Phone Home client |
+| `client_id` | string | No | Reach client |
 
 **Returns**:
 ```json
@@ -803,7 +803,7 @@ Close an SSH session and free resources.
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `session_id` | string | Yes | Session ID to close |
-| `client_id` | string | No | ET Phone Home client |
+| `client_id` | string | No | Reach client |
 
 **Returns**:
 ```json
@@ -824,7 +824,7 @@ List all active SSH sessions on the client.
 **Parameters**:
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `client_id` | string | No | ET Phone Home client |
+| `client_id` | string | No | Reach client |
 
 **Returns**:
 ```json
@@ -855,7 +855,7 @@ Send raw input to an SSH session for interactive prompts (sudo password, y/n con
 | `session_id` | string | Yes | Session ID from ssh_session_open |
 | `text` | string | Yes | Text to send |
 | `send_newline` | boolean | No | Append newline (default: true) |
-| `client_id` | string | No | ET Phone Home client |
+| `client_id` | string | No | Reach client |
 
 **Returns**:
 ```json
@@ -899,7 +899,7 @@ Read pending output from an SSH session without sending a command.
 |------|------|----------|-------------|
 | `session_id` | string | Yes | Session ID from ssh_session_open |
 | `timeout` | number | No | Wait time in seconds (default: 0.5) |
-| `client_id` | string | No | ET Phone Home client |
+| `client_id` | string | No | Reach client |
 
 **Returns**:
 ```json
@@ -935,7 +935,7 @@ Attempt to restore SSH sessions after client reconnect.
 **Parameters**:
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `client_id` | string | No | ET Phone Home client |
+| `client_id` | string | No | Reach client |
 
 **Returns**:
 ```json
@@ -975,7 +975,7 @@ Attempt to restore SSH sessions after client reconnect.
 - Old session IDs are replaced with new ones
 
 **When to use**:
-- After ET Phone Home client reconnects
+- After Reach client reconnects
 - To recover from network interruptions
 - During maintenance windows
 
@@ -1013,7 +1013,7 @@ All errors follow this structure:
 | `INTERNAL_ERROR` | Unexpected error | Check server logs |
 | `SSH_AUTH_FAILED` | SSH authentication failed | Check credentials or key file |
 | `SSH_CONNECTION_FAILED` | Cannot connect to SSH host | Verify host is reachable |
-| `SSH_KEY_NOT_FOUND` | SSH key file not found | Check path on ET Phone Home client |
+| `SSH_KEY_NOT_FOUND` | SSH key file not found | Check path on Reach client |
 | `SSH_SESSION_NOT_FOUND` | Invalid session ID | Use `ssh_session_list` to find valid sessions |
 | `SSH_COMMAND_TIMEOUT` | SSH command timed out | Increase timeout or check remote host |
 | `SSH_SESSION_SEND_ERROR` | Failed to send input | Check session is still active |
@@ -1063,7 +1063,7 @@ Events sent to configured webhook URLs.
 
 ### Security
 
-Webhooks are signed with HMAC-SHA256 when `ETPHONEHOME_WEBHOOK_SECRET` is set:
+Webhooks are signed with HMAC-SHA256 when `REACH_WEBHOOK_SECRET` is set:
 - Header: `X-Webhook-Signature`
 - Value: `sha256=<hex-digest>`
 

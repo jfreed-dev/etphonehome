@@ -1,4 +1,4 @@
-# ET Phone Home - Terraform Providers
+# Reach - Terraform Providers
 
 terraform {
   required_version = ">= 1.0.0"
@@ -24,7 +24,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "etphonehome"
+      Project     = "reach"
       Environment = var.environment
       ManagedBy   = "terraform"
     }

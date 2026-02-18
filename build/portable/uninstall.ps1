@@ -1,19 +1,19 @@
-# ET Phone Home - Windows Uninstaller
-# Removes phonehome from user profile
+# Reach - Windows Uninstaller
+# Removes reach from user profile
 
 param(
-    [string]$InstallDir = "$env:LOCALAPPDATA\Programs\phonehome",
-    [string]$ConfigDir = "$env:USERPROFILE\.etphonehome",
+    [string]$InstallDir = "$env:LOCALAPPDATA\Programs\reach",
+    [string]$ConfigDir = "$env:USERPROFILE\.reach",
     [switch]$Force  # Uninstall without prompting
 )
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== ET Phone Home Uninstaller ===" -ForegroundColor Cyan
+Write-Host "=== Reach Uninstaller ===" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not (Test-Path $InstallDir)) {
-    Write-Host "phonehome does not appear to be installed at $InstallDir"
+    Write-Host "reach does not appear to be installed at $InstallDir"
     exit 0
 }
 
@@ -31,7 +31,7 @@ if (-not $Force) {
     }
 }
 
-Write-Host "Removing phonehome..."
+Write-Host "Removing reach..."
 
 # Remove from user PATH
 $userPath = [Environment]::GetEnvironmentVariable("PATH", "User")

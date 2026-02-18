@@ -7,16 +7,16 @@ import sys
 import urllib.error
 import urllib.request
 
-# Add the etphonehome directory to path
-sys.path.insert(0, "/opt/etphonehome")
-os.chdir("/opt/etphonehome")
+# Add the reach directory to path
+sys.path.insert(0, "/opt/reach")
+os.chdir("/opt/reach")
 
 from datetime import datetime, timezone  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 MCP_SERVER_URL = "http://127.0.0.1:8765/internal/register"
 
-STORE_PATH = Path("/home/etphonehome/.etphonehome-server/clients.json")
+STORE_PATH = Path("/home/reach/.reach-server/clients.json")
 
 
 def load_store():

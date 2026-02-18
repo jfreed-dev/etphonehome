@@ -1,6 +1,6 @@
 @echo off
-REM ET Phone Home - Windows Runner
-REM This script runs the phone home client using the bundled Python
+REM Reach - Windows Runner
+REM This script runs the reach client using the bundled Python
 
 setlocal enabledelayedexpansion
 
@@ -17,11 +17,11 @@ REM Disable Python's user site-packages to ensure isolation
 set "PYTHONNOUSERSITE=1"
 
 REM Config directory (in user's home)
-if not defined ETPHONEHOME_CONFIG_DIR (
-    set "ETPHONEHOME_CONFIG_DIR=%USERPROFILE%\.etphonehome"
+if not defined REACH_CONFIG_DIR (
+    set "REACH_CONFIG_DIR=%USERPROFILE%\.reach"
 )
 
 REM Run the client
-"%SCRIPT_DIR%\python\python.exe" -m client.phonehome %*
+"%SCRIPT_DIR%\python\python.exe" -m client.reach %*
 
 endlocal

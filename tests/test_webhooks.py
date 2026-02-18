@@ -119,7 +119,7 @@ class TestWebhookDispatcher:
     @pytest.mark.asyncio
     async def test_dispatch_with_global_url(self):
         """Test dispatch uses global URL."""
-        with patch.dict("os.environ", {"ETPHONEHOME_WEBHOOK_URL": "https://example.com/hook"}):
+        with patch.dict("os.environ", {"REACH_WEBHOOK_URL": "https://example.com/hook"}):
             # Need to reimport to pick up env var
             from importlib import reload
 

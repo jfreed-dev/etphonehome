@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# ET Phone Home - Docker Production Setup Script
+# Reach - Docker Production Setup Script
 # =============================================================================
 
 set -e
@@ -14,7 +14,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${GREEN}ET Phone Home - Docker Production Setup${NC}"
+echo -e "${GREEN}Reach - Docker Production Setup${NC}"
 echo "========================================="
 echo ""
 
@@ -24,7 +24,7 @@ if [ ! -f .env ]; then
     cp .env.example .env
     echo -e "${RED}Please edit .env with your configuration before continuing.${NC}"
     echo "Required settings:"
-    echo "  - DOMAIN: Your domain name (e.g., etphonehome.example.com)"
+    echo "  - DOMAIN: Your domain name (e.g., reach.example.com)"
     echo "  - ACME_EMAIL: Email for Let's Encrypt notifications"
     echo "  - CF_DNS_API_TOKEN: Cloudflare API token for DNS-01 challenge"
     echo ""
@@ -53,14 +53,14 @@ fi
 echo -e "${GREEN}Environment variables validated${NC}"
 
 # Generate API key if not set
-if [ -z "$ETPHONEHOME_API_KEY" ] || [ "$ETPHONEHOME_API_KEY" = "your_api_key_here" ]; then  # pragma: allowlist secret
+if [ -z "$REACH_API_KEY" ] || [ "$REACH_API_KEY" = "your_api_key_here" ]; then  # pragma: allowlist secret
     echo "Generating API key..."
     NEW_API_KEY=$(openssl rand -hex 32)
     # Update the .env file with the generated key
-    if grep -q "^ETPHONEHOME_API_KEY=" .env; then
-        sed -i "s/^ETPHONEHOME_API_KEY=.*/ETPHONEHOME_API_KEY=$NEW_API_KEY/" .env
+    if grep -q "^REACH_API_KEY=" .env; then
+        sed -i "s/^REACH_API_KEY=.*/REACH_API_KEY=$NEW_API_KEY/" .env
     else
-        echo "ETPHONEHOME_API_KEY=$NEW_API_KEY" >> .env
+        echo "REACH_API_KEY=$NEW_API_KEY" >> .env
     fi
     echo -e "${GREEN}API key generated and saved to .env${NC}"
     echo -e "${YELLOW}Save this key securely - you'll need it to access the API:${NC}"
@@ -135,7 +135,7 @@ echo ""
 echo "To view logs:"
 echo "  docker compose -f docker-compose.prod.yml logs -f"
 echo ""
-echo "Your API key is stored in .env (ETPHONEHOME_API_KEY)"
+echo "Your API key is stored in .env (REACH_API_KEY)"
 echo ""
 echo "Access your deployment at:"
 echo "  https://$DOMAIN"

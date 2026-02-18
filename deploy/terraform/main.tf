@@ -1,4 +1,4 @@
-# ET Phone Home - Main Terraform Configuration
+# Reach - Main Terraform Configuration
 
 # Data sources
 data "aws_ami" "ubuntu" {
@@ -31,7 +31,7 @@ resource "tls_private_key" "admin" {
 
 resource "aws_key_pair" "admin" {
   count      = var.create_key_pair ? 1 : 0
-  key_name   = "etphonehome-${var.environment}"
+  key_name   = "reach-${var.environment}"
   public_key = tls_private_key.admin[0].public_key_openssh
 }
 
@@ -42,7 +42,7 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
 
   tags = {
-    Name = "etphonehome-${var.environment}"
+    Name = "reach-${var.environment}"
   }
 }
 
@@ -51,7 +51,7 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "etphonehome-${var.environment}"
+    Name = "reach-${var.environment}"
   }
 }
 
@@ -64,7 +64,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "etphonehome-${var.environment}-public-${count.index + 1}"
+    Name = "reach-${var.environment}-public-${count.index + 1}"
   }
 }
 
@@ -78,7 +78,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "etphonehome-${var.environment}-public"
+    Name = "reach-${var.environment}-public"
   }
 }
 
@@ -90,13 +90,13 @@ resource "aws_route_table_association" "public" {
 
 # Security Group
 resource "aws_security_group" "server" {
-  name        = "etphonehome-${var.environment}-server"
-  description = "Security group for ET Phone Home server"
+  name        = "reach-${var.environment}-server"
+  description = "Security group for Reach server"
   vpc_id      = aws_vpc.main.id
 
   # Client SSH connections
   ingress {
-    description = "ET Phone Home SSH"
+    description = "Reach SSH"
     from_port   = var.ssh_port
     to_port     = var.ssh_port
     protocol    = "tcp"
@@ -134,13 +134,13 @@ resource "aws_security_group" "server" {
   }
 
   tags = {
-    Name = "etphonehome-${var.environment}-server"
+    Name = "reach-${var.environment}-server"
   }
 }
 
 # IAM Role for EC2
 resource "aws_iam_role" "server" {
-  name = "etphonehome-${var.environment}-server"
+  name = "reach-${var.environment}-server"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -162,14 +162,14 @@ resource "aws_iam_role_policy_attachment" "ssm" {
 }
 
 resource "aws_iam_instance_profile" "server" {
-  name = "etphonehome-${var.environment}-server"
+  name = "reach-${var.environment}-server"
   role = aws_iam_role.server.name
 }
 
 # CloudWatch Log Group (optional)
 resource "aws_cloudwatch_log_group" "server" {
   count             = var.enable_cloudwatch_logs ? 1 : 0
-  name              = "/etphonehome/${var.environment}/server"
+  name              = "/reach/${var.environment}/server"
   retention_in_days = var.log_retention_days
 }
 
@@ -197,7 +197,7 @@ resource "aws_instance" "server" {
   }))
 
   tags = {
-    Name = "etphonehome-${var.environment}-server"
+    Name = "reach-${var.environment}-server"
   }
 
   lifecycle {
@@ -211,6 +211,6 @@ resource "aws_eip" "server" {
   domain   = "vpc"
 
   tags = {
-    Name = "etphonehome-${var.environment}-server"
+    Name = "reach-${var.environment}-server"
   }
 }

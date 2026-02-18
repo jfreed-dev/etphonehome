@@ -84,7 +84,7 @@
 
 		// Write welcome message
 		terminal.writeln('\x1b[1;36m╭─────────────────────────────────────╮\x1b[0m');
-		terminal.writeln('\x1b[1;36m│\x1b[0m   ET Phone Home Terminal Session   \x1b[1;36m│\x1b[0m');
+		terminal.writeln('\x1b[1;36m│\x1b[0m   Reach Terminal Session            \x1b[1;36m│\x1b[0m');
 		terminal.writeln('\x1b[1;36m╰─────────────────────────────────────╯\x1b[0m');
 		terminal.writeln('');
 		terminal.writeln('\x1b[90mType commands and press Enter to execute.\x1b[0m');

@@ -1,4 +1,4 @@
-# ET Phone Home - Client Dockerfile
+# Reach - Client Dockerfile
 # Multi-stage build for minimal image size
 
 FROM python:3.12-slim AS builder
@@ -35,27 +35,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN useradd --create-home --shell /bin/bash etphonehome
+RUN useradd --create-home --shell /bin/bash reach
 
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
-COPY --chown=etphonehome:etphonehome client/ client/
-COPY --chown=etphonehome:etphonehome server/ server/
-COPY --chown=etphonehome:etphonehome shared/ shared/
-COPY --chown=etphonehome:etphonehome pyproject.toml .
+COPY --chown=reach:reach client/ client/
+COPY --chown=reach:reach server/ server/
+COPY --chown=reach:reach shared/ shared/
+COPY --chown=reach:reach pyproject.toml .
 
 # Create directories for config and logs
-RUN mkdir -p /home/etphonehome/.etphonehome/logs \
-    && chown -R etphonehome:etphonehome /home/etphonehome/.etphonehome
+RUN mkdir -p /home/reach/.reach/logs \
+    && chown -R reach:reach /home/reach/.reach
 
 # Environment configuration
 ENV PYTHONUNBUFFERED=1
 
 # Switch to non-root user
-USER etphonehome
+USER reach
 
 # Default command
 CMD ["phonehome"]

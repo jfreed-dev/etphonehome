@@ -1,33 +1,33 @@
-# ET Phone Home Server - Simplified Docker Compose
+# Reach Server - Simplified Docker Compose
 # Single container deployment with persistent volumes
 #
-# Configuration: /home/etphonehome/appdata/phonehome/config/server.env
-# Data: /home/etphonehome/appdata/phonehome/data/
+# Configuration: /home/etphonehome/appdata/reach/config/server.env
+# Data: /home/etphonehome/appdata/reach/data/
 
 services:
-  etphonehome:
+  reach:
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile.simple
-    image: etphonehome-server:latest
-    container_name: etphonehome-server
+    image: reach-server:latest
+    container_name: reach-server
     restart: unless-stopped
 
     # Use host network so container can reach SSH reverse tunnels on localhost
     network_mode: host
 
-    # Run as the host etphonehome user for proper file permissions
+    # Run as the host user for proper file permissions
     user: "1001:1001"
 
     # Load environment from consolidated config file
     env_file:
-      - /home/etphonehome/appdata/phonehome/config/server.env
+      - /home/etphonehome/appdata/reach/config/server.env
 
     volumes:
       # Persistent client data - consolidated appdata location
-      - /home/etphonehome/appdata/phonehome/data:/data
+      - /home/etphonehome/appdata/reach/data:/data
       # Optional: logs directory
-      - /var/log/etphonehome:/var/log/etphonehome
+      - /var/log/reach:/var/log/reach
 
     environment:
       # Set HOME to writable directory for command history DB
@@ -50,6 +50,6 @@ services:
     #       memory: 128M
 
 # Example .env file:
-# ETPHONEHOME_API_KEY=your-secure-api-key
+# REACH_API_KEY=your-secure-api-key
 # LOG_LEVEL=INFO
 # WEBHOOK_URL=http://your-webhook-endpoint/webhook

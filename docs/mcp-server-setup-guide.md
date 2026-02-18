@@ -1,6 +1,6 @@
-# ET Phone Home MCP Server Setup Guide
+# Reach MCP Server Setup Guide
 
-Complete setup guide for ET Phone Home MCP server on Linux and Windows.
+Complete setup guide for Reach MCP server on Linux and Windows.
 
 ---
 
@@ -8,23 +8,23 @@ Complete setup guide for ET Phone Home MCP server on Linux and Windows.
 
 ```bash
 # Linux Quick Setup
-sudo useradd -m -s /bin/bash etphonehome
-sudo git clone https://github.com/jfreed-dev/etphonehome.git /opt/etphonehome
-sudo -u etphonehome python3 -m venv /opt/etphonehome/venv
-sudo -u etphonehome /opt/etphonehome/venv/bin/pip install -e "/opt/etphonehome[server]"
+sudo useradd -m -s /bin/bash reach
+sudo git clone https://github.com/jfreed-dev/reach.git /opt/reach
+sudo -u reach python3 -m venv /opt/reach/venv
+sudo -u reach /opt/reach/venv/bin/pip install -e "/opt/reach[server]"
 sudo ./scripts/deploy_mcp_service.sh
 
 # Verify
 curl http://localhost:8765/health
-sudo journalctl -u etphonehome-mcp -f
+sudo journalctl -u reach-mcp -f
 ```
 
 ```powershell
 # Windows Quick Setup
 Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
-git clone https://github.com/jfreed-dev/etphonehome.git C:\etphonehome
-python -m venv C:\etphonehome\venv
-C:\etphonehome\venv\Scripts\pip install -e "C:\etphonehome[server]"
+git clone https://github.com/jfreed-dev/reach.git C:\reach
+python -m venv C:\reach\venv
+C:\reach\venv\Scripts\pip install -e "C:\reach[server]"
 ```
 
 ---
@@ -43,7 +43,7 @@ C:\etphonehome\venv\Scripts\pip install -e "C:\etphonehome[server]"
 
 ## Overview
 
-The ET Phone Home MCP server consists of two components:
+The Reach MCP server consists of two components:
 
 1. **SSH Server** - Accepts reverse tunnel connections from clients (port 443 or 2222)
 2. **MCP Server** - Exposes tools to your MCP client for interacting with connected clients
@@ -76,35 +76,35 @@ The ET Phone Home MCP server consists of two components:
 
 ## Linux Setup
 
-### Step 1: Create the etphonehome User
+### Step 1: Create the reach User
 
 ```bash
 # Create dedicated user for client connections
-sudo useradd -m -s /bin/bash etphonehome
+sudo useradd -m -s /bin/bash reach
 
 # Create required directories
-sudo -u etphonehome mkdir -p /home/etphonehome/.ssh
-sudo -u etphonehome mkdir -p /home/etphonehome/.etphonehome-server
-sudo chmod 700 /home/etphonehome/.ssh
-sudo chmod 700 /home/etphonehome/.etphonehome-server
+sudo -u reach mkdir -p /home/reach/.ssh
+sudo -u reach mkdir -p /home/reach/.reach-server
+sudo chmod 700 /home/reach/.ssh
+sudo chmod 700 /home/reach/.reach-server
 
 # Create authorized_keys file (will hold client public keys)
-sudo -u etphonehome touch /home/etphonehome/.ssh/authorized_keys
-sudo chmod 600 /home/etphonehome/.ssh/authorized_keys
+sudo -u reach touch /home/reach/.ssh/authorized_keys
+sudo chmod 600 /home/reach/.ssh/authorized_keys
 ```
 
-### Step 2: Install ET Phone Home
+### Step 2: Install Reach
 
 ```bash
 # Clone the repository
-sudo git clone https://github.com/jfreed-dev/etphonehome.git /opt/etphonehome
-sudo chown -R etphonehome:etphonehome /opt/etphonehome
+sudo git clone https://github.com/jfreed-dev/reach.git /opt/reach
+sudo chown -R reach:reach /opt/reach
 
 # Create virtual environment
-sudo -u etphonehome python3 -m venv /opt/etphonehome/venv
+sudo -u reach python3 -m venv /opt/reach/venv
 
 # Install with server dependencies
-sudo -u etphonehome /opt/etphonehome/venv/bin/pip install -e "/opt/etphonehome[server]"
+sudo -u reach /opt/reach/venv/bin/pip install -e "/opt/reach[server]"
 ```
 
 ### Step 3: Configure SSH for Client Connections
@@ -112,19 +112,19 @@ sudo -u etphonehome /opt/etphonehome/venv/bin/pip install -e "/opt/etphonehome[s
 Create a dedicated SSH configuration for client tunnels:
 
 ```bash
-sudo tee /etc/ssh/sshd_config.d/etphonehome.conf << 'EOF'
-# ET Phone Home SSH configuration
+sudo tee /etc/ssh/sshd_config.d/reach.conf << 'EOF'
+# Reach SSH configuration
 # Dedicated SSH daemon for client tunnel connections
 
 Port 443
 ListenAddress 0.0.0.0
 
-# Only allow the etphonehome user on this port
+# Only allow the reach user on this port
 Match LocalPort 443
-    AllowUsers etphonehome
+    AllowUsers reach
     PasswordAuthentication no
     PubkeyAuthentication yes
-    AuthorizedKeysFile /home/etphonehome/.ssh/authorized_keys
+    AuthorizedKeysFile /home/reach/.ssh/authorized_keys
 
     # Enable reverse tunneling
     AllowTcpForwarding yes
@@ -133,7 +133,7 @@ Match LocalPort 443
     X11Forwarding no
 
     # Restrict shell access (clients only need tunneling)
-    ForceCommand /bin/echo "ET Phone Home tunnel established"
+    ForceCommand /bin/echo "Reach tunnel established"
 
     # Keep connections alive
     ClientAliveInterval 30
@@ -147,10 +147,10 @@ If you prefer a completely separate SSH daemon:
 
 ```bash
 # Copy the main sshd config
-sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config_etphonehome
+sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config_reach
 
-# Edit it to use port 443 and etphonehome settings
-sudo tee /etc/ssh/sshd_config_etphonehome << 'EOF'
+# Edit it to use port 443 and reach settings
+sudo tee /etc/ssh/sshd_config_reach << 'EOF'
 Port 443
 ListenAddress 0.0.0.0
 HostKey /etc/ssh/ssh_host_ed25519_key
@@ -159,10 +159,10 @@ HostKey /etc/ssh/ssh_host_rsa_key
 # Authentication
 PasswordAuthentication no
 PubkeyAuthentication yes
-AuthorizedKeysFile /home/etphonehome/.ssh/authorized_keys
+AuthorizedKeysFile /home/reach/.ssh/authorized_keys
 
-# Only allow etphonehome user
-AllowUsers etphonehome
+# Only allow reach user
+AllowUsers reach
 
 # Tunneling
 AllowTcpForwarding yes
@@ -171,7 +171,7 @@ PermitTunnel yes
 X11Forwarding no
 
 # Restrict commands
-ForceCommand /bin/echo "ET Phone Home tunnel established"
+ForceCommand /bin/echo "Reach tunnel established"
 
 # Keepalive
 ClientAliveInterval 30
@@ -183,14 +183,14 @@ LogLevel INFO
 EOF
 
 # Create systemd service for the separate daemon
-sudo tee /etc/systemd/system/etphonehome-ssh.service << 'EOF'
+sudo tee /etc/systemd/system/reach-ssh.service << 'EOF'
 [Unit]
-Description=ET Phone Home SSH Server
+Description=Reach SSH Server
 After=network.target
 
 [Service]
 Type=notify
-ExecStart=/usr/sbin/sshd -D -f /etc/ssh/sshd_config_etphonehome
+ExecStart=/usr/sbin/sshd -D -f /etc/ssh/sshd_config_reach
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=5
@@ -201,8 +201,8 @@ EOF
 
 # Enable and start the service
 sudo systemctl daemon-reload
-sudo systemctl enable etphonehome-ssh
-sudo systemctl start etphonehome-ssh
+sudo systemctl enable reach-ssh
+sudo systemctl start reach-ssh
 ```
 
 ### Step 4: Configure the MCP Server
@@ -211,43 +211,43 @@ sudo systemctl start etphonehome-ssh
 
 ```bash
 # Create environment configuration
-sudo mkdir -p /etc/etphonehome
-sudo tee /etc/etphonehome/server.env << 'EOF'
+sudo mkdir -p /etc/reach
+sudo tee /etc/reach/server.env << 'EOF'
 # API key for authentication (generate with: openssl rand -hex 32)
-ETPHONEHOME_API_KEY=your-generated-api-key-here
+REACH_API_KEY=your-generated-api-key-here
 
 # Server settings
-ETPHONEHOME_HOST=127.0.0.1
-ETPHONEHOME_PORT=8765
-ETPHONEHOME_LOG_LEVEL=INFO
+REACH_HOST=127.0.0.1
+REACH_PORT=8765
+REACH_LOG_LEVEL=INFO
 EOF
 
 # Secure the config file
-sudo chmod 600 /etc/etphonehome/server.env
+sudo chmod 600 /etc/reach/server.env
 
 # Generate an API key
 API_KEY=$(openssl rand -hex 32)
-sudo sed -i "s/your-generated-api-key-here/$API_KEY/" /etc/etphonehome/server.env
+sudo sed -i "s/your-generated-api-key-here/$API_KEY/" /etc/reach/server.env
 echo "Your API key: $API_KEY"
 
 # Create systemd service
-sudo tee /etc/systemd/system/etphonehome-mcp.service << 'EOF'
+sudo tee /etc/systemd/system/reach-mcp.service << 'EOF'
 [Unit]
-Description=ET Phone Home MCP Server (HTTP/SSE)
-Documentation=https://github.com/jfreed-dev/etphonehome
-After=network-online.target etphonehome-ssh.service
+Description=Reach MCP Server (HTTP/SSE)
+Documentation=https://github.com/jfreed-dev/reach
+After=network-online.target reach-ssh.service
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=etphonehome
-Group=etphonehome
+User=reach
+Group=reach
 
-WorkingDirectory=/opt/etphonehome
+WorkingDirectory=/opt/reach
 Environment=PYTHONUNBUFFERED=1
-EnvironmentFile=-/etc/etphonehome/server.env
+EnvironmentFile=-/etc/reach/server.env
 
-ExecStart=/opt/etphonehome/venv/bin/python -m server.mcp_server \
+ExecStart=/opt/reach/venv/bin/python -m server.mcp_server \
     --transport http \
     --host 127.0.0.1 \
     --port 8765
@@ -259,12 +259,12 @@ RestartSec=5
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/etphonehome/.etphonehome-server
+ReadWritePaths=/home/reach/.reach-server
 PrivateTmp=true
 
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=etphonehome-mcp
+SyslogIdentifier=reach-mcp
 
 [Install]
 WantedBy=multi-user.target
@@ -272,11 +272,11 @@ EOF
 
 # Enable and start
 sudo systemctl daemon-reload
-sudo systemctl enable etphonehome-mcp
-sudo systemctl start etphonehome-mcp
+sudo systemctl enable reach-mcp
+sudo systemctl start reach-mcp
 
 # Verify it's running
-sudo systemctl status etphonehome-mcp
+sudo systemctl status reach-mcp
 curl http://localhost:8765/health
 ```
 
@@ -284,14 +284,14 @@ curl http://localhost:8765/health
 
 ```bash
 # Run MCP server in stdio mode (MCP client launches it directly)
-/opt/etphonehome/venv/bin/python -m server.mcp_server
+/opt/reach/venv/bin/python -m server.mcp_server
 ```
 
 ### Step 5: Configure Firewall
 
 ```bash
 # UFW (Ubuntu/Debian)
-sudo ufw allow 443/tcp comment "ET Phone Home client tunnels"
+sudo ufw allow 443/tcp comment "Reach client tunnels"
 
 # firewalld (RHEL/CentOS/Fedora)
 sudo firewall-cmd --permanent --add-port=443/tcp
@@ -305,17 +305,17 @@ sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT
 
 ```bash
 # Check SSH daemon
-sudo systemctl status etphonehome-ssh  # if using separate daemon
+sudo systemctl status reach-ssh  # if using separate daemon
 # OR
 sudo systemctl status ssh
 
 # Check MCP server
-sudo systemctl status etphonehome-mcp
+sudo systemctl status reach-mcp
 curl http://localhost:8765/health
 
 # View logs
-sudo journalctl -u etphonehome-mcp -f
-sudo journalctl -u etphonehome-ssh -f
+sudo journalctl -u reach-mcp -f
+sudo journalctl -u reach-ssh -f
 ```
 
 ---
@@ -338,28 +338,28 @@ Set-Service -Name sshd -StartupType Automatic
 Get-Service sshd
 ```
 
-### Step 2: Create etphonehome User
+### Step 2: Create reach User
 
 ```powershell
 # Create local user (PowerShell as Administrator)
-$Password = Read-Host -AsSecureString "Enter password for etphonehome user"
-New-LocalUser -Name "etphonehome" -Password $Password -Description "ET Phone Home client connections"
+$Password = Read-Host -AsSecureString "Enter password for reach user"
+New-LocalUser -Name "reach" -Password $Password -Description "Reach client connections"
 
 # Create SSH directory
-$SshDir = "C:\Users\etphonehome\.ssh"
+$SshDir = "C:\Users\reach\.ssh"
 New-Item -ItemType Directory -Path $SshDir -Force
 New-Item -ItemType File -Path "$SshDir\authorized_keys" -Force
 
 # Set proper permissions
 icacls $SshDir /inheritance:r
-icacls $SshDir /grant "etphonehome:(OI)(CI)F"
+icacls $SshDir /grant "reach:(OI)(CI)F"
 icacls $SshDir /grant "SYSTEM:(OI)(CI)F"
 icacls "$SshDir\authorized_keys" /inheritance:r
-icacls "$SshDir\authorized_keys" /grant "etphonehome:F"
+icacls "$SshDir\authorized_keys" /grant "reach:F"
 icacls "$SshDir\authorized_keys" /grant "SYSTEM:F"
 ```
 
-### Step 3: Install Python and ET Phone Home
+### Step 3: Install Python and Reach
 
 ```powershell
 # Install Python 3.10+ from https://www.python.org/downloads/windows/
@@ -367,13 +367,13 @@ icacls "$SshDir\authorized_keys" /grant "SYSTEM:F"
 
 # Clone repository
 cd C:\
-git clone https://github.com/jfreed-dev/etphonehome.git C:\etphonehome
+git clone https://github.com/jfreed-dev/reach.git C:\reach
 
 # Create virtual environment
-python -m venv C:\etphonehome\venv
+python -m venv C:\reach\venv
 
 # Install with server dependencies
-C:\etphonehome\venv\Scripts\pip install -e "C:\etphonehome[server]"
+C:\reach\venv\Scripts\pip install -e "C:\reach[server]"
 ```
 
 ### Step 4: Configure OpenSSH
@@ -408,10 +408,10 @@ PermitTunnel yes
 ClientAliveInterval 30
 ClientAliveCountMax 3
 
-# Match block for etphonehome user
-Match User etphonehome
-    AuthorizedKeysFile C:/Users/etphonehome/.ssh/authorized_keys
-    ForceCommand cmd /c echo ET Phone Home tunnel established
+# Match block for reach user
+Match User reach
+    AuthorizedKeysFile C:/Users/reach/.ssh/authorized_keys
+    ForceCommand cmd /c echo Reach tunnel established
     AllowTcpForwarding yes
 ```
 
@@ -425,7 +425,7 @@ Restart-Service sshd
 
 ```powershell
 # Allow port 443 for client connections
-New-NetFirewallRule -Name "ETPhoneHome-SSH" -DisplayName "ET Phone Home SSH (443)" `
+New-NetFirewallRule -Name "Reach-SSH" -DisplayName "Reach SSH (443)" `
     -Direction Inbound -Protocol TCP -LocalPort 443 -Action Allow
 ```
 
@@ -436,31 +436,31 @@ New-NetFirewallRule -Name "ETPhoneHome-SSH" -DisplayName "ET Phone Home SSH (443
 # https://nssm.cc/download
 
 # Install as service
-nssm install etphonehome-mcp "C:\etphonehome\venv\Scripts\python.exe"
-nssm set etphonehome-mcp AppParameters "-m server.mcp_server --transport http --host 127.0.0.1 --port 8765"
-nssm set etphonehome-mcp AppDirectory "C:\etphonehome"
-nssm set etphonehome-mcp AppEnvironmentExtra "PYTHONUNBUFFERED=1" "ETPHONEHOME_API_KEY=your-api-key"
-nssm set etphonehome-mcp DisplayName "ET Phone Home MCP Server"
-nssm set etphonehome-mcp Description "MCP Server for remote client management"
-nssm set etphonehome-mcp Start SERVICE_AUTO_START
-nssm set etphonehome-mcp ObjectName LocalSystem
+nssm install reach-mcp "C:\reach\venv\Scripts\python.exe"
+nssm set reach-mcp AppParameters "-m server.mcp_server --transport http --host 127.0.0.1 --port 8765"
+nssm set reach-mcp AppDirectory "C:\reach"
+nssm set reach-mcp AppEnvironmentExtra "PYTHONUNBUFFERED=1" "REACH_API_KEY=your-api-key"
+nssm set reach-mcp DisplayName "Reach MCP Server"
+nssm set reach-mcp Description "MCP Server for remote client management"
+nssm set reach-mcp Start SERVICE_AUTO_START
+nssm set reach-mcp ObjectName LocalSystem
 
 # Start the service
-nssm start etphonehome-mcp
+nssm start reach-mcp
 ```
 
 **Alternative: Run as a scheduled task**
 
 ```powershell
 # Create a scheduled task to run at startup
-$Action = New-ScheduledTaskAction -Execute "C:\etphonehome\venv\Scripts\python.exe" `
+$Action = New-ScheduledTaskAction -Execute "C:\reach\venv\Scripts\python.exe" `
     -Argument "-m server.mcp_server --transport http --host 127.0.0.1 --port 8765" `
-    -WorkingDirectory "C:\etphonehome"
+    -WorkingDirectory "C:\reach"
 
 $Trigger = New-ScheduledTaskTrigger -AtStartup
 $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 
-Register-ScheduledTask -TaskName "ETPhoneHome-MCP" -Action $Action -Trigger $Trigger `
+Register-ScheduledTask -TaskName "Reach-MCP" -Action $Action -Trigger $Trigger `
     -Settings $Settings -User "SYSTEM" -RunLevel Highest
 ```
 
@@ -471,13 +471,13 @@ Register-ScheduledTask -TaskName "ETPhoneHome-MCP" -Action $Action -Trigger $Tri
 Get-Service sshd
 
 # Check MCP service (if using NSSM)
-nssm status etphonehome-mcp
+nssm status reach-mcp
 
 # Test health endpoint
 Invoke-WebRequest -Uri "http://localhost:8765/health" | Select-Object -ExpandProperty Content
 
 # View logs (if using NSSM with file logging)
-Get-Content C:\etphonehome\logs\mcp.log -Tail 50
+Get-Content C:\reach\logs\mcp.log -Tail 50
 ```
 
 ---
@@ -491,7 +491,7 @@ Add to your MCP client settings (location varies by client):
 ```json
 {
   "mcpServers": {
-    "etphonehome": {
+    "reach": {
       "type": "sse",
       "url": "http://your-server-ip:8765/sse",
       "headers": {
@@ -509,13 +509,13 @@ For remote servers without direct HTTP access:
 ```json
 {
   "mcpServers": {
-    "etphonehome": {
+    "reach": {
       "command": "ssh",
       "args": [
         "-i", "/path/to/your/ssh/key",
         "-o", "StrictHostKeyChecking=no",
         "root@your-server-ip",
-        "/opt/etphonehome/venv/bin/python -m server.mcp_server"
+        "/opt/reach/venv/bin/python -m server.mcp_server"
       ]
     }
   }
@@ -529,10 +529,10 @@ For local development:
 ```json
 {
   "mcpServers": {
-    "etphonehome": {
-      "command": "/opt/etphonehome/venv/bin/python",
+    "reach": {
+      "command": "/opt/reach/venv/bin/python",
       "args": ["-m", "server.mcp_server"],
-      "cwd": "/opt/etphonehome"
+      "cwd": "/opt/reach"
     }
   }
 }
@@ -548,51 +548,51 @@ On the client machine, install to the user's home directory:
 
 **Linux:**
 ```bash
-# Download and install to ~/phonehome/
-mkdir -p ~/phonehome && cd ~/phonehome
-curl -LO http://your-server/latest/phonehome-linux-x86_64.tar.gz
-tar xzf phonehome-linux-x86_64.tar.gz
-cd phonehome && ./setup.sh
+# Download and install to ~/reach/
+mkdir -p ~/reach reach && cd ~/reach
+curl -LO http://your-server/latest/reach-linux-x86_64.tar.gz
+tar xzf reach-linux-x86_64.tar.gz
+cd reach reach && ./setup.sh
 
 # Initialize configuration
-./phonehome --init
+./reach --init
 # Enter: display_name, purpose, tags (when prompted)
 
 # Generate SSH keypair
-./phonehome --generate-key
+./reach --generate-key
 ```
 
 **Windows:**
 ```powershell
-# Download and install to %USERPROFILE%\phonehome\
-New-Item -ItemType Directory -Path "$env:USERPROFILE\phonehome" -Force
-Set-Location "$env:USERPROFILE\phonehome"
-Invoke-WebRequest -Uri "http://your-server/latest/phonehome-windows-amd64.zip" -OutFile "phonehome.zip"
-Expand-Archive -Path "phonehome.zip" -DestinationPath "."
+# Download and install to %USERPROFILE%\reach\
+New-Item -ItemType Directory -Path "$env:USERPROFILE\reach" -Force
+Set-Location "$env:USERPROFILE\reach"
+Invoke-WebRequest -Uri "http://your-server/latest/reach-windows-amd64.zip" -OutFile "reach.zip"
+Expand-Archive -Path "reach.zip" -DestinationPath "."
 
 # Initialize configuration
-.\phonehome.exe --init
+.\reach.exe --init
 # Enter: display_name, purpose, tags (when prompted)
 
 # Generate SSH keypair
-.\phonehome.exe --generate-key
+.\reach.exe --generate-key
 ```
 
 **From Source (Development):**
 ```bash
 # Linux
-git clone https://github.com/jfreed-dev/etphonehome.git ~/etphonehome
-cd ~/etphonehome && pip install -e .
-phonehome --init && phonehome --generate-key
+git clone https://github.com/jfreed-dev/reach.git ~/reach
+cd ~/reach && pip install -e .
+reach --init && reach --generate-key
 ```
 
 ```powershell
 # Windows
-git clone https://github.com/jfreed-dev/etphonehome.git "$env:USERPROFILE\etphonehome"
-Set-Location "$env:USERPROFILE\etphonehome"
+git clone https://github.com/jfreed-dev/reach.git "$env:USERPROFILE\reach"
+Set-Location "$env:USERPROFILE\reach"
 pip install -e .
-phonehome --init
-phonehome --generate-key
+reach --init
+reach --generate-key
 ```
 
 ### Step 2: Add Client Key to Server
@@ -600,29 +600,29 @@ phonehome --generate-key
 Copy the client's public key to the server's authorized_keys:
 
 **Client key location:**
-- Linux: `~/.etphonehome/id_ed25519.pub`
-- Windows: `%USERPROFILE%\.etphonehome\id_ed25519.pub`
+- Linux: `~/.reach/id_ed25519.pub`
+- Windows: `%USERPROFILE%\.reach\id_ed25519.pub`
 
 ```bash
 # On Linux server
-echo "ssh-ed25519 AAAA... client-name" >> /home/etphonehome/.ssh/authorized_keys
+echo "ssh-ed25519 AAAA... client-name" >> /home/reach/.ssh/authorized_keys
 
 # On Windows server (PowerShell)
-Add-Content -Path "C:\Users\etphonehome\.ssh\authorized_keys" -Value "ssh-ed25519 AAAA... client-name"
+Add-Content -Path "C:\Users\reach\.ssh\authorized_keys" -Value "ssh-ed25519 AAAA... client-name"
 ```
 
 ### Step 3: Configure Client
 
 Edit the client config file:
-- Linux: `~/.etphonehome/config.yaml`
-- Windows: `%USERPROFILE%\.etphonehome\config.yaml`
+- Linux: `~/.reach/config.yaml`
+- Windows: `%USERPROFILE%\.reach\config.yaml`
 
 ```yaml
 server_host: your-server-ip
 server_port: 443
-server_user: etphonehome
-key_file: ~/.etphonehome/id_ed25519   # Linux
-# key_file: %USERPROFILE%\.etphonehome\id_ed25519  # Windows (use full path)
+server_user: reach
+key_file: ~/.reach/id_ed25519   # Linux
+# key_file: %USERPROFILE%\.reach\id_ed25519  # Windows (use full path)
 display_name: My Client Name
 purpose: Development
 tags:
@@ -634,10 +634,10 @@ tags:
 
 ```bash
 # Linux
-phonehome --verbose
+reach --verbose
 
 # Windows
-.\phonehome.exe --verbose
+.\reach.exe --verbose
 ```
 
 ---
@@ -648,11 +648,11 @@ phonehome --verbose
 
 ```bash
 # Test SSH connectivity directly
-ssh -v -i ~/.etphonehome/id_ed25519 etphonehome@server-ip -p 443
+ssh -v -i ~/.reach/id_ed25519 etreach@server-ip -p 443
 
 # Check server SSH logs
 sudo journalctl -u sshd -f           # Linux (main sshd)
-sudo journalctl -u etphonehome-ssh -f # Linux (separate daemon)
+sudo journalctl -u reach-ssh -f # Linux (separate daemon)
 Get-EventLog -LogName Security -Newest 50 | Where-Object {$_.EventID -eq 4625}  # Windows
 ```
 
@@ -663,8 +663,8 @@ Get-EventLog -LogName Security -Newest 50 | Where-Object {$_.EventID -eq 4625}  
 curl http://localhost:8765/health
 
 # Check logs
-sudo journalctl -u etphonehome-mcp -f  # Linux
-Get-Content C:\etphonehome\logs\mcp.log -Tail 50  # Windows
+sudo journalctl -u reach-mcp -f  # Linux
+Get-Content C:\reach\logs\mcp.log -Tail 50  # Windows
 
 # Test with API key
 curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:8765/health
@@ -674,13 +674,13 @@ curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:8765/health
 
 ```bash
 # Run client with verbose logging
-phonehome --verbose
+reach --verbose
 
 # Check client logs
-cat ~/.etphonehome/phonehome.log
+cat ~/.reach/reach.log
 
 # Verify config
-cat ~/.etphonehome/config.yaml
+cat ~/.reach/config.yaml
 ```
 
 ### Common Issues
@@ -690,8 +690,8 @@ cat ~/.etphonehome/config.yaml
 | Connection refused | SSH not listening on port | Check sshd config, verify port 443 is configured |
 | Permission denied | Key not in authorized_keys | Add client's public key to authorized_keys |
 | Host key verification failed | First connection to new server | Use `-o StrictHostKeyChecking=no` or add to known_hosts |
-| MCP timeout | Server not running | Start etphonehome-mcp service |
-| API key invalid | Wrong or missing key | Check ETPHONEHOME_API_KEY in server.env |
+| MCP timeout | Server not running | Start reach-mcp service |
+| API key invalid | Wrong or missing key | Check REACH_API_KEY in server.env |
 
 ---
 
@@ -701,15 +701,15 @@ cat ~/.etphonehome/config.yaml
 
 ```bash
 # Service management
-sudo systemctl status etphonehome-ssh
-sudo systemctl status etphonehome-mcp
-sudo systemctl restart etphonehome-mcp
+sudo systemctl status reach-ssh
+sudo systemctl status reach-mcp
+sudo systemctl restart reach-mcp
 
 # Logs
-sudo journalctl -u etphonehome-mcp -f
+sudo journalctl -u reach-mcp -f
 
 # Add client key
-echo "ssh-ed25519 AAAA... name" >> /home/etphonehome/.ssh/authorized_keys
+echo "ssh-ed25519 AAAA... name" >> /home/reach/.ssh/authorized_keys
 ```
 
 ### Windows Commands
@@ -718,10 +718,10 @@ echo "ssh-ed25519 AAAA... name" >> /home/etphonehome/.ssh/authorized_keys
 # Service management
 Get-Service sshd
 Restart-Service sshd
-nssm status etphonehome-mcp
+nssm status reach-mcp
 
 # Add client key
-Add-Content -Path "C:\Users\etphonehome\.ssh\authorized_keys" -Value "ssh-ed25519 AAAA... name"
+Add-Content -Path "C:\Users\reach\.ssh\authorized_keys" -Value "ssh-ed25519 AAAA... name"
 ```
 
 ### MCP Tools

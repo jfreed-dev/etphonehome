@@ -1,4 +1,4 @@
-# ET Phone Home - Docker Compose Configuration
+# Reach - Docker Compose Configuration
 #
 # Usage:
 #   docker-compose up -d              # Start server
@@ -12,21 +12,21 @@ services:
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile.server
-    image: etphonehome-server:latest
-    container_name: etphonehome-server
+    image: reach-server:latest
+    container_name: reach-server
     restart: unless-stopped
     ports:
-      - "${ETPHONEHOME_PORT:-8765}:8765"
+      - "${REACH_PORT:-8765}:8765"
       - "${SSH_PORT:-2222}:22"
     environment:
-      - ETPHONEHOME_LOG_LEVEL=${ETPHONEHOME_LOG_LEVEL:-INFO}
-      - ETPHONEHOME_API_KEY=${ETPHONEHOME_API_KEY:-}
-      - ETPHONEHOME_LOG_FILE=/var/log/etphonehome/server.log
-      - ETPHONEHOME_LOG_MAX_BYTES=${ETPHONEHOME_LOG_MAX_BYTES:-10485760}
-      - ETPHONEHOME_LOG_BACKUP_COUNT=${ETPHONEHOME_LOG_BACKUP_COUNT:-5}
+      - REACH_LOG_LEVEL=${REACH_LOG_LEVEL:-INFO}
+      - REACH_API_KEY=${REACH_API_KEY:-}
+      - REACH_LOG_FILE=/var/log/reach/server.log
+      - REACH_LOG_MAX_BYTES=${REACH_LOG_MAX_BYTES:-10485760}
+      - REACH_LOG_BACKUP_COUNT=${REACH_LOG_BACKUP_COUNT:-5}
     volumes:
-      - server-data:/var/lib/etphonehome
-      - server-logs:/var/log/etphonehome
+      - server-data:/var/lib/reach
+      - server-logs:/var/log/reach
       - ${SSH_HOST_KEYS:-./ssh_host_keys}:/etc/ssh/keys:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
@@ -35,12 +35,12 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - etphonehome
+      - reach
 
   # SSH server for client connections (optional, run with --profile ssh)
   ssh:
     image: linuxserver/openssh-server:latest
-    container_name: etphonehome-ssh
+    container_name: reach-ssh
     profiles:
       - ssh
     restart: unless-stopped
@@ -50,7 +50,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=${TZ:-UTC}
-      - USER_NAME=etphonehome
+      - USER_NAME=reach
       - PUBLIC_KEY_FILE=/config/authorized_keys
       - SUDO_ACCESS=false
       - PASSWORD_ACCESS=false
@@ -58,27 +58,27 @@ services:
       - ssh-config:/config
       - ${AUTHORIZED_KEYS_FILE:-./authorized_keys}:/config/authorized_keys:ro
     networks:
-      - etphonehome
+      - reach
 
   # Client container (optional, run with --profile client)
   client:
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile.client
-    image: etphonehome-client:latest
-    container_name: etphonehome-client
+    image: reach-client:latest
+    container_name: reach-client
     profiles:
       - client
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      - client-config:/home/etphonehome/.etphonehome
-      - ${CLIENT_SSH_KEY:-./client_key}:/home/etphonehome/.etphonehome/id_ed25519:ro
+      - client-config:/home/reach/.reach
+      - ${CLIENT_SSH_KEY:-./client_key}:/home/reach/.reach/id_ed25519:ro
     depends_on:
       - server
     networks:
-      - etphonehome
+      - reach
 
 volumes:
   server-data:
@@ -87,5 +87,5 @@ volumes:
   client-config:
 
 networks:
-  etphonehome:
+  reach:
     driver: bridge

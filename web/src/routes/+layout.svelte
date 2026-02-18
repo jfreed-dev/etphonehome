@@ -16,7 +16,7 @@
 </script>
 
 <svelte:head>
-	<title>ET Phone Home</title>
+	<title>Reach</title>
 	<meta name="description" content="Remote access management dashboard" />
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
@@ -35,7 +35,7 @@
 			{@render children()}
 		</main>
 		<footer class="page__footer">
-			<div class="et-container">ET Phone Home &bull; Remote Access Management</div>
+			<div class="reach-container">Reach &bull; Remote Access Management</div>
 		</footer>
 	</div>
 {:else}

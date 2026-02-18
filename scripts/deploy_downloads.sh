@@ -1,5 +1,5 @@
 #!/bin/bash
-# ET Phone Home - Deploy builds to download server
+# Reach - Deploy builds to download server
 # Uploads build artifacts and generates version manifest
 
 set -e
@@ -9,14 +9,14 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 DIST_DIR="$PROJECT_DIR/dist"
 
 # Server configuration (no defaults for host - must be set)
-VPS_HOST="${PHONEHOME_VPS_HOST:-}"
-VPS_USER="${PHONEHOME_VPS_USER:-root}"
-VPS_KEY="${PHONEHOME_VPS_KEY:-$HOME/.ssh/id_ed25519}"
-DEPLOY_DIR="/var/www/phonehome"
+VPS_HOST="${REACH_VPS_HOST:-}"
+VPS_USER="${REACH_VPS_USER:-root}"
+VPS_KEY="${REACH_VPS_KEY:-$HOME/.ssh/id_ed25519}"
+DEPLOY_DIR="/var/www/reach"
 
 # Require VPS_HOST to be set
 if [ -z "$VPS_HOST" ]; then
-    echo "Error: PHONEHOME_VPS_HOST environment variable must be set"
+    echo "Error: REACH_VPS_HOST environment variable must be set"
     exit 1
 fi
 
@@ -35,9 +35,9 @@ usage() {
     echo "  version    Version tag (e.g., v0.1.0)"
     echo ""
     echo "Environment variables:"
-    echo "  PHONEHOME_VPS_HOST  Server hostname (required)"
-    echo "  PHONEHOME_VPS_USER  SSH user (default: root)"
-    echo "  PHONEHOME_VPS_KEY   SSH key path (default: ~/.ssh/id_ed25519)"
+    echo "  REACH_VPS_HOST  Server hostname (required)"
+    echo "  REACH_VPS_USER  SSH user (default: root)"
+    echo "  REACH_VPS_KEY   SSH key path (default: ~/.ssh/id_ed25519)"
     exit 1
 }
 
@@ -50,16 +50,16 @@ fi
 # Strip 'v' prefix for directory name if present
 VERSION_DIR="${VERSION#v}"
 
-echo -e "${YELLOW}=== Deploying ET Phone Home $VERSION ===${NC}"
+echo -e "${YELLOW}=== Deploying Reach $VERSION ===${NC}"
 echo "Server: $VPS_USER@$VPS_HOST"
 echo "Deploy directory: $DEPLOY_DIR"
 echo ""
 
 # Check for build artifacts
 ARTIFACTS=(
-    "phonehome-linux-x86_64.tar.gz"
-    "phonehome-linux-aarch64.tar.gz"
-    "phonehome-windows-amd64.zip"
+    "reach-linux-x86_64.tar.gz"
+    "reach-linux-aarch64.tar.gz"
+    "reach-windows-amd64.zip"
 )
 
 echo "Checking build artifacts..."
@@ -122,7 +122,7 @@ VERSION_JSON=$(cat <<EOF
   "release_date": "$RELEASE_DATE",
   "downloads": {$CHECKSUMS
   },
-  "changelog": "See https://github.com/jfreed-dev/etphonehome/releases/tag/$VERSION"
+  "changelog": "See https://github.com/jfreed-dev/reach/releases/tag/$VERSION"
 }
 EOF
 )

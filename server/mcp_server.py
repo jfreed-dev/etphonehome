@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ET Phone Home - MCP Server
+Reach - MCP Server
 
 Exposes tools to Claude CLI for interacting with connected remote clients.
 """
@@ -8,7 +8,6 @@ Exposes tools to Claude CLI for interacting with connected remote clients.
 import argparse
 import asyncio
 import json
-import os
 import sys
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -41,6 +40,9 @@ from server.webhooks import (
     get_dispatcher,
     set_dispatcher,
 )
+
+# Get logging configuration from environment (with backwards compat)
+from shared.compat import env as _env
 from shared.logging_config import get_default_log_file, setup_logging
 from shared.protocol import (
     ClientNotFoundError,
@@ -49,15 +51,14 @@ from shared.protocol import (
     ToolError,
 )
 
-# Get logging configuration from environment
-_log_level = os.environ.get("ETPHONEHOME_LOG_LEVEL", "INFO")
-_log_file = os.environ.get("ETPHONEHOME_LOG_FILE", str(get_default_log_file("server")))
-_log_max_bytes = int(os.environ.get("ETPHONEHOME_LOG_MAX_BYTES", 10 * 1024 * 1024))
-_log_backup_count = int(os.environ.get("ETPHONEHOME_LOG_BACKUP_COUNT", 5))
+_log_level = _env("REACH_LOG_LEVEL", "ETPHONEHOME_LOG_LEVEL", "INFO")
+_log_file = _env("REACH_LOG_FILE", "ETPHONEHOME_LOG_FILE", str(get_default_log_file("server")))
+_log_max_bytes = int(_env("REACH_LOG_MAX_BYTES", "ETPHONEHOME_LOG_MAX_BYTES", 10 * 1024 * 1024))
+_log_backup_count = int(_env("REACH_LOG_BACKUP_COUNT", "ETPHONEHOME_LOG_BACKUP_COUNT", 5))
 
 # Configure logging to stderr (stdout is used for MCP protocol) and file with rotation
 logger = setup_logging(
-    name="etphonehome",
+    name="reach",
     level=_log_level,
     log_file=_log_file,
     max_bytes=_log_max_bytes,
@@ -260,7 +261,7 @@ def create_server(registry_override=None) -> Server:
     """
     # Use provided registry or fall back to module global
     _registry = registry_override if registry_override is not None else registry
-    server = Server("etphonehome")
+    server = Server("reach")
 
     @server.list_tools()
     async def list_tools() -> list[Tool]:
@@ -634,7 +635,7 @@ def create_server(registry_override=None) -> Server:
             # ===== SSH SESSION MANAGEMENT =====
             Tool(
                 name="ssh_session_open",
-                description="Open a persistent SSH session to a remote host through the ET Phone Home client. Supports jump hosts for accessing private networks. The session maintains state (working directory, environment) across commands. Use password OR key_file for authentication.",
+                description="Open a persistent SSH session to a remote host through the Reach client. Supports jump hosts for accessing private networks. The session maintains state (working directory, environment) across commands. Use password OR key_file for authentication.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -700,7 +701,7 @@ def create_server(registry_override=None) -> Server:
                         },
                         "client_id": {
                             "type": "string",
-                            "description": "ET Phone Home client to use (uses active client if not specified)",
+                            "description": "Reach client to use (uses active client if not specified)",
                         },
                     },
                     "required": ["host", "username"],
@@ -732,7 +733,7 @@ def create_server(registry_override=None) -> Server:
                         },
                         "client_id": {
                             "type": "string",
-                            "description": "ET Phone Home client (uses active client if not specified)",
+                            "description": "Reach client (uses active client if not specified)",
                         },
                     },
                     "required": ["session_id", "command"],
@@ -752,7 +753,7 @@ def create_server(registry_override=None) -> Server:
                         },
                         "client_id": {
                             "type": "string",
-                            "description": "ET Phone Home client (uses active client if not specified)",
+                            "description": "Reach client (uses active client if not specified)",
                         },
                     },
                     "required": ["session_id"],
@@ -767,7 +768,7 @@ def create_server(registry_override=None) -> Server:
                     "properties": {
                         "client_id": {
                             "type": "string",
-                            "description": "ET Phone Home client (uses active client if not specified)",
+                            "description": "Reach client (uses active client if not specified)",
                         },
                     },
                     "additionalProperties": False,
@@ -795,7 +796,7 @@ def create_server(registry_override=None) -> Server:
                         },
                         "client_id": {
                             "type": "string",
-                            "description": "ET Phone Home client (uses active client if not specified)",
+                            "description": "Reach client (uses active client if not specified)",
                         },
                     },
                     "required": ["session_id", "text"],
@@ -822,7 +823,7 @@ def create_server(registry_override=None) -> Server:
                         },
                         "client_id": {
                             "type": "string",
-                            "description": "ET Phone Home client (uses active client if not specified)",
+                            "description": "Reach client (uses active client if not specified)",
                         },
                     },
                     "required": ["session_id"],
@@ -837,7 +838,7 @@ def create_server(registry_override=None) -> Server:
                     "properties": {
                         "client_id": {
                             "type": "string",
-                            "description": "ET Phone Home client (uses active client if not specified)",
+                            "description": "Reach client (uses active client if not specified)",
                         },
                     },
                     "additionalProperties": False,
@@ -1357,8 +1358,8 @@ async def _handle_tool(name: str, args: dict, _registry) -> Any:
         if r2_client is None:
             raise ToolError(
                 code="R2_NOT_CONFIGURED",
-                message="Cloudflare R2 storage is not configured. Set environment variables: ETPHONEHOME_R2_ACCOUNT_ID, ETPHONEHOME_R2_ACCESS_KEY, ETPHONEHOME_R2_SECRET_KEY, ETPHONEHOME_R2_BUCKET",
-                recovery_hint="Configure R2 credentials in your server.env file or environment variables. See FILE_TRANSFER_IMPROVEMENT_RESEARCH.md for setup instructions.",
+                message="Cloudflare R2 storage is not configured. Set environment variables: REACH_R2_ACCOUNT_ID, REACH_R2_ACCESS_KEY, REACH_R2_SECRET_KEY, REACH_R2_BUCKET",
+                recovery_hint="Configure R2 credentials in your server.env file or environment variables.",
             )
 
         # Get source client info (for metadata)
@@ -1470,7 +1471,7 @@ async def _handle_tool(name: str, args: dict, _registry) -> Any:
         raise ToolError(
             code="ROTATION_NOT_SUPPORTED",
             message="Automated R2 key rotation is not supported. Cloudflare does not provide a public API to create permanent R2 tokens.",
-            recovery_hint="Rotate R2 keys manually: 1) Go to Cloudflare Dashboard > R2 > Manage API Tokens, 2) Create new token, 3) Update GitHub Secrets (ETPHONEHOME_R2_ACCESS_KEY, ETPHONEHOME_R2_SECRET_KEY), 4) Delete old token, 5) Restart server.",
+            recovery_hint="Rotate R2 keys manually: 1) Go to Cloudflare Dashboard > R2 > Manage API Tokens, 2) Create new token, 3) Update GitHub Secrets (REACH_R2_ACCESS_KEY, REACH_R2_SECRET_KEY), 4) Delete old token, 5) Restart server.",
         )
 
     elif name == "r2_list_tokens":
@@ -1490,7 +1491,7 @@ async def _handle_tool(name: str, args: dict, _registry) -> Any:
                 from pathlib import Path
 
                 self.rotation_days = rotation_days
-                self.last_rotation_file = Path.home() / ".etphonehome" / "last_r2_rotation.txt"
+                self.last_rotation_file = Path.home() / ".reach" / "last_r2_rotation.txt"
 
             def get_last_rotation_date(self):
                 from datetime import datetime
@@ -1573,13 +1574,18 @@ async def run_stdio():
     """Run the MCP server with stdio transport."""
     global _health_monitor
 
-    logger.info("Starting ET Phone Home MCP server (stdio)")
+    logger.info("Starting Reach MCP server (stdio)")
 
     # Initialize secret sync (if enabled)
     from shared.secret_sync import initialize_secret_sync
 
-    secret_sync_enabled = os.getenv("ETPHONEHOME_SECRET_SYNC_ENABLED", "false").lower() == "true"
-    secret_sync_interval = int(os.getenv("ETPHONEHOME_SECRET_SYNC_INTERVAL", "3600"))
+    secret_sync_enabled = (
+        _env("REACH_SECRET_SYNC_ENABLED", "ETPHONEHOME_SECRET_SYNC_ENABLED", "false").lower()
+        == "true"
+    )
+    secret_sync_interval = int(
+        _env("REACH_SECRET_SYNC_INTERVAL", "ETPHONEHOME_SECRET_SYNC_INTERVAL", "3600")
+    )
 
     secret_sync = await initialize_secret_sync(
         enabled=secret_sync_enabled,
@@ -1634,8 +1640,13 @@ async def run_http(host: str, port: int, api_key: str = None):
     # Initialize secret sync (if enabled)
     from shared.secret_sync import initialize_secret_sync
 
-    secret_sync_enabled = os.getenv("ETPHONEHOME_SECRET_SYNC_ENABLED", "false").lower() == "true"
-    secret_sync_interval = int(os.getenv("ETPHONEHOME_SECRET_SYNC_INTERVAL", "3600"))
+    secret_sync_enabled = (
+        _env("REACH_SECRET_SYNC_ENABLED", "ETPHONEHOME_SECRET_SYNC_ENABLED", "false").lower()
+        == "true"
+    )
+    secret_sync_interval = int(
+        _env("REACH_SECRET_SYNC_INTERVAL", "ETPHONEHOME_SECRET_SYNC_INTERVAL", "3600")
+    )
 
     secret_sync = await initialize_secret_sync(
         enabled=secret_sync_enabled,
@@ -1680,7 +1691,7 @@ async def run_http(host: str, port: int, api_key: str = None):
 
 def main():
     """Entry point with transport selection."""
-    parser = argparse.ArgumentParser(description="ET Phone Home MCP Server")
+    parser = argparse.ArgumentParser(description="Reach MCP Server")
     parser.add_argument(
         "--transport",
         "-t",
@@ -1703,7 +1714,7 @@ def main():
     parser.add_argument(
         "--api-key",
         default=None,
-        help="API key for authentication (or set ETPHONEHOME_API_KEY env var)",
+        help="API key for authentication (or set REACH_API_KEY env var)",
     )
 
     args = parser.parse_args()

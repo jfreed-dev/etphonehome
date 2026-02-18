@@ -1,12 +1,12 @@
-# ET Phone Home SSH Configuration
+# Reach SSH Configuration
 # Managed by Ansible
 
-# Listen on dedicated port for etphonehome clients
-Port {{ etphonehome_ssh_port }}
-ListenAddress {{ etphonehome_ssh_listen_address }}
+# Listen on dedicated port for reach clients
+Port {{ reach_ssh_port }}
+ListenAddress {{ reach_ssh_listen_address }}
 
-# Only allow etphonehome user
-Match User {{ etphonehome_user }}
+# Only allow reach user
+Match User {{ reach_user }}
     # Allow reverse port forwarding only
     AllowTcpForwarding remote
     GatewayPorts no

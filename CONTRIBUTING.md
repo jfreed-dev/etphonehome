@@ -1,4 +1,4 @@
-# Contributing to ET Phone Home
+# Contributing to Reach
 
 Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
 
@@ -35,8 +35,8 @@ Look for issues labeled `good first issue` - these are specifically chosen for n
 
 ```bash
 # Clone the repository
-git clone https://github.com/jfreed-dev/etphonehome.git
-cd etphonehome
+git clone https://github.com/jfreed-dev/reach.git
+cd reach
 
 # Create virtual environment
 python3 -m venv .venv
@@ -128,8 +128,8 @@ ruff check --fix .
 ### File Organization
 
 ```
-etphonehome/
-├── client/          # Phone home client code
+reach/
+├── client/          # Reach client code
 ├── server/          # MCP server code
 ├── shared/          # Shared protocol and utilities
 ├── tests/           # Test suite

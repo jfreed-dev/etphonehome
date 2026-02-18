@@ -10,9 +10,9 @@ name: R2 Key Rotation (Disabled)
 # Manual rotation steps:
 # 1. Go to Cloudflare Dashboard > R2 > Overview > Manage R2 API Tokens
 # 2. Create a new token with read/write permissions
-# 3. Update GitHub Secrets: ETPHONEHOME_R2_ACCESS_KEY and ETPHONEHOME_R2_SECRET_KEY
+# 3. Update GitHub Secrets: REACH_R2_ACCESS_KEY and REACH_R2_SECRET_KEY
 # 4. Delete the old token from Cloudflare dashboard
-# 5. Restart ET Phone Home server to use new credentials
+# 5. Restart Reach server to use new credentials
 
 on:
   workflow_dispatch:
@@ -40,10 +40,10 @@ jobs:
           echo "1. Go to **Cloudflare Dashboard > R2 > Overview > Manage R2 API Tokens**" >> $GITHUB_STEP_SUMMARY
           echo "2. Create a new token with read/write permissions" >> $GITHUB_STEP_SUMMARY
           echo "3. Update GitHub Secrets:" >> $GITHUB_STEP_SUMMARY
-          echo "   - \`ETPHONEHOME_R2_ACCESS_KEY\`" >> $GITHUB_STEP_SUMMARY
-          echo "   - \`ETPHONEHOME_R2_SECRET_KEY\`" >> $GITHUB_STEP_SUMMARY
+          echo "   - \`REACH_R2_ACCESS_KEY\`" >> $GITHUB_STEP_SUMMARY
+          echo "   - \`REACH_R2_SECRET_KEY\`" >> $GITHUB_STEP_SUMMARY
           echo "4. Delete the old token from Cloudflare dashboard" >> $GITHUB_STEP_SUMMARY
-          echo "5. Restart ET Phone Home server to use new credentials" >> $GITHUB_STEP_SUMMARY
+          echo "5. Restart Reach server to use new credentials" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Future Enhancement" >> $GITHUB_STEP_SUMMARY
           echo "TODO: Implement using Cloudflare's general API tokens endpoint" >> $GITHUB_STEP_SUMMARY

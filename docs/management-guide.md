@@ -1,4 +1,4 @@
-# ET Phone Home Management Guide
+# Reach Management Guide
 
 Manage connected clients using an MCP client with MCP tools.
 
@@ -34,7 +34,7 @@ find_client {"online_only": true}
 
 ## Overview
 
-ET Phone Home uses MCP (Model Context Protocol) to expose management tools to your MCP client. You can manage all connected clients from any machine with your MCP client configured to use the ET Phone Home MCP server.
+Reach uses MCP (Model Context Protocol) to expose management tools to your MCP client. You can manage all connected clients from any machine with your MCP client configured to use the Reach MCP server.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -52,7 +52,7 @@ ET Phone Home uses MCP (Model Context Protocol) to expose management tools to yo
 ## Prerequisites
 
 1. MCP client installed and configured
-2. ET Phone Home MCP server configured in MCP client settings
+2. Reach MCP server configured in MCP client settings
 3. SSH access to the server (optional, for direct management)
 
 ---
@@ -66,9 +66,9 @@ Configure your MCP client to invoke MCP remotely via SSH:
 ```json
 {
   "mcpServers": {
-    "etphonehome": {
+    "reach": {
       "command": "ssh",
-      "args": ["-i", "~/.ssh/your_key", "root@your-server", "/opt/etphonehome/run_mcp.sh"]
+      "args": ["-i", "~/.ssh/your_key", "root@your-server", "/opt/reach/run_mcp.sh"]
     }
   }
 }
@@ -286,7 +286,7 @@ ssh root@your-server
 
 ### 10. SSH Session to Remote Host
 
-Use SSH sessions to connect through an ET Phone Home client to other hosts on the network. Sessions maintain state (working directory, environment variables) between commands.
+Use SSH sessions to connect through an Reach client to other hosts on the network. Sessions maintain state (working directory, environment variables) between commands.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -319,7 +319,7 @@ Use SSH sessions to connect through an ET Phone Home client to other hosts on th
 - Sessions persist across commands - `cd` and `export` changes are remembered
 - Use `ssh_session_list` to see all open sessions
 - Always close sessions when done to free resources
-- The SSH connection goes through the ET Phone Home client, not directly
+- The SSH connection goes through the Reach client, not directly
 
 ### 11. R2 File Exchange (Large/Async Transfers)
 
@@ -453,9 +453,9 @@ find_client {"tags": ["linux"], "capabilities": ["docker"]}
 
 ```bash
 # On client machine
-ps aux | grep phonehome           # Check process running
-cat ~/.etphonehome/phonehome.log  # Check logs
-phonehome --verbose               # Run with debug output
+ps aux | grep reach           # Check process running
+cat ~/.reach/reach.log  # Check logs
+reach --verbose               # Run with debug output
 ```
 
 ### Command Timeout

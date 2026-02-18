@@ -1,12 +1,12 @@
 #!/bin/bash
-# ET Phone Home - R2 Secrets Initial Setup Script
+# Reach - R2 Secrets Initial Setup Script
 # This script guides you through setting up R2 credentials with GitHub Secrets
 # and automatic rotation
 
 set -e  # Exit on error
 
 echo "============================================"
-echo "ET Phone Home - R2 Secrets Setup"
+echo "Reach - R2 Secrets Setup"
 echo "============================================"
 echo ""
 
@@ -35,7 +35,7 @@ print_success() {
 
 # Check if running from correct directory
 if [ ! -f "pyproject.toml" ]; then
-    print_error "Please run this script from the etphonehome root directory"
+    print_error "Please run this script from the reach root directory"
     exit 1
 fi
 
@@ -56,7 +56,7 @@ echo ""
 echo "To create one:"
 echo "  1. Go to: https://github.com/settings/tokens"
 echo "  2. Click 'Generate new token' → 'Generate new token (classic)'"
-echo "  3. Give it a name: 'ET Phone Home Secrets Management'"
+echo "  3. Give it a name: 'Reach Secrets Management'"
 echo "  4. Select scopes: ✓ repo (full control of private repositories)"
 echo "  5. Click 'Generate token'"
 echo "  6. Copy the token (you won't see it again!)"
@@ -73,7 +73,7 @@ fi
 # Store token securely
 print_info "Storing GitHub token securely..."
 python3 -m shared.secrets_manager store-token "$GITHUB_TOKEN"
-print_success "GitHub token stored in ~/.etphonehome/github_token.enc (encrypted)"
+print_success "GitHub token stored in ~/.reach/github_token.enc (encrypted)"
 
 # Step 2: GitHub Repository
 echo ""
@@ -88,7 +88,7 @@ if [ -z "$GITHUB_REPO" ]; then
     exit 1
 fi
 
-export ETPHONEHOME_GITHUB_REPO="$GITHUB_REPO"
+export REACH_GITHUB_REPO="$GITHUB_REPO"
 
 # Test GitHub access
 print_info "Testing GitHub access..."
@@ -126,7 +126,7 @@ if [ -z "$CF_API_TOKEN" ]; then
     exit 1
 fi
 
-export ETPHONEHOME_CLOUDFLARE_API_TOKEN="$CF_API_TOKEN"
+export REACH_CLOUDFLARE_API_TOKEN="$CF_API_TOKEN"
 
 # Step 4: R2 Configuration
 echo ""
@@ -142,7 +142,7 @@ if [ -z "$ACCOUNT_ID" ]; then
     exit 1
 fi
 
-export ETPHONEHOME_R2_ACCOUNT_ID="$ACCOUNT_ID"
+export REACH_R2_ACCOUNT_ID="$ACCOUNT_ID"
 
 # Step 5: Initial R2 API Token (will be rotated)
 echo ""
@@ -153,7 +153,7 @@ echo "Create a temporary R2 API token:"
 echo "  1. Go to R2 dashboard: https://dash.cloudflare.com/r2"
 echo "  2. Click 'Manage R2 API Tokens'"
 echo "  3. Click 'Create API Token'"
-echo "  4. Token name: 'etphonehome-initial' (will be deleted)"
+echo "  4. Token name: 'reach-initial' (will be deleted)"
 echo "  5. Permissions: Object Read & Write"
 echo "  6. Select bucket: [Your bucket]"
 echo "  7. Click 'Create API Token'"
@@ -212,19 +212,19 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # Create environment file
-ENV_FILE="$HOME/.etphonehome/r2_config.env"
-mkdir -p "$HOME/.etphonehome"
+ENV_FILE="$HOME/.reach/r2_config.env"
+mkdir -p "$HOME/.reach"
 
 cat > "$ENV_FILE" << EOF
-# ET Phone Home R2 Configuration
+# Reach R2 Configuration
 # Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
 # GitHub Configuration
-export ETPHONEHOME_GITHUB_REPO="$GITHUB_REPO"
+export REACH_GITHUB_REPO="$GITHUB_REPO"
 
 # Cloudflare Configuration
-export ETPHONEHOME_R2_ACCOUNT_ID="$ACCOUNT_ID"
-export ETPHONEHOME_CLOUDFLARE_API_TOKEN="$CF_API_TOKEN"
+export REACH_R2_ACCOUNT_ID="$ACCOUNT_ID"
+export REACH_CLOUDFLARE_API_TOKEN="$CF_API_TOKEN"
 
 # Note: R2 credentials are stored in GitHub Secrets and will be
 # automatically injected by GitHub Actions. For local development,
@@ -257,7 +257,7 @@ echo "     python3 -m shared.r2_client"
 echo ""
 echo "  3. Set up automatic rotation (add to crontab):"
 echo "     # Rotate R2 keys every 90 days"
-echo "     0 3 1 * * cd /path/to/etphonehome && source $ENV_FILE && python3 -m shared.r2_rotation auto"
+echo "     0 3 1 * * cd /path/to/reach && source $ENV_FILE && python3 -m shared.r2_rotation auto"
 echo ""
 echo "  4. Manual rotation (if needed):"
 echo "     python3 -m shared.r2_rotation rotate"

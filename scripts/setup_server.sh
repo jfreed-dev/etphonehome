@@ -1,12 +1,12 @@
 #!/bin/bash
-# Setup script for ET Phone Home server
+# Setup script for Reach server
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "=== ET Phone Home Server Setup ==="
+echo "=== Reach Server Setup ==="
 echo
 
 # Check for Python 3.10+
@@ -39,7 +39,7 @@ pip install -q -e "$PROJECT_DIR"
 echo "✓ Dependencies installed"
 
 # Setup SSH directory
-SSH_DIR="$HOME/.etphonehome-server"
+SSH_DIR="$HOME/.reach-server"
 mkdir -p "$SSH_DIR"
 chmod 700 "$SSH_DIR"
 
@@ -58,14 +58,14 @@ echo
 echo "Add the following to /etc/ssh/sshd_config or a new config file:"
 echo
 cat << 'EOF'
-# ET Phone Home SSH configuration
-# Save as /etc/ssh/sshd_config.d/etphonehome.conf
+# Reach SSH configuration
+# Save as /etc/ssh/sshd_config.d/reach.conf
 
 Port 2222
 ListenAddress 0.0.0.0
 
-# Only allow the etphonehome user
-AllowUsers etphonehome
+# Only allow the reach user
+AllowUsers reach
 
 # Enable reverse tunneling
 GatewayPorts no
@@ -75,7 +75,7 @@ PermitTunnel yes
 # Security settings
 PasswordAuthentication no
 PubkeyAuthentication yes
-AuthorizedKeysFile /home/etphonehome/.etphonehome-server/authorized_keys
+AuthorizedKeysFile /home/reach/.reach-server/authorized_keys
 
 # Keep connections alive
 ClientAliveInterval 30
@@ -90,7 +90,7 @@ echo
 cat << EOF
 {
   "mcpServers": {
-    "etphonehome": {
+    "reach": {
       "command": "$VENV_DIR/bin/python",
       "args": ["-m", "server.mcp_server"],
       "cwd": "$PROJECT_DIR"
@@ -102,7 +102,7 @@ EOF
 echo
 echo "=== Next Steps ==="
 echo "1. Configure SSH as shown above"
-echo "2. Create the 'etphonehome' user: sudo useradd -m etphonehome"
+echo "2. Create the 'reach' user: sudo useradd -m reach"
 echo "3. Add client public keys to $AUTH_KEYS"
 echo "4. Restart SSH: sudo systemctl restart sshd"
 echo "5. Configure your MCP client as shown above"

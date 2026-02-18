@@ -8,7 +8,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SESSION_STORE = Path.home() / ".etphonehome" / "ssh_sessions.json"
+DEFAULT_SESSION_STORE = Path.home() / ".reach" / "ssh_sessions.json"
 
 
 @dataclass
@@ -58,7 +58,7 @@ class SSHSessionStore:
         Initialize the session store.
 
         Args:
-            store_path: Path to store session data (default: ~/.etphonehome/ssh_sessions.json)
+            store_path: Path to store session data (default: ~/.reach/ssh_sessions.json)
         """
         self.store_path = store_path or DEFAULT_SESSION_STORE
         self._sessions: dict[str, StoredSession] = {}

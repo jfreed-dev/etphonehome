@@ -1,5 +1,5 @@
 # =============================================================================
-# ET Phone Home - Public Repository .gitignore
+# Reach - Public Repository .gitignore
 # =============================================================================
 # All secrets are stored in GitHub Secrets and injected via environment
 # variables during deployment. See docs/SECRETS_MANAGEMENT.md for details.
@@ -56,7 +56,7 @@ venv/
 !*.env.example
 
 # Build artifacts
-build/phonehome/
+build/reach/
 build/portable/work/
 build/pyinstaller/dist/
 build/pyinstaller/build/

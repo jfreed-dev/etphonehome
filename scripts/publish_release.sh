@@ -1,5 +1,5 @@
 #!/bin/bash
-# ET Phone Home - Publish release to R2
+# Reach - Publish release to R2
 # Wrapper script for publish_release_r2.py
 
 set -e
@@ -26,15 +26,15 @@ for ENV_FILE in "${PROJECT_DIR}/deploy/docker/.env" "${PROJECT_DIR}/deploy/docke
 done
 
 # Check for required R2 environment variables
-if [ -z "$ETPHONEHOME_R2_ACCOUNT_ID" ] || [ -z "$ETPHONEHOME_R2_ACCESS_KEY" ] || \
-   [ -z "$ETPHONEHOME_R2_SECRET_KEY" ] || [ -z "$ETPHONEHOME_R2_BUCKET" ]; then
+if [ -z "$REACH_R2_ACCOUNT_ID" ] || [ -z "$REACH_R2_ACCESS_KEY" ] || \
+   [ -z "$REACH_R2_SECRET_KEY" ] || [ -z "$REACH_R2_BUCKET" ]; then
     echo -e "${RED}Error: R2 environment variables not configured${NC}"
     echo ""
     echo "Required variables:"
-    echo "  ETPHONEHOME_R2_ACCOUNT_ID"
-    echo "  ETPHONEHOME_R2_ACCESS_KEY"
-    echo "  ETPHONEHOME_R2_SECRET_KEY"
-    echo "  ETPHONEHOME_R2_BUCKET"
+    echo "  REACH_R2_ACCOUNT_ID"
+    echo "  REACH_R2_ACCESS_KEY"
+    echo "  REACH_R2_SECRET_KEY"
+    echo "  REACH_R2_BUCKET"
     echo ""
     echo "Set these in deploy/docker/.env, deploy/docker/secrets/.env, or export them."
     exit 1

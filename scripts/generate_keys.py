@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate SSH keypair for ET Phone Home client."""
+"""Generate SSH keypair for Reach client."""
 
 import argparse
 import sys
@@ -13,7 +13,7 @@ from client.tunnel import generate_ssh_keypair
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate SSH keypair for ET Phone Home")
+    parser = argparse.ArgumentParser(description="Generate SSH keypair for Reach")
     parser.add_argument(
         "-o",
         "--output",

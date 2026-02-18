@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# ET Phone Home - Docker Test Suite
+# Reach - Docker Test Suite
 # =============================================================================
 # Usage:
 #   ./scripts/test_docker.sh              # Run all tests
@@ -27,8 +27,8 @@ TESTS_SKIPPED=0
 # Configuration
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DOCKER_DIR="$PROJECT_ROOT/deploy/docker"
-TEST_IMAGE_PREFIX="etphonehome-test"
-COMPOSE_PROJECT="etphonehome-test"
+TEST_IMAGE_PREFIX="reach-test"
+COMPOSE_PROJECT="reach-test"
 
 # =============================================================================
 # Helper Functions

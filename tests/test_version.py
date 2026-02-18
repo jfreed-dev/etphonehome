@@ -43,7 +43,7 @@ class TestUpdateUrl:
         """UPDATE_URL should be a string."""
         assert isinstance(UPDATE_URL, str)
 
-    @patch.dict(os.environ, {"PHONEHOME_UPDATE_URL": "https://example.com/updates.json"})
+    @patch.dict(os.environ, {"REACH_UPDATE_URL": "https://example.com/updates.json"})
     def test_update_url_from_environment(self):
         """Should read UPDATE_URL from environment."""
         # Need to reimport to pick up env var
@@ -66,7 +66,7 @@ class TestUpdateUrl:
         from shared import version
 
         # Remove the env var if it exists
-        os.environ.pop("PHONEHOME_UPDATE_URL", None)
+        os.environ.pop("REACH_UPDATE_URL", None)
 
         importlib.reload(version)
 

@@ -181,8 +181,8 @@ class TestDockerComposeConfig:
         for compose_file in compose_files:
             content = yaml.safe_load(compose_file.read_text())
             services = content.get("services", {})
-            # Check main service (etphonehome, server, or backend)
-            main_services = ["etphonehome", "server", "backend"]
+            # Check main service (reach, server, or backend)
+            main_services = ["reach", "server", "backend"]
             for service_name in main_services:
                 if service_name in services:
                     service = services[service_name]
@@ -196,7 +196,7 @@ class TestDockerComposeConfig:
         if simple_file.exists():
             content = yaml.safe_load(simple_file.read_text())
             services = content.get("services", {})
-            main_service = services.get("etphonehome", {})
+            main_service = services.get("reach", {})
             assert (
                 main_service.get("network_mode") == "host"
             ), "docker-compose.simple.yml should use network_mode: host"
@@ -232,7 +232,7 @@ class TestDockerBuild:
                 "docker",
                 "build",
                 "-t",
-                "etphonehome-test-simple:pytest",
+                "reach-test-simple:pytest",
                 "-f",
                 str(DOCKER_DIR / "Dockerfile.simple"),
                 str(PROJECT_ROOT),
@@ -249,7 +249,7 @@ class TestDockerBuild:
                 "docker",
                 "build",
                 "-t",
-                "etphonehome-test-server:pytest",
+                "reach-test-server:pytest",
                 "-f",
                 str(DOCKER_DIR / "Dockerfile.server"),
                 str(PROJECT_ROOT),
@@ -289,7 +289,7 @@ class TestContainerRuntime:
     @pytest.fixture(scope="class")
     def test_image(self):
         """Build test image if not exists."""
-        image_name = "etphonehome-test-simple:pytest"
+        image_name = "reach-test-simple:pytest"
 
         # Check if image exists
         result = subprocess.run(
@@ -317,7 +317,7 @@ class TestContainerRuntime:
 
     def test_container_starts(self, test_image):
         """Test container can start."""
-        container_name = "etphonehome-pytest-start"
+        container_name = "reach-pytest-start"
 
         # Cleanup
         subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)

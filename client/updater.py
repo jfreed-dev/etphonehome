@@ -70,7 +70,7 @@ def check_for_update(url: str = UPDATE_URL) -> dict | None:
 
     try:
         logger.debug(f"Checking for updates at {url}")
-        req = urllib.request.Request(url, headers={"User-Agent": f"phonehome/{__version__}"})
+        req = urllib.request.Request(url, headers={"User-Agent": f"reach/{__version__}"})
         with urllib.request.urlopen(req, timeout=10) as response:
             manifest = json.loads(response.read().decode("utf-8"))
 
@@ -98,11 +98,11 @@ def _get_install_dir() -> Path:
     system = platform.system().lower()
 
     if system == "linux":
-        return Path.home() / ".local" / "share" / "phonehome"
+        return Path.home() / ".local" / "share" / "reach"
     elif system == "windows":
-        return Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "phonehome"
+        return Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "reach"
     elif system == "darwin":
-        return Path.home() / "Library" / "Application Support" / "phonehome"
+        return Path.home() / "Library" / "Application Support" / "reach"
     else:
         raise RuntimeError(f"Unsupported platform: {system}")
 
@@ -137,7 +137,7 @@ def perform_update(update_info: dict) -> bool:
     # Download to temp file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as tmp:
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": f"phonehome/{__version__}"})
+            req = urllib.request.Request(url, headers={"User-Agent": f"reach/{__version__}"})
             with urllib.request.urlopen(req, timeout=300) as response:
                 shutil.copyfileobj(response, tmp)
             tmp_path = Path(tmp.name)
@@ -232,13 +232,13 @@ def _update_linux(archive_path: Path) -> bool:
             logger.error(f"Failed to extract archive: {e}")
             return False
 
-        extracted = tmp_path / "phonehome"
+        extracted = tmp_path / "reach"
         if not extracted.exists():
-            logger.error("Invalid archive: phonehome directory not found")
+            logger.error("Invalid archive: reach directory not found")
             return False
 
         # Backup current installation
-        backup_dir = install_dir.parent / f"phonehome.backup.{os.getpid()}"
+        backup_dir = install_dir.parent / f"reach.backup.{os.getpid()}"
         if install_dir.exists():
             try:
                 shutil.move(str(install_dir), str(backup_dir))
@@ -281,14 +281,14 @@ def _update_windows(archive_path: Path, version: str) -> bool:
             logger.error(f"Failed to extract archive: {e}")
             return False
 
-        extracted = tmp_path / "phonehome"
+        extracted = tmp_path / "reach"
         if not extracted.exists():
-            logger.error("Invalid archive: phonehome directory not found")
+            logger.error("Invalid archive: reach directory not found")
             return False
 
         # On Windows, we can't replace running executables directly
         # Create an update script that runs after we exit
-        update_script = install_dir.parent / "phonehome_update.cmd"
+        update_script = install_dir.parent / "reach_update.cmd"
         script_content = f"""@echo off
 timeout /t 2 /nobreak > nul
 rmdir /s /q "{install_dir}"
@@ -332,8 +332,8 @@ def auto_update() -> bool:
     Only performs updates when running from a portable installation.
     """
     # Skip if updates are disabled
-    if os.environ.get("PHONEHOME_NO_UPDATE"):
-        logger.debug("Auto-update disabled via PHONEHOME_NO_UPDATE")
+    if os.environ.get("REACH_NO_UPDATE") or os.environ.get("PHONEHOME_NO_UPDATE"):
+        logger.debug("Auto-update disabled via REACH_NO_UPDATE")
         return False
 
     # Skip if not running from portable installation

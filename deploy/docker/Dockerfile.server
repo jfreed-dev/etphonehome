@@ -1,4 +1,4 @@
-# ET Phone Home - Server Dockerfile
+# Reach - Server Dockerfile
 # Multi-stage build for minimal image size
 
 FROM python:3.12-slim AS builder
@@ -34,30 +34,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user with specific UID for consistency
-RUN groupadd -r -g 1000 etphonehome && \
-    useradd -r -u 1000 -g etphonehome -m -s /bin/bash etphonehome
+RUN groupadd -r -g 1000 reach && \
+    useradd -r -u 1000 -g reach -m -s /bin/bash reach
 
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
-COPY --chown=etphonehome:etphonehome client/ client/
-COPY --chown=etphonehome:etphonehome server/ server/
-COPY --chown=etphonehome:etphonehome shared/ shared/
-COPY --chown=etphonehome:etphonehome pyproject.toml .
+COPY --chown=reach:reach client/ client/
+COPY --chown=reach:reach server/ server/
+COPY --chown=reach:reach shared/ shared/
+COPY --chown=reach:reach pyproject.toml .
 
 # Create directories for data and logs
-RUN mkdir -p /var/lib/etphonehome /var/log/etphonehome \
-    && chown -R etphonehome:etphonehome /var/lib/etphonehome /var/log/etphonehome
+RUN mkdir -p /var/lib/reach /var/log/reach \
+    && chown -R reach:reach /var/lib/reach /var/log/reach
 
 # Environment configuration
-ENV ETPHONEHOME_LOG_FILE=/var/log/etphonehome/server.log
-ENV ETPHONEHOME_LOG_LEVEL=INFO
+ENV REACH_LOG_FILE=/var/log/reach/server.log
+ENV REACH_LOG_LEVEL=INFO
 ENV PYTHONUNBUFFERED=1
 
 # Switch to non-root user
-USER etphonehome
+USER reach
 
 # Expose ports
 EXPOSE 8765 2222
@@ -67,4 +67,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8765/health || exit 1
 
 # Default command: HTTP mode with SSH enabled
-CMD ["etphonehome-server", "--transport", "http", "--host", "0.0.0.0", "--port", "8765"]
+CMD ["reach-server", "--transport", "http", "--host", "0.0.0.0", "--port", "8765"]

@@ -3,14 +3,14 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "etphonehome"
+name = "reach"
 version = "0.1.13"
 description = "Remote access system for Claude CLI via reverse SSH tunnels"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "ET Phone Home Contributors"}
+    {name = "Reach Contributors"}
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -49,8 +49,8 @@ dev = [
 ]
 
 [project.scripts]
-phonehome = "client.phonehome:main"
-etphonehome-server = "server.mcp_server:main"
+reach = "client.phonehome:main"
+reach-server = "server.mcp_server:main"
 
 [tool.setuptools.packages.find]
 include = ["client*", "server*", "shared*"]

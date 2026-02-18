@@ -1,11 +1,11 @@
-# ET Phone Home Client Deployment Playbook
+# Reach Client Deployment Playbook
 #
 # Usage:
 #   ansible-playbook -i inventory.yml deploy-client.yml
 #
 ---
-- name: Deploy ET Phone Home Client
-  hosts: etphonehome_clients
+- name: Deploy Reach Client
+  hosts: reach_clients
   gather_facts: true
 
   pre_tasks:
@@ -19,22 +19,22 @@
     - name: Verify server host is configured
       ansible.builtin.assert:
         that:
-          - etphonehome_server_host is defined
-          - etphonehome_server_host | length > 0
-        fail_msg: "etphonehome_server_host must be set in inventory"
-        success_msg: "Server host: {{ etphonehome_server_host }}"
+          - reach_server_host is defined
+          - reach_server_host | length > 0
+        fail_msg: "reach_server_host must be set in inventory"
+        success_msg: "Server host: {{ reach_server_host }}"
 
   roles:
-    - role: etphonehome-client
+    - role: reach-client
 
   post_tasks:
     - name: Display client status
       ansible.builtin.debug:
         msg: |
-          ET Phone Home Client deployed on {{ inventory_hostname }}!
+          Reach Client deployed on {{ inventory_hostname }}!
 
-          Display Name: {{ etphonehome_display_name | default('(not set)') }}
-          Purpose: {{ etphonehome_purpose | default('(not set)') }}
-          Server: {{ etphonehome_server_host }}:{{ etphonehome_server_port }}
+          Display Name: {{ reach_display_name | default('(not set)') }}
+          Purpose: {{ reach_purpose | default('(not set)') }}
+          Server: {{ reach_server_host }}:{{ reach_server_port }}
 
           IMPORTANT: Add the public key to the server's authorized_keys file!

@@ -1,5 +1,5 @@
 #!/bin/bash
-# ET Phone Home - Security Check Script
+# Reach - Security Check Script
 # Runs security scanning tools: bandit, pip-audit, detect-secrets
 
 # Don't use set -e as tools may return non-zero for non-critical issues
@@ -17,7 +17,7 @@ NC='\033[0m'
 
 ERRORS=0
 
-echo "=== ET Phone Home Security Checks ==="
+echo "=== Reach Security Checks ==="
 echo
 
 # Check for required tools

@@ -1,4 +1,4 @@
-# ET Phone Home Server - Simplified Single Container
+# Reach Server - Simplified Single Container
 # Multi-stage build for minimal image size
 
 # ============================================================================
@@ -57,8 +57,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean
 
 # Create non-root user
-RUN groupadd -g 1000 etphonehome \
-    && useradd -u 1000 -g etphonehome -m -s /bin/bash etphonehome
+RUN groupadd -g 1000 reach \
+    && useradd -u 1000 -g reach -m -s /bin/bash reach
 
 # Copy venv from builder and make world-readable
 COPY --from=builder /opt/venv /opt/venv
@@ -75,22 +75,22 @@ COPY --from=builder /build/pyproject.toml ./
 RUN chmod -R a+rX /app
 
 # Create data and log directories with open permissions for volume mounts
-RUN mkdir -p /data /var/log/etphonehome \
-    && chmod 777 /data /var/log/etphonehome
+RUN mkdir -p /data /var/log/reach \
+    && chmod 777 /data /var/log/reach
 
 # Environment defaults
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    ETPHONEHOME_HOST=0.0.0.0 \
-    ETPHONEHOME_PORT=8765 \
-    ETPHONEHOME_LOG_LEVEL=INFO \
-    ETPHONEHOME_DATA_DIR=/data
+    REACH_HOST=0.0.0.0 \
+    REACH_PORT=8765 \
+    REACH_LOG_LEVEL=INFO \
+    REACH_DATA_DIR=/data
 
 # Expose HTTP/SSE/WebSocket port
 EXPOSE 8765
 
 # Run as non-root user
-USER etphonehome
+USER reach
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

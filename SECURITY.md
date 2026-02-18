@@ -44,14 +44,14 @@ We take security seriously. If you discover a security vulnerability, please rep
 
 ### Client Security
 
-- Store SSH keys securely (`~/.etphonehome/id_ed25519`)
+- Store SSH keys securely (`~/.reach/id_ed25519`)
 - Use `allowed_paths` to restrict file system access
 - Run the client as a non-root user when possible
 - Keep the client updated to receive security patches
 
 ### Server Security
 
-- Use a dedicated `etphonehome` user for client connections
+- Use a dedicated `etreach` user for client connections
 - Configure SSH to only allow key-based authentication
 - Use port 443 (HTTPS port) to pass through firewalls securely
 - Enable API key authentication for HTTP transport mode

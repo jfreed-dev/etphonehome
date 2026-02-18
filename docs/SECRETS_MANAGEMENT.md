@@ -1,4 +1,4 @@
-# ET Phone Home - Secrets Management Guide
+# Reach - Secrets Management Guide
 
 Comprehensive guide for managing R2 credentials with GitHub Secrets and automatic rotation.
 
@@ -19,7 +19,7 @@ Comprehensive guide for managing R2 credentials with GitHub Secrets and automati
 
 ## Overview
 
-ET Phone Home uses GitHub Secrets for secure storage of R2 API credentials with support for automatic rotation. This system provides:
+Reach uses GitHub Secrets for secure storage of R2 API credentials with support for automatic rotation. This system provides:
 
 - **Secure storage**: Credentials stored in GitHub Secrets (encrypted at rest)
 - **Automatic rotation**: Keys rotate on schedule (default: 90 days)
@@ -53,7 +53,7 @@ ET Phone Home uses GitHub Secrets for secure storage of R2 API credentials with 
        │ Load on startup              │ Deploy
        ▼                              ▼
 ┌─────────────────────────────────────────────────────┐
-│ ET Phone Home Server                                 │
+│ Reach Server                                 │
 │ (R2 credentials available as environment variables) │
 └─────────────────────────────────────────────────────┘
 ```
@@ -65,7 +65,7 @@ ET Phone Home uses GitHub Secrets for secure storage of R2 API credentials with 
 Run the interactive setup wizard to configure everything:
 
 ```bash
-cd /home/etphonehome/etphonehome
+cd /home/reach/reach
 ./scripts/setup_r2_secrets.sh
 ```
 
@@ -102,21 +102,21 @@ python3 -m shared.secrets_manager store-token "ghp_your_token_here"
 #### 3. Store R2 Credentials in GitHub
 
 ```bash
-export ETPHONEHOME_GITHUB_REPO="owner/repo"
+export REACH_GITHUB_REPO="owner/repo"
 
 python3 -m shared.secrets_manager store-r2 \
-  --repo "$ETPHONEHOME_GITHUB_REPO" \
+  --repo "$REACH_GITHUB_REPO" \
   --account-id "your-account-id" \
   --access-key "your-access-key" \
   --secret-key "your-secret-key" \
-  --bucket "etphonehome-transfers"
+  --bucket "reach-transfers"
 ```
 
 #### 4. Perform Initial Rotation
 
 ```bash
-export ETPHONEHOME_CLOUDFLARE_API_TOKEN="your-cf-api-token"
-export ETPHONEHOME_R2_ACCOUNT_ID="your-account-id"
+export REACH_CLOUDFLARE_API_TOKEN="your-cf-api-token"
+export REACH_R2_ACCOUNT_ID="your-account-id"
 
 python3 -m shared.r2_rotation rotate --old-key "initial-access-key"
 ```
@@ -130,8 +130,8 @@ The server can automatically load secrets from multiple sources on startup.
 ### Secret Loading Priority
 
 1. **Current environment variables** (highest priority)
-2. **Secret cache file** (`~/.etphonehome/secret_cache.env`)
-3. **Server env file** (`/etc/etphonehome/server.env` or `~/.etphonehome/server.env`)
+2. **Secret cache file** (`~/.reach/secret_cache.env`)
+3. **Server env file** (`/etc/reach/server.env` or `~/.reach/server.env`)
 
 ### Enable Automatic Secret Sync
 
@@ -139,13 +139,13 @@ Add to your environment or `server.env`:
 
 ```bash
 # Enable secret sync on server startup
-ETPHONEHOME_SECRET_SYNC_ENABLED=true
+REACH_SECRET_SYNC_ENABLED=true
 
 # Sync interval in seconds (default: 3600 = 1 hour)
-ETPHONEHOME_SECRET_SYNC_INTERVAL=3600
+REACH_SECRET_SYNC_INTERVAL=3600
 
 # GitHub repository (for rotation metadata)
-ETPHONEHOME_GITHUB_REPO="owner/repo"
+REACH_GITHUB_REPO="owner/repo"
 ```
 
 ### How It Works
@@ -153,7 +153,7 @@ ETPHONEHOME_GITHUB_REPO="owner/repo"
 **On Server Startup:**
 1. Secret sync loads credentials from available sources
 2. Injects them into the process environment
-3. Caches them to `~/.etphonehome/secret_cache.env`
+3. Caches them to `~/.reach/secret_cache.env`
 4. Server uses credentials from environment
 
 **During Operation:**
@@ -221,10 +221,10 @@ Options:
 - `force_rotation: true` - Rotate even if not due
 
 **Required Secrets:**
-- `ETPHONEHOME_GITHUB_TOKEN` - GitHub PAT for updating secrets
-- `ETPHONEHOME_CLOUDFLARE_API_TOKEN` - Cloudflare API token
-- `ETPHONEHOME_R2_ACCOUNT_ID` - Cloudflare account ID
-- `ETPHONEHOME_R2_ACCESS_KEY` - Current R2 access key (for deletion)
+- `REACH_GITHUB_TOKEN` - GitHub PAT for updating secrets
+- `REACH_CLOUDFLARE_API_TOKEN` - Cloudflare API token
+- `REACH_R2_ACCOUNT_ID` - Cloudflare account ID
+- `REACH_R2_ACCESS_KEY` - Current R2 access key (for deletion)
 
 ### Cron-based Rotation (Alternative)
 
@@ -235,7 +235,7 @@ Add to crontab for local automation:
 crontab -e
 
 # Add rotation job (runs 3 AM on 1st of month, every 3 months)
-0 3 1 */3 * cd /path/to/etphonehome && source ~/.etphonehome/r2_config.env && python3 -m shared.r2_rotation auto --days 90
+0 3 1 */3 * cd /path/to/etreach reach && source ~/.reach/r2_config.env && python3 -m shared.r2_rotation auto --days 90
 ```
 
 ---
@@ -258,7 +258,7 @@ The `.github/workflows/deploy-server.yml` workflow:
 wget https://github.com/owner/repo/actions/artifacts/...
 
 # Extract
-tar -xzf etphonehome-server.tar.gz
+tar -xzf reach-server.tar.gz
 
 # Source environment (includes R2 secrets)
 source .env
@@ -273,12 +273,12 @@ Configure these in GitHub repository settings (Settings → Secrets and variable
 
 | Secret Name | Description | How to Get |
 |-------------|-------------|------------|
-| `ETPHONEHOME_GITHUB_TOKEN` | GitHub PAT for secret management | GitHub Settings → Tokens |
-| `ETPHONEHOME_CLOUDFLARE_API_TOKEN` | Cloudflare API token | Cloudflare Dashboard → API Tokens |
-| `ETPHONEHOME_R2_ACCOUNT_ID` | Cloudflare account ID | R2 dashboard URL |
-| `ETPHONEHOME_R2_ACCESS_KEY` | R2 access key | Created during setup |
-| `ETPHONEHOME_R2_SECRET_KEY` | R2 secret key | Created during setup |
-| `ETPHONEHOME_R2_BUCKET` | R2 bucket name | Your bucket name |
+| `REACH_GITHUB_TOKEN` | GitHub PAT for secret management | GitHub Settings → Tokens |
+| `REACH_CLOUDFLARE_API_TOKEN` | Cloudflare API token | Cloudflare Dashboard → API Tokens |
+| `REACH_R2_ACCOUNT_ID` | Cloudflare account ID | R2 dashboard URL |
+| `REACH_R2_ACCESS_KEY` | R2 access key | Created during setup |
+| `REACH_R2_SECRET_KEY` | R2 secret key | Created during setup |
+| `REACH_R2_BUCKET` | R2 bucket name | Your bucket name |
 
 ---
 
@@ -299,7 +299,7 @@ Manually rotate R2 API keys.
   "rotated_at": "2026-01-09T12:00:00Z",
   "old_access_key_id": "old-key-id",
   "old_token_deleted": true,
-  "token_name": "etphonehome-r2-20260109_120000"
+  "token_name": "reach-r2-20260109_120000"
 }
 ```
 
@@ -314,7 +314,7 @@ List all active R2 API tokens.
     {
       "access_key_id": "key-id",
       "created_on": "2026-01-09T12:00:00Z",
-      "name": "etphonehome-r2-20260109_120000"
+      "name": "reach-r2-20260109_120000"
     }
   ],
   "count": 1
@@ -437,11 +437,11 @@ python3 -m shared.r2_rotation auto --days 90 [--old-key KEY]
 ```bash
 # Verify token works
 curl -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-  -H "Authorization: Bearer $ETPHONEHOME_CLOUDFLARE_API_TOKEN"
+  -H "Authorization: Bearer $REACH_CLOUDFLARE_API_TOKEN"
 
 # Create new token if needed
 # Update environment variable
-export ETPHONEHOME_CLOUDFLARE_API_TOKEN="new-token"
+export REACH_CLOUDFLARE_API_TOKEN="new-token"
 ```
 
 ### GitHub Secrets Not Found
@@ -460,10 +460,10 @@ export ETPHONEHOME_CLOUDFLARE_API_TOKEN="new-token"
 **Solution:**
 ```bash
 # Check sync is enabled
-grep ETPHONEHOME_SECRET_SYNC_ENABLED /etc/etphonehome/server.env
+grep REACH_SECRET_SYNC_ENABLED /etc/reach/server.env
 
 # Check cache file exists
-ls -la ~/.etphonehome/secret_cache.env
+ls -la ~/.reach/secret_cache.env
 
 # Manually test secret loading
 python3 -c "
@@ -475,7 +475,7 @@ for key in secrets:
 "
 
 # Check server logs
-tail -f /var/log/etphonehome/server.log | grep -i secret
+tail -f /var/log/reach/server.log | grep -i secret
 ```
 
 ### R2 Credentials Invalid After Rotation
@@ -485,7 +485,7 @@ tail -f /var/log/etphonehome/server.log | grep -i secret
 **Solution:**
 ```bash
 # Option 1: Restart server to pick up new credentials
-systemctl restart etphonehome-server
+systemctl restart reach-server
 
 # Option 2: Force secret sync
 python3 -c "
@@ -502,13 +502,13 @@ asyncio.run(sync())
 "
 
 # Option 3: Manually update cache
-cat > ~/.etphonehome/secret_cache.env << EOF
-ETPHONEHOME_R2_ACCOUNT_ID=your-account-id
-ETPHONEHOME_R2_ACCESS_KEY=new-access-key
-ETPHONEHOME_R2_SECRET_KEY=new-secret-key
-ETPHONEHOME_R2_BUCKET=etphonehome-transfers
+cat > ~/.reach/secret_cache.env << EOF
+REACH_R2_ACCOUNT_ID=your-account-id
+REACH_R2_ACCESS_KEY=new-access-key
+REACH_R2_SECRET_KEY=new-secret-key
+REACH_R2_BUCKET=reach-transfers
 EOF
-chmod 600 ~/.etphonehome/secret_cache.env
+chmod 600 ~/.reach/secret_cache.env
 ```
 
 ### Workflow Dispatch Not Available

@@ -1,6 +1,6 @@
 # GitHub Repository Recommendations
 
-This document lists recommended improvements to the GitHub repo setup for ET Phone Home. It assumes the repo is public and there is a single maintainer. Items are ordered by importance.
+This document lists recommended improvements to the GitHub repo setup for Reach. It assumes the repo is public and there is a single maintainer. Items are ordered by importance.
 
 ## High Priority
 

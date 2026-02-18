@@ -2,11 +2,11 @@
 
 import json
 import logging
-import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from shared.compat import env as _env
 from shared.protocol import ClientIdentity
 
 logger = logging.getLogger(__name__)
@@ -16,13 +16,13 @@ def _get_default_store_path() -> Path:
     """
     Determine the default store path.
 
-    Checks ETPHONEHOME_DATA_DIR environment variable first (for Docker),
-    falls back to ~/.etphonehome-server/clients.json.
+    Checks REACH_DATA_DIR environment variable first (for Docker),
+    falls back to ~/.reach-server/clients.json.
     """
-    data_dir = os.environ.get("ETPHONEHOME_DATA_DIR")
+    data_dir = _env("REACH_DATA_DIR", "ETPHONEHOME_DATA_DIR")
     if data_dir:
         return Path(data_dir) / "clients.json"
-    return Path.home() / ".etphonehome-server" / "clients.json"
+    return Path.home() / ".reach-server" / "clients.json"
 
 
 DEFAULT_STORE_PATH = _get_default_store_path()

@@ -1,4 +1,4 @@
-"""Shared protocol definitions for ET Phone Home."""
+"""Shared protocol definitions for Reach."""
 
 from .protocol import (
     METHOD_HEARTBEAT,

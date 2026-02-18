@@ -1,4 +1,4 @@
-# ET Phone Home Server Handlers
+# Reach Server Handlers
 ---
 - name: Reload systemd
   become: true
@@ -11,9 +11,9 @@
     name: ssh
     state: restarted
 
-- name: Restart etphonehome-server
+- name: Restart reach-server
   become: true
   ansible.builtin.systemd:
-    name: etphonehome-mcp
+    name: reach-mcp
     state: restarted
-  when: etphonehome_start_service | bool
+  when: reach_start_service | bool

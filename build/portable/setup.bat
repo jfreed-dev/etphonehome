@@ -1,14 +1,14 @@
 @echo off
-REM ET Phone Home - First-time Setup (Windows)
+REM Reach - First-time Setup (Windows)
 REM Generates SSH keys and creates initial configuration
 
 setlocal enabledelayedexpansion
 
 set "SCRIPT_DIR=%~dp0"
 set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
-set "CONFIG_DIR=%USERPROFILE%\.etphonehome"
+set "CONFIG_DIR=%USERPROFILE%\.reach"
 
-echo === ET Phone Home Setup ===
+echo === Reach Setup ===
 echo.
 
 REM Create config directory
@@ -46,7 +46,7 @@ echo 2. Add your public key to the server's authorized_keys
 echo 3. Run: run.bat
 echo.
 echo Quick connect (bypassing config file):
-echo   run.bat -s YOUR_SERVER -p 2222 -u etphonehome
+echo   run.bat -s YOUR_SERVER -p 2222 -u reach
 echo.
 
 REM Show public key if it exists

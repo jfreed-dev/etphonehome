@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ET Phone Home - Client Application
+Reach - Client Application
 
 Creates a reverse SSH tunnel to the server, allowing remote access to this machine.
 """
@@ -24,7 +24,7 @@ from client.tunnel import ReverseTunnel, generate_ssh_keypair
 from client.updater import auto_update, get_current_version
 from shared.logging_config import setup_logging as configure_logging
 
-logger = logging.getLogger("phonehome")
+logger = logging.getLogger("reach")
 
 
 def _wait_for_network(host, port, log, is_shutdown, max_wait=60):
@@ -51,9 +51,7 @@ def _wait_for_network(host, port, log, is_shutdown, max_wait=60):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="ET Phone Home - Connect to remote Claude CLI instance"
-    )
+    parser = argparse.ArgumentParser(description="Reach - Connect to remote Claude CLI instance")
     parser.add_argument("-c", "--config", type=Path, help="Path to config file")
     parser.add_argument("-s", "--server", help="Server host (overrides config)")
     parser.add_argument("-p", "--port", type=int, help="Server port (overrides config)")
@@ -135,9 +133,9 @@ def main():
             print(f"  Tags: {', '.join(config.tags)}")
         print("\nNext steps:")
         print("1. Edit the config file with your server details")
-        print("2. Run: phonehome --generate-key")
+        print("2. Run: reach --generate-key")
         print("3. Add the public key to your server")
-        print("4. Run: phonehome")
+        print("4. Run: reach")
         return 0
 
     # Handle --show-uuid
@@ -150,14 +148,14 @@ def main():
             if config.tags:
                 print(f"Tags: {', '.join(config.tags)}")
         else:
-            print("No UUID assigned. Run 'phonehome --init' first.")
+            print("No UUID assigned. Run 'reach --init' first.")
         return 0
 
     # Handle --list-clients
     if args.list_clients:
         config = Config.load(args.config)
         if not config.server_host:
-            print("Error: No server configured. Run 'phonehome --init' first.")
+            print("Error: No server configured. Run 'reach --init' first.")
             return 1
 
         key_path = Path(config.key_file)
@@ -279,14 +277,14 @@ def main():
 
     # Configure logging with file rotation
     configure_logging(
-        name="phonehome",
+        name="reach",
         level=config.log_level,
         log_file=config.log_file,
         max_bytes=config.log_max_bytes,
         backup_count=config.log_backup_count,
     )
 
-    logger.info(f"ET Phone Home v{get_current_version()}")
+    logger.info(f"Reach v{get_current_version()}")
 
     # Check for updates
     if auto_update():
@@ -297,7 +295,7 @@ def main():
     key_path = Path(config.key_file)
     if not key_path.exists():
         logger.error(f"SSH key not found: {key_path}")
-        logger.error("Run 'phonehome --generate-key' to create one")
+        logger.error("Run 'reach --generate-key' to create one")
         return 1
 
     # Create agent

@@ -1,4 +1,4 @@
-# ET Phone Home - Build & Release Workflow
+# Reach - Build & Release Workflow
 # Builds portable packages for Linux and Windows
 #
 # NOTE: This is a PRIVATE repository. Releases are only accessible to collaborators.
@@ -70,15 +70,15 @@ jobs:
 
       - name: Prepare test fixtures
         run: |
-          mkdir -p /home/etphonehome/appdata/phonehome/config
-          printf '%s\n' "# Local CI test env" > /home/etphonehome/appdata/phonehome/config/server.env
+          mkdir -p /home/reach/appdata/reach/config
+          printf '%s\n' "# Local CI test env" > /home/reach/appdata/reach/config/server.env
           mkdir -p server/static
           cat > server/static/index.html <<'EOF'
           <!doctype html>
           <html lang="en">
             <head>
               <meta charset="utf-8" />
-              <title>ET Phone Home</title>
+              <title>Reach</title>
             </head>
             <body>
               <div id="sveltekit">_app/immutable</div>
@@ -89,16 +89,16 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v --tb=short
         env:
-          ETPHONEHOME_R2_ACCOUNT_ID: ${{ secrets.ETPHONEHOME_R2_ACCOUNT_ID }}
-          ETPHONEHOME_R2_ACCESS_KEY: ${{ secrets.ETPHONEHOME_R2_ACCESS_KEY }}
-          ETPHONEHOME_R2_SECRET_KEY: ${{ secrets.ETPHONEHOME_R2_SECRET_KEY }}
-          ETPHONEHOME_R2_BUCKET: ${{ secrets.ETPHONEHOME_R2_BUCKET }}
-          ETPHONEHOME_R2_REGION: ${{ secrets.ETPHONEHOME_R2_REGION }}
+          REACH_R2_ACCOUNT_ID: ${{ secrets.REACH_R2_ACCOUNT_ID }}
+          REACH_R2_ACCESS_KEY: ${{ secrets.REACH_R2_ACCESS_KEY }}
+          REACH_R2_SECRET_KEY: ${{ secrets.REACH_R2_SECRET_KEY }}
+          REACH_R2_BUCKET: ${{ secrets.REACH_R2_BUCKET }}
+          REACH_R2_REGION: ${{ secrets.REACH_R2_REGION }}
           CF_DNS_API_TOKEN: ${{ secrets.CF_DNS_API_TOKEN }}
-          ETPHONEHOME_API_KEY: ${{ secrets.ETPHONEHOME_API_KEY }}
-          ETPHONEHOME_R2_API_TOKEN: ${{ secrets.ETPHONEHOME_R2_API_TOKEN }}
+          REACH_API_KEY: ${{ secrets.REACH_API_KEY }}
+          REACH_R2_API_TOKEN: ${{ secrets.REACH_R2_API_TOKEN }}
           TRAEFIK_DASHBOARD_AUTH: ${{ secrets.TRAEFIK_DASHBOARD_AUTH }}
-          ETPHONEHOME_GH_TOKEN: ${{ secrets.ETPHONEHOME_GH_TOKEN }}
+          REACH_GH_TOKEN: ${{ secrets.REACH_GH_TOKEN }}
           HOSTINGER_API_KEY: ${{ secrets.HOSTINGER_API_KEY }}
           HOSTINGER_SERVER_IP: ${{ secrets.HOSTINGER_SERVER_IP }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -195,10 +195,10 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            artifact: phonehome-linux
+            artifact: reach-linux
             ext: ''
           - os: windows-2022
-            artifact: phonehome-windows
+            artifact: reach-windows
             ext: '.exe'
 
     steps:
@@ -217,15 +217,15 @@ jobs:
           pip install -e .
 
       - name: Build with PyInstaller
-        run: pyinstaller --clean --noconfirm build/pyinstaller/phonehome.spec
+        run: pyinstaller --clean --noconfirm build/pyinstaller/reach.spec
 
       - name: Rename artifact (Linux)
         if: runner.os == 'Linux'
-        run: mv dist/phonehome dist/${{ matrix.artifact }}
+        run: mv dist/reach dist/${{ matrix.artifact }}
 
       - name: Rename artifact (Windows)
         if: runner.os == 'Windows'
-        run: mv dist/phonehome.exe dist/${{ matrix.artifact }}${{ matrix.ext }}
+        run: mv dist/reach.exe dist/${{ matrix.artifact }}${{ matrix.ext }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -245,17 +245,17 @@ jobs:
             name: linux-x86_64
             arch: x86_64
             script: build/portable/package_linux.sh
-            artifact: phonehome-linux-x86_64.tar.gz
+            artifact: reach-linux-x86_64.tar.gz
           - os: ubuntu-22.04
             name: linux-aarch64
             arch: aarch64
             script: build/portable/package_linux.sh
-            artifact: phonehome-linux-aarch64.tar.gz
+            artifact: reach-linux-aarch64.tar.gz
             use_qemu: true
           - os: windows-2022
             name: windows-amd64
             script: build/portable/package_windows.ps1
-            artifact: phonehome-windows-amd64.zip
+            artifact: reach-windows-amd64.zip
 
     steps:
       - name: Checkout
@@ -320,38 +320,38 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           files: |
-            artifacts/phonehome-linux/phonehome-linux
-            artifacts/phonehome-windows/phonehome-windows.exe
-            artifacts/portable-linux-x86_64/phonehome-linux-x86_64.tar.gz
-            artifacts/portable-linux-aarch64/phonehome-linux-aarch64.tar.gz
-            artifacts/portable-windows-amd64/phonehome-windows-amd64.zip
+            artifacts/reach-linux/reach-linux
+            artifacts/reach-windows/reach-windows.exe
+            artifacts/portable-linux-x86_64/reach-linux-x86_64.tar.gz
+            artifacts/portable-linux-aarch64/reach-linux-aarch64.tar.gz
+            artifacts/portable-windows-amd64/reach-windows-amd64.zip
           body: |
             ## Downloads
 
             ### Single Executable (PyInstaller)
             | Platform | File |
             |----------|------|
-            | Linux x64 | `phonehome-linux` |
-            | Windows x64 | `phonehome-windows.exe` |
+            | Linux x64 | `reach-linux` |
+            | Windows x64 | `reach-windows.exe` |
 
             ### Portable Archive (Bundled Python)
             | Platform | File |
             |----------|------|
-            | Linux x64 | `phonehome-linux-x86_64.tar.gz` |
-            | Linux ARM64 | `phonehome-linux-aarch64.tar.gz` |
-            | Windows x64 | `phonehome-windows-amd64.zip` |
+            | Linux x64 | `reach-linux-x86_64.tar.gz` |
+            | Linux ARM64 | `reach-linux-aarch64.tar.gz` |
+            | Windows x64 | `reach-windows-amd64.zip` |
 
             ## Quick Start
 
             ```bash
             # Linux (portable)
-            tar xzf phonehome-linux-x86_64.tar.gz
-            cd phonehome
+            tar xzf reach-linux-x86_64.tar.gz
+            cd reach
             ./install.sh
 
             # Windows (portable)
-            Expand-Archive phonehome-windows-amd64.zip
-            cd phonehome
+            Expand-Archive reach-windows-amd64.zip
+            cd reach
             .\install.ps1
             ```
 
