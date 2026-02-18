@@ -179,3 +179,4 @@ REACH_*  →  ETPHONEHOME_*  →  PHONEHOME_*  (checked in order)
 ```
 
 This allows old config files and environment variables to continue working during migration.
+The canonical prefix is `REACH_*`. Legacy prefixes will be removed in a future release.

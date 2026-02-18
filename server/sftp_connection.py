@@ -59,7 +59,7 @@ class SFTPConnection:
                 self.ssh_client.connect,
                 hostname=self.host,
                 port=self.port,
-                username="phonehome",  # Fixed username for tunnel connections
+                username="reach",  # Fixed username for tunnel connections
                 look_for_keys=False,
                 allow_agent=False,
                 timeout=self.timeout,
