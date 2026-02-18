@@ -449,6 +449,7 @@ log_level: INFO
 | [Deployment Guide](deploy/README.md) | Ansible, Docker, Terraform automation |
 | [Hostinger Setup](docs/hostinger-server-setup.md) | VPS deployment reference |
 | [Download Server](docs/download-server-setup.md) | Client distribution setup |
+| [Python Dependencies](docs/python-dependencies.md) | Python versions, deps, venv setup, build methods |
 | [Roadmap](docs/roadmap.md) | Planned features |
 
 ### Optional Skills (Private)
