@@ -67,7 +67,7 @@ class ReleaseManager:
         Args:
             version: Version string (e.g., "0.1.10")
             artifacts: Dict mapping platform keys to file paths
-                       e.g., {"linux-x86_64": Path("dist/phonehome-linux-x86_64.tar.gz")}
+                       e.g., {"linux-x86_64": Path("dist/reach-linux-x86_64.tar.gz")}
             changelog: Optional changelog text
 
         Returns:

@@ -1,8 +1,7 @@
-"""Async webhook dispatch system for ET Phone Home events."""
+"""Async webhook dispatch system for Reach events."""
 
 import asyncio
 import logging
-import os
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -10,15 +9,17 @@ from enum import Enum
 
 import httpx
 
+from shared.compat import env as _env
+
 logger = logging.getLogger(__name__)
 
 # Type alias for broadcast callback
 BroadcastCallback = Callable[[dict], asyncio.Task]
 
 # Environment variable configuration
-GLOBAL_WEBHOOK_URL = os.environ.get("ETPHONEHOME_WEBHOOK_URL", "")
-WEBHOOK_TIMEOUT = float(os.environ.get("ETPHONEHOME_WEBHOOK_TIMEOUT", "10.0"))
-WEBHOOK_MAX_RETRIES = int(os.environ.get("ETPHONEHOME_WEBHOOK_MAX_RETRIES", "3"))
+GLOBAL_WEBHOOK_URL = _env("REACH_WEBHOOK_URL", "ETPHONEHOME_WEBHOOK_URL", "")
+WEBHOOK_TIMEOUT = float(_env("REACH_WEBHOOK_TIMEOUT", "ETPHONEHOME_WEBHOOK_TIMEOUT", "10.0"))
+WEBHOOK_MAX_RETRIES = int(_env("REACH_WEBHOOK_MAX_RETRIES", "ETPHONEHOME_WEBHOOK_MAX_RETRIES", "3"))
 
 
 class EventType(str, Enum):

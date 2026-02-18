@@ -18,7 +18,7 @@
     <circle cx="120" cy="30" r="7" fill="#FFB454"/>
     <path d="M90 52 C104 34 136 34 150 52" fill="none" stroke="#2DE2E6" stroke-width="4" stroke-linecap="round"/>
   </g>
-  <text x="320" y="150" font-family="Space Grotesk, Futura, 'Avenir Next', sans-serif" font-size="72" fill="#E6F7FF" letter-spacing="1">ET Phone Home</text>
+  <text x="320" y="150" font-family="Space Grotesk, Futura, 'Avenir Next', sans-serif" font-size="72" fill="#E6F7FF" letter-spacing="1">Reach</text>
   <text x="320" y="210" font-family="'Fira Mono', 'SFMono-Regular', monospace" font-size="26" fill="#7CFF6B">Reverse SSH + MCP Remote Access</text>
   <path d="M320 240 H1040" stroke="#2DE2E6" stroke-width="4" opacity="0.6"/>
 </svg>

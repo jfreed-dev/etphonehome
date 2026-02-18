@@ -44,6 +44,6 @@
   <path d="M440 380 C620 520 760 520 920 520" fill="none" stroke="url(#pulse)" stroke-width="6" stroke-linecap="round"/>
   <circle cx="680" cy="260" r="6" fill="#FFB454"/>
   <circle cx="680" cy="560" r="6" fill="#FFB454"/>
-  <text x="120" y="120" font-family="Space Grotesk, Futura, sans-serif" font-size="52" fill="#E6F7FF">ET Phone Home</text>
+  <text x="120" y="120" font-family="Space Grotesk, Futura, sans-serif" font-size="52" fill="#E6F7FF">Reach</text>
   <text x="120" y="170" font-family="'Fira Mono', monospace" font-size="20" fill="#2DE2E6">Reverse SSH tunnels for Claude CLI remote support</text>
 </svg>

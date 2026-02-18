@@ -9,8 +9,8 @@ from server.client_connection import ClientConnection
 from server.client_registry import ClientRegistry
 from server.webhooks import EventType, get_dispatcher
 
-# Use the etphonehome logger to ensure logs are captured
-logger = logging.getLogger("etphonehome.health_monitor")
+# Use the reach logger to ensure logs are captured
+logger = logging.getLogger("reach.health_monitor")
 
 
 @dataclass

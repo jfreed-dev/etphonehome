@@ -1,15 +1,15 @@
 #!/bin/bash
-# Quick run ET Phone Home server container (without compose)
+# Quick run Reach server container (without compose)
 #
 # Usage:
 #   ./run-simple.sh                    # Run with defaults
-#   ETPHONEHOME_API_KEY=xxx ./run-simple.sh  # Run with API key
+#   REACH_API_KEY=xxx ./run-simple.sh  # Run with API key
 #
 set -e
 
-CONTAINER_NAME="etphonehome-server"
-IMAGE_NAME="etphonehome-server:latest"
-PORT="${ETPHONEHOME_PORT:-8765}"
+CONTAINER_NAME="reach-server"
+IMAGE_NAME="reach-server:latest"
+PORT="${REACH_PORT:-8765}"
 
 # Check if container already exists
 if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -31,11 +31,11 @@ echo ""
 docker run -d \
     --name "${CONTAINER_NAME}" \
     -p "${PORT}:8765" \
-    -v etphonehome-data:/data \
-    -v etphonehome-logs:/var/log/etphonehome \
-    -e "ETPHONEHOME_API_KEY=${ETPHONEHOME_API_KEY:-}" \
-    -e "ETPHONEHOME_LOG_LEVEL=${ETPHONEHOME_LOG_LEVEL:-INFO}" \
-    -e "ETPHONEHOME_WEBHOOK_URL=${ETPHONEHOME_WEBHOOK_URL:-}" \
+    -v reach-data:/data \
+    -v reach-logs:/var/log/reach \
+    -e "REACH_API_KEY=${REACH_API_KEY:-}" \
+    -e "REACH_LOG_LEVEL=${REACH_LOG_LEVEL:-INFO}" \
+    -e "REACH_WEBHOOK_URL=${REACH_WEBHOOK_URL:-}" \
     --restart unless-stopped \
     "${IMAGE_NAME}"
 

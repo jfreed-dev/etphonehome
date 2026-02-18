@@ -58,4 +58,4 @@ ENV PYTHONUNBUFFERED=1
 USER reach
 
 # Default command
-CMD ["phonehome"]
+CMD ["reach"]

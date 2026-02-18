@@ -81,7 +81,7 @@
 - name: Create systemd service for MCP server
   become: true
   ansible.builtin.template:
-    src: etphonehome-mcp.service.j2
+    src: reach-mcp.service.j2
     dest: /etc/systemd/system/reach-mcp.service
     owner: root
     group: root

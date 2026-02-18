@@ -26,7 +26,7 @@ log_info "Deploying Reach MCP Server..."
 
 # 1. Copy service file
 log_info "Installing systemd service file..."
-cp "$SCRIPT_DIR/etphonehome-mcp.service" /etc/systemd/system/reach-mcp.service
+cp "$SCRIPT_DIR/reach-mcp.service" /etc/systemd/system/reach-mcp.service
 chmod 644 /etc/systemd/system/reach-mcp.service
 
 # 2. Create config directory

@@ -5,8 +5,8 @@ import logging
 
 from shared.protocol import Request, Response, encode_message
 
-# Use the etphonehome logger to ensure logs are captured
-logger = logging.getLogger("etphonehome.client_connection")
+# Use the reach logger to ensure logs are captured
+logger = logging.getLogger("reach.client_connection")
 
 
 class ClientConnection:

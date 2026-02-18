@@ -1,4 +1,4 @@
-"""SFTP server interface for ET Phone Home clients.
+"""SFTP server interface for Reach clients.
 
 This module implements an SFTP subsystem that enforces allowed_paths restrictions
 and provides streaming file transfers through the existing reverse SSH tunnel.

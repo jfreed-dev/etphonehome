@@ -11,7 +11,7 @@ from shared.secrets_manager import SecureLocalStorage
 class GitHubDeviceFlow:
     """Handle GitHub OAuth Device Flow authentication."""
 
-    # GitHub OAuth App client ID for ET Phone Home
+    # GitHub OAuth App client ID for Reach
     # This is a public client ID and is safe to commit
     CLIENT_ID = "Ov23liXZQDbxJxQqYR7z"
 

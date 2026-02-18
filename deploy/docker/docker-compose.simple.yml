@@ -1,8 +1,8 @@
 # Reach Server - Simplified Docker Compose
 # Single container deployment with persistent volumes
 #
-# Configuration: /home/etphonehome/appdata/reach/config/server.env
-# Data: /home/etphonehome/appdata/reach/data/
+# Configuration: /home/reach/appdata/reach/config/server.env
+# Data: /home/reach/appdata/reach/data/
 
 services:
   reach:
@@ -21,11 +21,11 @@ services:
 
     # Load environment from consolidated config file
     env_file:
-      - /home/etphonehome/appdata/reach/config/server.env
+      - /home/reach/appdata/reach/config/server.env
 
     volumes:
       # Persistent client data - consolidated appdata location
-      - /home/etphonehome/appdata/reach/data:/data
+      - /home/reach/appdata/reach/data:/data
       # Optional: logs directory
       - /var/log/reach:/var/log/reach
 

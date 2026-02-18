@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build the simplified ET Phone Home Docker image
+# Build the simplified Reach Docker image
 #
 # Usage:
 #   ./build-simple.sh              # Build with default tag
@@ -13,14 +13,14 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # Get version tag from argument or use 'latest'
 VERSION="${1:-latest}"
 
-echo "Building etphonehome-server:${VERSION}..."
+echo "Building reach-server:${VERSION}..."
 echo "Project root: ${PROJECT_ROOT}"
 
 cd "$PROJECT_ROOT"
 
 docker build \
-    -t "etphonehome-server:${VERSION}" \
-    -t "etphonehome-server:latest" \
+    -t "reach-server:${VERSION}" \
+    -t "reach-server:latest" \
     -f deploy/docker/Dockerfile.simple \
     .
 
@@ -28,7 +28,7 @@ echo ""
 echo "Build complete!"
 echo ""
 echo "Image tags:"
-docker images etphonehome-server --format "  {{.Repository}}:{{.Tag}} ({{.Size}})"
+docker images reach-server --format "  {{.Repository}}:{{.Tag}} ({{.Size}})"
 echo ""
 echo "Run with:"
 echo "  docker-compose -f deploy/docker/docker-compose.simple.yml up -d"

@@ -43,10 +43,10 @@ class CommandHistoryStore:
         """Initialize the store.
 
         Args:
-            db_path: Path to SQLite database. Defaults to ~/.etphonehome/history.db
+            db_path: Path to SQLite database. Defaults to ~/.reach/history.db
         """
         if db_path is None:
-            db_path = Path.home() / ".etphonehome" / "history.db"
+            db_path = Path.home() / ".reach" / "history.db"
 
         self.db_path = db_path
         self._lock = asyncio.Lock()

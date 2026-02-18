@@ -1,4 +1,4 @@
-# Hadolint configuration for ET Phone Home Docker images
+# Hadolint configuration for Reach Docker images
 # https://github.com/hadolint/hadolint#configure
 
 ignored:

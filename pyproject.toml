@@ -49,7 +49,7 @@ dev = [
 ]
 
 [project.scripts]
-reach = "client.phonehome:main"
+reach = "client.reach:main"
 reach-server = "server.mcp_server:main"
 
 [tool.setuptools.packages.find]

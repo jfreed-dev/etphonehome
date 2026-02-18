@@ -18,7 +18,7 @@ install_user_service() {
     echo "Installing reach as user service..."
 
     mkdir -p ~/.config/systemd/user
-    cp "$SCRIPT_DIR/phonehome-user.service" ~/.config/systemd/user/reach.service
+    cp "$SCRIPT_DIR/reach-user.service" ~/.config/systemd/user/reach.service
 
     # Update ExecStart path if reach is elsewhere
     if command -v reach &> /dev/null; then
@@ -49,7 +49,7 @@ install_system_service() {
 
     echo "Installing reach as system service..."
 
-    cp "$SCRIPT_DIR/phonehome.service" /etc/systemd/system/reach@.service
+    cp "$SCRIPT_DIR/reach.service" /etc/systemd/system/reach@.service
     systemctl daemon-reload
 
     echo ""

@@ -1,8 +1,8 @@
 #!/bin/bash
-# ET Phone Home - Docker Migration Script
+# Reach - Docker Migration Script
 #
 # This script helps migrate from systemd service to Docker container.
-# It reads settings from /etc/etphonehome/server.env and uses existing client data.
+# It reads settings from /etc/reach/server.env and uses existing client data.
 #
 # Usage:
 #   ./migrate-to-docker.sh start    # Stop systemd, start Docker
@@ -16,12 +16,12 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-CONTAINER_NAME="etphonehome-server"
-IMAGE_NAME="etphonehome-server:latest"
-SYSTEMD_SERVICE="etphonehome-mcp"
-SERVER_ENV="/etc/etphonehome/server.env"
-CLIENT_DATA_DIR="${HOME}/.etphonehome-server"
-PORT="${ETPHONEHOME_PORT:-8765}"
+CONTAINER_NAME="reach-server"
+IMAGE_NAME="reach-server:latest"
+SYSTEMD_SERVICE="reach-mcp"
+SERVER_ENV="/etc/reach/server.env"
+CLIENT_DATA_DIR="${HOME}/.reach-server"
+PORT="${REACH_PORT:-8765}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -149,14 +149,14 @@ start_docker() {
         --user "${HOST_UID}:${HOST_GID}" \
         -p "${PORT}:8765" \
         -v "${CLIENT_DATA_DIR}:/data" \
-        -e "ETPHONEHOME_API_KEY=${ETPHONEHOME_API_KEY:-}" \
-        -e "ETPHONEHOME_LOG_LEVEL=${ETPHONEHOME_LOG_LEVEL:-INFO}" \
-        -e "ETPHONEHOME_WEBHOOK_URL=${ETPHONEHOME_WEBHOOK_URL:-}" \
-        -e "ETPHONEHOME_R2_ACCOUNT_ID=${ETPHONEHOME_R2_ACCOUNT_ID:-}" \
-        -e "ETPHONEHOME_R2_ACCESS_KEY=${ETPHONEHOME_R2_ACCESS_KEY:-}" \
-        -e "ETPHONEHOME_R2_SECRET_KEY=${ETPHONEHOME_R2_SECRET_KEY:-}" \
-        -e "ETPHONEHOME_R2_BUCKET=${ETPHONEHOME_R2_BUCKET:-}" \
-        -e "ETPHONEHOME_R2_REGION=${ETPHONEHOME_R2_REGION:-auto}" \
+        -e "REACH_API_KEY=${REACH_API_KEY:-}" \
+        -e "REACH_LOG_LEVEL=${REACH_LOG_LEVEL:-INFO}" \
+        -e "REACH_WEBHOOK_URL=${REACH_WEBHOOK_URL:-}" \
+        -e "REACH_R2_ACCOUNT_ID=${REACH_R2_ACCOUNT_ID:-}" \
+        -e "REACH_R2_ACCESS_KEY=${REACH_R2_ACCESS_KEY:-}" \
+        -e "REACH_R2_SECRET_KEY=${REACH_R2_SECRET_KEY:-}" \
+        -e "REACH_R2_BUCKET=${REACH_R2_BUCKET:-}" \
+        -e "REACH_R2_REGION=${REACH_R2_REGION:-auto}" \
         --restart unless-stopped \
         "$IMAGE_NAME" >/dev/null
 
@@ -202,7 +202,7 @@ stop_docker() {
 # Show status
 show_status() {
     echo ""
-    echo "=== ET Phone Home Status ==="
+    echo "=== Reach Status ==="
     echo ""
 
     # Systemd service status
@@ -284,7 +284,7 @@ case "${1:-}" in
         build_docker
         ;;
     *)
-        echo "ET Phone Home - Docker Migration Script"
+        echo "Reach - Docker Migration Script"
         echo ""
         echo "Usage: $0 {start|stop|status|logs|build}"
         echo ""

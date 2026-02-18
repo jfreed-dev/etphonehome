@@ -97,7 +97,7 @@
   become: true
   become_user: "{{ _reach_user }}"
   ansible.builtin.template:
-    src: etphonehome-client.service.j2
+    src: reach-client.service.j2
     dest: "{{ _reach_home }}/.config/systemd/user/reach-client.service"
     mode: "0644"
   notify:

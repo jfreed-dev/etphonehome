@@ -2,16 +2,19 @@
 
 import asyncio
 import logging
-import os
 from collections import deque
 from dataclasses import dataclass, field
 from time import monotonic
 
+from shared.compat import env as _env
+
 logger = logging.getLogger(__name__)
 
 # Environment variable configuration (global defaults)
-DEFAULT_RPM = int(os.environ.get("ETPHONEHOME_RATE_LIMIT_RPM", "60"))
-DEFAULT_CONCURRENT = int(os.environ.get("ETPHONEHOME_RATE_LIMIT_CONCURRENT", "10"))
+DEFAULT_RPM = int(_env("REACH_RATE_LIMIT_RPM", "ETPHONEHOME_RATE_LIMIT_RPM", "60"))
+DEFAULT_CONCURRENT = int(
+    _env("REACH_RATE_LIMIT_CONCURRENT", "ETPHONEHOME_RATE_LIMIT_CONCURRENT", "10")
+)
 
 
 @dataclass
